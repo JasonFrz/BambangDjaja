@@ -20,6 +20,10 @@ const initWhatsApp = () => {
     puppeteer: {
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu']
+    },
+    webVersionCache: {
+      type: 'remote',
+      remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
     }
   });
 
@@ -59,8 +63,8 @@ const initWhatsApp = () => {
   waClient.initialize();
 };
 
-// Initialize WhatsApp on module load
-initWhatsApp();
+// Initialize WhatsApp only when needed (e.g., via QR endpoint)
+// initWhatsApp();
 
 // ---------------------------------------------------------
 // Routes
@@ -81,6 +85,10 @@ router.get('/status', authenticateToken, (req, res) => {
 
 // GET /api/whatsapp/qr - Get QR Code as HTML page (for easy scanning)
 router.get('/qr', (req, res) => {
+  if (!waClient) {
+    initWhatsApp();
+  }
+
   if (waReady) {
     return res.send(`
       <html><body style="display:flex;justify-content:center;align-items:center;height:100vh;background:#0a0a0a;color:#25D366;font-family:sans-serif;flex-direction:column">
@@ -163,6 +171,9 @@ router.post('/send', authenticateToken, async (req, res) => {
 
     // Check if WhatsApp is ready
     if (!waReady || !waClient) {
+      if (!waClient) {
+        initWhatsApp();
+      }
       return res.status(503).json({
         error: 'WhatsApp belum terhubung. Admin perlu scan QR Code terlebih dahulu.',
         needsQR: true
