@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int     @id @default(autoincrement())
+  username     String  @unique
+  password     String
+  role         String  @default("user")
+  company_name String?
+  db_name      String?
+  phone        String?
+}
+
+model Transformer {
+  id             Int    @id @default(autoincrement())
+  name           String
+  status         String  @default("Offline")
+  power_capacity String  @default("1000kVA")
+  type           String  @default("DyN")
+  company_name   String?
+  username       String?
+}
+
+model ElectricalReading {
+  id        Int      @id @default(autoincrement())
+  timestamp DateTime
+  phase_a   Float?
+  phase_b   Float?
+  phase_c   Float?
+  line_ab   Float?
+  line_bc   Float?
+  line_ca   Float?
+  current_a Float?
+  current_b Float?
+  current_c Float?
+  frequency Float?
+  power     Float?
+  energy    Float?
+}
+
+model OilReading {
+  id           Int      @id @default(autoincrement())
+  timestamp    DateTime
+  temperature  Float?
+  oil_level    Float?
+  moisture     Float?
+  acidity      Float?
+}
+
+model ProvisionToken {
+  id             Int       @id @default(autoincrement())
+  token          String    @unique
+  company_code   String
+  tmu_version       Int       @default(2) // 1 or 2
+  company_name      String?
+  db_name           String?
+  tmu_username      String?
+  tmu_password      String?
+  transformers_list String?
+  created_at        DateTime  @default(now())
+  expires_at        DateTime
+  is_used           Int       @default(0) // 0 or 1
+  used_at           DateTime?
+  used_by_serial    String?
+  created_by        String?
+  
+  @@index([token])
+  @@index([company_code])
+}
+
+model RegisteredDevice {
+  id              Int       @id @default(autoincrement())
+  serial_number   String    @unique
+  company_code    String
+  tmu_version     Int
+  provision_token String?
+  provisioned_at  DateTime  @default(now())
+  last_online     DateTime?
+  status          String    @default("provisioned") // provisioned, online, offline
+  ip_address      String?
+  
+  @@index([serial_number])
+  @@index([company_code])
+}
