@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+
+  --animate-slide-up-fade: slideUpFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-float-soft: floatSoft 6s ease-in-out infinite;
+  --animate-glow-pulse: glowPulse 3s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s infinite;
+
+  @keyframes slideUpFade {
+    0% { opacity: 0; transform: translateY(24px) scale(0.98); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes floatSoft {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  @keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 15px rgba(0, 82, 204, 0.2); }
+    50% { box-shadow: 0 0 30px rgba(0, 82, 204, 0.6); }
+  }
+  @keyframes shimmer {
+    100% { transform: translateX(150%) skewX(45deg); }
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  :root.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-[#f4f7fe] text-[#172b4d] font-sans antialiased min-h-screen dark:bg-[#0b1120] dark:text-white;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+}
+
+
+/* Custom scrollbar to keep it clean */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent; 
+}
+::-webkit-scrollbar-thumb {
+  background: #dfe1e6; 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #5e6c84; 
+}
+
+/* Hide scrollbar for clean mobile sliding menus */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}

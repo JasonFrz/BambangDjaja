@@ -1,0 +1,33 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build output
+graphify-out/
+frontend/dist/
+
+# WhatsApp session
+wa_session/
+
+# Prisma
+backend/prisma/*.db
+backend/prisma/*.db-journal
+
+# IDE
+.vscode/
+.idea/
