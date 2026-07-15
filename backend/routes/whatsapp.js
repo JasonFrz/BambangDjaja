@@ -177,7 +177,7 @@ router.post('/send', authenticateToken, async (req, res) => {
         messageText = `📋 *[TMU REPORT]*\n\nHalo ${user.username},\nLaporan masalah pada Trafo *${transformer_name}* (ID: ${transformer_id}) telah dikirim ke tim teknis PT. Bambang Djaja.\n\nTim kami akan segera menghubungi Anda.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
         break;
       default:
-        messageText = `HANS KONTOL 📢 *[TMU NOTIFICATION]*\n\nHalo ${user.username},\nNotifikasi terkait Trafo *${transformer_name}* (ID: ${transformer_id}).\n\nSilakan cek dashboard TMU untuk informasi lebih lanjut.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
+        messageText = `📢 *[TMU NOTIFICATION]*\n\nHalo ${user.username},\nNotifikasi terkait Trafo *${transformer_name}* (ID: ${transformer_id}).\n\nSilakan cek dashboard TMU untuk informasi lebih lanjut.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
     }
 
     // Format phone number for WhatsApp (must end with @c.us)
