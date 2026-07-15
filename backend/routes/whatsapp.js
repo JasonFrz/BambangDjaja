@@ -20,10 +20,6 @@ const initWhatsApp = () => {
     puppeteer: {
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu']
-    },
-    webVersionCache: {
-      type: 'remote',
-      remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
     }
   });
 
@@ -55,16 +51,39 @@ const initWhatsApp = () => {
     waReady = false;
     waQrCode = null;
     console.log('⚠️ WhatsApp Disconnected:', reason);
-    // Reinitialize after disconnect
+    
+    // Destroy client to free resources and prevent crashes
+    if (waClient) {
+      waClient.destroy().catch(() => {});
+    }
+    
+    // Delete the session folder so it starts fresh next time
+    try {
+      const fs = require('fs');
+      if (fs.existsSync('./wa_session')) {
+        fs.rmSync('./wa_session', { recursive: true, force: true });
+      }
+    } catch (err) {
+      console.error('Failed to delete wa_session:', err);
+    }
+
     waClient = null;
-    setTimeout(() => initWhatsApp(), 5000);
+    console.log('✅ WhatsApp session cleared. Siap untuk scan ulang jika diperlukan.');
   });
 
-  waClient.initialize();
+  waClient.initialize().catch(err => {
+    console.error('❌ Failed to initialize WhatsApp:', err);
+    waReady = false;
+    waClient = null;
+  });
 };
 
-// Initialize WhatsApp only when needed (e.g., via QR endpoint)
-// initWhatsApp();
+// Auto-start WhatsApp ONLY IF a session exists, so it doesn't prompt for QR unless needed.
+const fs = require('fs');
+if (fs.existsSync('./wa_session')) {
+  console.log('🔄 Sesi WhatsApp ditemukan. Memulai ulang di background...');
+  initWhatsApp();
+}
 
 // ---------------------------------------------------------
 // Routes
@@ -158,7 +177,7 @@ router.post('/send', authenticateToken, async (req, res) => {
         messageText = `📋 *[TMU REPORT]*\n\nHalo ${user.username},\nLaporan masalah pada Trafo *${transformer_name}* (ID: ${transformer_id}) telah dikirim ke tim teknis PT. Bambang Djaja.\n\nTim kami akan segera menghubungi Anda.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
         break;
       default:
-        messageText = `📢 *[TMU NOTIFICATION]*\n\nHalo ${user.username},\nNotifikasi terkait Trafo *${transformer_name}* (ID: ${transformer_id}).\n\nSilakan cek dashboard TMU untuk informasi lebih lanjut.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
+        messageText = `HANS KONTOL 📢 *[TMU NOTIFICATION]*\n\nHalo ${user.username},\nNotifikasi terkait Trafo *${transformer_name}* (ID: ${transformer_id}).\n\nSilakan cek dashboard TMU untuk informasi lebih lanjut.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
     }
 
     // Format phone number for WhatsApp (must end with @c.us)
@@ -170,14 +189,24 @@ router.post('/send', authenticateToken, async (req, res) => {
     const chatId = phoneNumber + '@c.us';
 
     // Check if WhatsApp is ready
-    if (!waReady || !waClient) {
+    if (!waReady) {
       if (!waClient) {
         initWhatsApp();
+        return res.status(503).json({
+          error: 'WhatsApp belum terhubung. Admin perlu scan QR Code terlebih dahulu.',
+          needsQR: true
+        });
+      } else if (waQrCode) {
+        return res.status(503).json({
+          error: 'WhatsApp belum terhubung. Admin perlu scan QR Code terlebih dahulu.',
+          needsQR: true
+        });
+      } else {
+        return res.status(503).json({
+          error: 'Sesi WhatsApp sedang disiapkan / loading. Silakan klik kirim WA lagi dalam 5-10 detik.',
+          needsQR: false
+        });
       }
-      return res.status(503).json({
-        error: 'WhatsApp belum terhubung. Admin perlu scan QR Code terlebih dahulu.',
-        needsQR: true
-      });
     }
 
     // Send message

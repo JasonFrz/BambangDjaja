@@ -75,6 +75,11 @@ const TransformerSelection = () => {
         setWaStatus(prev => ({ ...prev, [trafo.id]: { type: 'success', msg: data.message + (data.simulated ? ' (Simulasi)' : '') } }));
       } else {
         setWaStatus(prev => ({ ...prev, [trafo.id]: { type: 'error', msg: data.error || 'Gagal mengirim pesan' } }));
+        
+        // Buka halaman QR Code di tab baru jika backend memintanya
+        if (data.needsQR) {
+          window.open(`${apiUrl}/api/whatsapp/qr`, '_blank');
+        }
       }
     } catch (err) {
       setWaStatus(prev => ({ ...prev, [trafo.id]: { type: 'error', msg: 'Tidak dapat terhubung ke server' } }));
