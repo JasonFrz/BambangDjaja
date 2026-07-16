@@ -1,4 +1,3 @@
-2026/07/16-15:15:49.096 3950 Creating DB D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\Session Storage since it was missing.
-2026/07/16-15:15:49.111 3950 Reusing MANIFEST D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\Session Storage/MANIFEST-000001
-2026/07/16-15:15:49.114 3950 Recovering log #3
-2026/07/16-15:15:49.117 3950 Reusing old log D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\Session Storage/000003.log 
+2026/07/16-15:28:16.667 89ec Reusing MANIFEST D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\Session Storage/MANIFEST-000001
+2026/07/16-15:28:16.669 89ec Recovering log #3
+2026/07/16-15:28:16.672 89ec Reusing old log D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\Session Storage/000003.log 

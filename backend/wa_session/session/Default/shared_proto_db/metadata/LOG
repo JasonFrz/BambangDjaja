@@ -1,4 +1,3 @@
-2026/07/16-15:15:49.070 3978 Creating DB D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\shared_proto_db\metadata since it was missing.
-2026/07/16-15:15:49.078 3978 Reusing MANIFEST D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\shared_proto_db\metadata/MANIFEST-000001
-2026/07/16-15:15:49.079 3978 Recovering log #3
-2026/07/16-15:15:49.079 3978 Reusing old log D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\shared_proto_db\metadata/000003.log 
+2026/07/16-15:28:16.312 5fbc Reusing MANIFEST D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\shared_proto_db\metadata/MANIFEST-000001
+2026/07/16-15:28:16.325 5fbc Recovering log #3
+2026/07/16-15:28:16.326 5fbc Reusing old log D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\shared_proto_db\metadata/000003.log 
