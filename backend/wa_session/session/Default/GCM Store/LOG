@@ -1,3 +1,2 @@
-2026/07/16-07:51:44.468 11c8 Reusing MANIFEST D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\GCM Store/MANIFEST-000001
-2026/07/16-07:51:44.486 11c8 Recovering log #3
-2026/07/16-07:51:44.486 11c8 Reusing old log D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\GCM Store/000003.log 
+2026/07/16-08:25:24.375 d60 Creating DB D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\GCM Store since it was missing.
+2026/07/16-08:25:24.382 d60 Reusing MANIFEST D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\GCM Store/MANIFEST-000001

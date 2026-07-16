@@ -11,10 +11,27 @@ async function main() {
       data: {
         username: 'admin',
         password: hashedPassword,
-        role: 'admin'
+        role: 'admin',
+        company_name: 'PT. Admin',
       }
     });
     console.log('Seeded admin user');
+  }
+
+  // Seed normal user
+  const userExists = await prisma.user.findUnique({ where: { username: 'user' } });
+  if (!userExists) {
+    const hashedPassword = await bcrypt.hash('user', 10);
+    await prisma.user.create({
+      data: {
+        username: 'user',
+        password: hashedPassword,
+        role: 'user',
+        company_name: 'PT. Klien Trafo',
+        phone: '08123456789'
+      }
+    });
+    console.log('Seeded user "user"');
   }
 
   // Seed transformers
@@ -22,12 +39,12 @@ async function main() {
   if (transformersCount === 0) {
     await prisma.transformer.createMany({
       data: [
-        { name: '1800004519 (Trafo Mech...)', status: 'Offline', power_capacity: '1000kVA', type: 'DyN' },
-        { name: '1202482 (Trafo Testing...)', status: 'Online', power_capacity: '1000kVA', type: 'DyN' },
-        { name: '1800003781 (Trafo PTR ...)', status: 'Online', power_capacity: '2000kVA', type: 'DyN' },
+        { name: '1800004519 (Trafo Mech)', status: 'Offline', power_capacity: '1000kVA', type: 'DyN', username: 'user', company_name: 'PT. Klien Trafo' },
+        { name: '1202482 (Trafo Testing)', status: 'Online', power_capacity: '1000kVA', type: 'DyN', username: 'user', company_name: 'PT. Klien Trafo' },
+        { name: '1800003781 (Trafo PTR)', status: 'Online', power_capacity: '2000kVA', type: 'DyN', username: 'user', company_name: 'PT. Klien Trafo' },
       ]
     });
-    console.log('Seeded initial transformers');
+    console.log('Seeded initial transformers untuk user');
   }
 }
 
