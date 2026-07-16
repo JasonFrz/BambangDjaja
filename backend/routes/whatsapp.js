@@ -5,15 +5,12 @@ const { authenticateToken } = require('../middleware/auth');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 
-// ---------------------------------------------------------
-// WhatsApp Client Singleton
-// ---------------------------------------------------------
 let waClient = null;
 let waReady = false;
 let waQrCode = null;
 
 const initWhatsApp = () => {
-  if (waClient) return; // Already initialized
+  if (waClient) return; 
 
   waClient = new Client({
     authStrategy: new LocalAuth({ dataPath: './wa_session' }),
@@ -52,12 +49,10 @@ const initWhatsApp = () => {
     waQrCode = null;
     console.log('⚠️ WhatsApp Disconnected:', reason);
     
-    // Destroy client to free resources and prevent crashes
     if (waClient) {
       waClient.destroy().catch(() => {});
     }
     
-    // Delete the session folder so it starts fresh next time
     try {
       const fs = require('fs');
       if (fs.existsSync('./wa_session')) {
@@ -78,18 +73,12 @@ const initWhatsApp = () => {
   });
 };
 
-// Auto-start WhatsApp ONLY IF a session exists, so it doesn't prompt for QR unless needed.
 const fs = require('fs');
 if (fs.existsSync('./wa_session')) {
   console.log('🔄 Sesi WhatsApp ditemukan. Memulai ulang di background...');
   initWhatsApp();
 }
 
-// ---------------------------------------------------------
-// Routes
-// ---------------------------------------------------------
-
-// GET /api/whatsapp/status - Check WhatsApp connection status
 router.get('/status', authenticateToken, (req, res) => {
   res.json({
     connected: waReady,
@@ -102,7 +91,6 @@ router.get('/status', authenticateToken, (req, res) => {
   });
 });
 
-// GET /api/whatsapp/qr - Get QR Code as HTML page (for easy scanning)
 router.get('/qr', (req, res) => {
   if (!waClient) {
     initWhatsApp();
@@ -127,7 +115,6 @@ router.get('/qr', (req, res) => {
     `);
   }
 
-  // Generate QR as image using a simple library
   const qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(waQrCode)}`;
   res.send(`
     <html><body style="display:flex;justify-content:center;align-items:center;height:100vh;background:#0a0a0a;color:#fff;font-family:sans-serif;flex-direction:column">
@@ -140,7 +127,6 @@ router.get('/qr', (req, res) => {
   `);
 });
 
-// POST /api/whatsapp/send - Send WhatsApp message
 router.post('/send', authenticateToken, async (req, res) => {
   const { transformer_id, transformer_name, message_type } = req.body;
 
@@ -149,7 +135,6 @@ router.post('/send', authenticateToken, async (req, res) => {
   }
 
   try {
-    // Get the logged-in user's phone from DB
     const user = await prisma.user.findUnique({
       where: { username: req.user.username }
     });
@@ -162,7 +147,6 @@ router.post('/send', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Nomor telepon belum terdaftar. Hubungi admin untuk menambahkan nomor WhatsApp Anda.' });
     }
 
-    // Build the message
     const msgType = message_type || 'report';
     let messageText = '';
 
@@ -180,15 +164,12 @@ router.post('/send', authenticateToken, async (req, res) => {
         messageText = `📢 *[TMU NOTIFICATION]*\n\nHalo ${user.username},\nNotifikasi terkait Trafo *${transformer_name}* (ID: ${transformer_id}).\n\nSilakan cek dashboard TMU untuk informasi lebih lanjut.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
     }
 
-    // Format phone number for WhatsApp (must end with @c.us)
     let phoneNumber = user.phone.replace(/\+/g, '').replace(/\s/g, '').replace(/-/g, '');
-    // Ensure it starts with country code
     if (phoneNumber.startsWith('0')) {
       phoneNumber = '62' + phoneNumber.substring(1);
     }
     const chatId = phoneNumber + '@c.us';
 
-    // Check if WhatsApp is ready
     if (!waReady) {
       if (!waClient) {
         initWhatsApp();
@@ -209,7 +190,6 @@ router.post('/send', authenticateToken, async (req, res) => {
       }
     }
 
-    // Send message
     await waClient.sendMessage(chatId, messageText);
 
     return res.json({
