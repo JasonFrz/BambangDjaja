@@ -22,6 +22,7 @@ router.post("/generate-token", authenticateToken, async (req, res) => {
     db_name,
     tmu_username,
     tmu_password,
+    tmu_phone,
     transformers_list,
     tmu_version,
   } = req.body;
@@ -32,11 +33,12 @@ router.post("/generate-token", authenticateToken, async (req, res) => {
     !db_name ||
     !tmu_username ||
     !tmu_password ||
+    !tmu_phone ||
     !transformers_list
   ) {
     return res.status(400).json({
       error:
-        "Semua field (company_code, company_name, db_name, username, password, transformers) wajib diisi",
+        "Semua field (company_code, company_name, db_name, username, password, phone, transformers) wajib diisi",
     });
   }
 
@@ -65,6 +67,7 @@ router.post("/generate-token", authenticateToken, async (req, res) => {
         db_name,
         tmu_username,
         tmu_password,
+        tmu_phone,
         transformers_list,
         tmu_version,
         expires_at: expiresAt,
@@ -113,6 +116,7 @@ router.put("/tokens/:id", authenticateToken, async (req, res) => {
     db_name,
     tmu_username,
     tmu_password,
+    tmu_phone,
     transformers_list,
     tmu_version,
   } = req.body;
@@ -135,6 +139,7 @@ router.put("/tokens/:id", authenticateToken, async (req, res) => {
         db_name,
         tmu_username,
         tmu_password,
+        tmu_phone,
         transformers_list,
         tmu_version,
       },
@@ -318,6 +323,7 @@ router.post("/activate", async (req, res) => {
         password: hashedPassword,
         company_name: tokenRow.company_name,
         db_name: tokenRow.db_name,
+        phone: tokenRow.tmu_phone,
       },
       create: {
         username: clientUsername,
@@ -325,6 +331,7 @@ router.post("/activate", async (req, res) => {
         role: "user",
         company_name: tokenRow.company_name,
         db_name: tokenRow.db_name,
+        phone: tokenRow.tmu_phone,
       },
     });
 

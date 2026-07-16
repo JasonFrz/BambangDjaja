@@ -9,6 +9,7 @@ const DeviceProvisioning = () => {
   const [dbName, setDbName] = useState('');
   const [tmuUsername, setTmuUsername] = useState('');
   const [tmuPassword, setTmuPassword] = useState('');
+  const [tmuPhone, setTmuPhone] = useState('');
   const [transformers, setTransformers] = useState(['']);
   const [tmuVersion, setTmuVersion] = useState(2);
   
@@ -105,6 +106,7 @@ const DeviceProvisioning = () => {
     setDbName('');
     setTmuUsername('');
     setTmuPassword('');
+    setTmuPhone('');
     setTransformers(['']);
     setTmuVersion(2);
     setEditingTokenId(null);
@@ -123,6 +125,7 @@ const DeviceProvisioning = () => {
       db_name: dbName,
       tmu_username: tmuUsername,
       tmu_password: tmuPassword,
+      tmu_phone: tmuPhone,
       transformers_list: transformers.filter(t => t.trim() !== '').join(', '),
       tmu_version: Number(tmuVersion) 
     };
@@ -204,6 +207,7 @@ const DeviceProvisioning = () => {
     setDbName(t.db_name || '');
     setTmuUsername(t.tmu_username || '');
     setTmuPassword(t.tmu_password || '');
+    setTmuPhone(t.tmu_phone || '');
     setTransformers(t.transformers_list ? t.transformers_list.split(',').map(s => s.trim()) : ['']);
     setTmuVersion(t.tmu_version || 2);
     
@@ -360,6 +364,18 @@ const DeviceProvisioning = () => {
                     required
                   />
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-[#172b4d] dark:text-white">Phone Number (WhatsApp)</label>
+                <input 
+                  type="tel" 
+                  value={tmuPhone}
+                  onChange={(e) => setTmuPhone(e.target.value.replace(/[^0-9]/g, ''))}
+                  className="w-full bg-[#f4f5f7] dark:bg-[#070a13] border border-[#dfe1e6] dark:border-white/10 rounded-xl py-3 px-4 text-[#172b4d] dark:text-white text-sm outline-none focus:border-[#4c9aff] focus:ring-2 focus:ring-[#4c9aff]/20 transition-all"
+                  placeholder="e.g. 08123456789"
+                  required
+                />
               </div>
 
               <div className="space-y-3 md:col-span-2">
