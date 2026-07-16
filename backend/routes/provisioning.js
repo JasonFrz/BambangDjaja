@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
 const prisma = require("../prismaClient");
+const CryptoJS = require("crypto-js");
 const { authenticateToken } = require("../middleware/auth");
 
 router.get("/verify", async (req, res) => {
@@ -267,7 +268,6 @@ router.post("/activate", async (req, res) => {
       telegram_chat_id: "-100123456",
     };
 
-    const CryptoJS = require("crypto-js");
     const SECRET_KEY = process.env.SECRET_KEY || "b@mB4nG_dJaJ@";
     const hashedSerial = CryptoJS.SHA256(serial_number).toString();
     const programKey = CryptoJS.AES.encrypt(
