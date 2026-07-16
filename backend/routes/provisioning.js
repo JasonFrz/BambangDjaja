@@ -335,6 +335,24 @@ router.post("/activate", async (req, res) => {
       },
     });
 
+    if (tokenRow.transformers_list) {
+      const trafos = tokenRow.transformers_list.split(',').map(t => t.trim()).filter(t => t);
+      for (const tName of trafos) {
+        const exists = await prisma.transformer.findFirst({
+          where: { name: tName, username: clientUsername }
+        });
+        if (!exists) {
+          await prisma.transformer.create({
+            data: {
+              name: tName,
+              company_name: tokenRow.company_name,
+              username: clientUsername
+            }
+          });
+        }
+      }
+    }
+
     return res.json({
       status: 200,
       env_config: {
