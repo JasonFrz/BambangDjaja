@@ -1,3 +1,2 @@
-2026/07/16-14:42:37.947 2e2c Reusing MANIFEST C:\Users\Hans Christian\OneDrive\Desktop\magang\BambangDjaja\backend\wa_session\session\Default\Site Characteristics Database/MANIFEST-000001
-2026/07/16-14:42:37.948 2e2c Recovering log #3
-2026/07/16-14:42:37.949 2e2c Reusing old log C:\Users\Hans Christian\OneDrive\Desktop\magang\BambangDjaja\backend\wa_session\session\Default\Site Characteristics Database/000003.log 
+2026/07/16-15:15:49.075 5c38 Creating DB D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\Site Characteristics Database since it was missing.
+2026/07/16-15:15:49.083 5c38 Reusing MANIFEST D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\Site Characteristics Database/MANIFEST-000001

@@ -1,3 +1,2 @@
-2026/07/16-14:42:38.023 5438 Reusing MANIFEST C:\Users\Hans Christian\OneDrive\Desktop\magang\BambangDjaja\backend\wa_session\session\Default\Local Storage\leveldb/MANIFEST-000001
-2026/07/16-14:42:38.035 5438 Recovering log #3
-2026/07/16-14:42:38.041 5438 Reusing old log C:\Users\Hans Christian\OneDrive\Desktop\magang\BambangDjaja\backend\wa_session\session\Default\Local Storage\leveldb/000003.log 
+2026/07/16-15:15:49.096 40fc Creating DB D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\Local Storage\leveldb since it was missing.
+2026/07/16-15:15:49.110 40fc Reusing MANIFEST D:\BAMBANG_DJAJA\WebDemoTrafo\BambangDjaja\backend\wa_session\session\Default\Local Storage\leveldb/MANIFEST-000001
