@@ -371,11 +371,17 @@ const DeviceProvisioning = () => {
                 <input 
                   type="tel" 
                   value={tmuPhone}
-                  onChange={(e) => setTmuPhone(e.target.value.replace(/[^0-9]/g, ''))}
+                  onChange={(e) => {
+                    let val = e.target.value.replace(/[^0-9]/g, '');
+                    if (val.startsWith('62')) val = '0' + val.substring(2);
+                    if (val.length > 0 && !val.startsWith('0')) val = '0' + val;
+                    setTmuPhone(val);
+                  }}
                   className="w-full bg-[#f4f5f7] dark:bg-[#070a13] border border-[#dfe1e6] dark:border-white/10 rounded-xl py-3 px-4 text-[#172b4d] dark:text-white text-sm outline-none focus:border-[#4c9aff] focus:ring-2 focus:ring-[#4c9aff]/20 transition-all"
                   placeholder="e.g. 08123456789"
                   required
                 />
+                <p className="text-xs text-[#5e6c84] dark:text-[#94a3b8] mt-1.5 ml-1">Gunakan format 08... (Contoh: 08123456789)</p>
               </div>
 
               <div className="space-y-3 md:col-span-2">
