@@ -336,18 +336,21 @@ router.post("/activate", async (req, res) => {
     });
 
     if (tokenRow.transformers_list) {
-      const trafos = tokenRow.transformers_list.split(',').map(t => t.trim()).filter(t => t);
+      const trafos = tokenRow.transformers_list
+        .split(",")
+        .map((t) => t.trim())
+        .filter((t) => t);
       for (const tName of trafos) {
         const exists = await prisma.transformer.findFirst({
-          where: { name: tName, username: clientUsername }
+          where: { name: tName, username: clientUsername },
         });
         if (!exists) {
           await prisma.transformer.create({
             data: {
               name: tName,
               company_name: tokenRow.company_name,
-              username: clientUsername
-            }
+              username: clientUsername,
+            },
           });
         }
       }
@@ -356,10 +359,18 @@ router.post("/activate", async (req, res) => {
     return res.json({
       status: 200,
       env_config: {
-        DATABASE_URL: "postgresql://neondb_owner:npg_MYeZfpyDU5H4@ep-wandering-dust-at5yztr1.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require",
+        DATABASE_URL:
+          "postgresql://neondb_owner:npg_MYeZfpyDU5H4@ep-wandering-dust-at5yztr1.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require",
         COMPANY_CODE: tokenRow.company_code,
         TMU_USERNAME: clientUsername,
         TMU_PASSWORD: clientPassword,
+        MODBUS_PORT: "/dev/ttyACM0",
+        MODBUS_BAUDRATE: 9600,
+        MODBUS_PARITY: "N",
+        MODBUS_STOPBITS: 1,
+        MODBUS_BYTESIZE: 8,
+        ADC_ADDRESS: "0x48",
+        ADC_BUSNUM: 1,
       },
       tmu_version: tokenRow.tmu_version,
       message: "Provisioning successful",
