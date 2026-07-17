@@ -4,9 +4,51 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine 
 } from 'recharts';
 import { Link, useLocation } from "react-router-dom";
-import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Filter, ChevronDown, RefreshCw, Settings } from "lucide-react";
+import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Filter, ChevronDown, RefreshCw, Settings, GripHorizontal } from "lucide-react";
 import { useTrendData } from "../contexts/TrendDataContext";
 import { useApi } from '../contexts/ApiContext';
+
+import { ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
+
+
+
+const DEFAULT_LAYOUTS = {
+  lg: [
+    { i: 'uPhaseCard', x: 0, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
+    { i: 'uLineCard', x: 3, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
+    { i: 'currentCard', x: 6, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
+    { i: 'freqCard', x: 9, y: 0, w: 3, h: 1, minW: 2, minH: 1 },
+    { i: 'energyCard', x: 9, y: 1, w: 3, h: 1, minW: 2, minH: 1 },
+    { i: 'uPhaseChart', x: 0, y: 2, w: 6, h: 3, minW: 4, minH: 2 },
+    { i: 'uLineChart', x: 6, y: 2, w: 6, h: 3, minW: 4, minH: 2 },
+    { i: 'currentChart', x: 0, y: 5, w: 6, h: 3, minW: 4, minH: 2 },
+    { i: 'freqChart', x: 6, y: 5, w: 6, h: 3, minW: 4, minH: 2 }
+  ],
+  md: [
+    { i: 'uPhaseCard', x: 0, y: 0, w: 5, h: 2, minW: 3, minH: 2 },
+    { i: 'uLineCard', x: 5, y: 0, w: 5, h: 2, minW: 3, minH: 2 },
+    { i: 'currentCard', x: 0, y: 2, w: 5, h: 2, minW: 3, minH: 2 },
+    { i: 'freqCard', x: 5, y: 2, w: 5, h: 1, minW: 3, minH: 1 },
+    { i: 'energyCard', x: 5, y: 3, w: 5, h: 1, minW: 3, minH: 1 },
+    { i: 'uPhaseChart', x: 0, y: 4, w: 10, h: 3, minW: 4, minH: 2 },
+    { i: 'uLineChart', x: 0, y: 7, w: 10, h: 3, minW: 4, minH: 2 },
+    { i: 'currentChart', x: 0, y: 10, w: 10, h: 3, minW: 4, minH: 2 },
+    { i: 'freqChart', x: 0, y: 13, w: 10, h: 3, minW: 4, minH: 2 }
+  ],
+  sm: [
+    { i: 'uPhaseCard', x: 0, y: 0, w: 6, h: 2, minW: 2, minH: 2 },
+    { i: 'uLineCard', x: 0, y: 2, w: 6, h: 2, minW: 2, minH: 2 },
+    { i: 'currentCard', x: 0, y: 4, w: 6, h: 2, minW: 2, minH: 2 },
+    { i: 'freqCard', x: 0, y: 6, w: 6, h: 1, minW: 2, minH: 1 },
+    { i: 'energyCard', x: 0, y: 7, w: 6, h: 1, minW: 2, minH: 1 },
+    { i: 'uPhaseChart', x: 0, y: 8, w: 6, h: 3, minW: 3, minH: 2 },
+    { i: 'uLineChart', x: 0, y: 11, w: 6, h: 3, minW: 3, minH: 2 },
+    { i: 'currentChart', x: 0, y: 14, w: 6, h: 3, minW: 3, minH: 2 },
+    { i: 'freqChart', x: 0, y: 17, w: 6, h: 3, minW: 3, minH: 2 }
+  ]
+};
 
 const Dashboard = () => {
   // Shared context
@@ -24,6 +66,26 @@ const Dashboard = () => {
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [warning, setWarning] = useState("");
+  const { width, containerRef } = useContainerWidth();
+
+  const [layouts, setLayouts] = useState(() => {
+    const savedLayouts = localStorage.getItem('dashboardLayouts_v3');
+    return savedLayouts ? JSON.parse(savedLayouts) : DEFAULT_LAYOUTS;
+  });
+
+  const handleLayoutChange = (currentLayout, allLayouts) => {
+    const stringifiedLayouts = JSON.stringify(allLayouts);
+    const savedLayouts = localStorage.getItem('dashboardLayouts_v3');
+    if (stringifiedLayouts !== savedLayouts) {
+      setLayouts(allLayouts);
+      localStorage.setItem('dashboardLayouts_v3', stringifiedLayouts);
+    }
+  };
+
+  const resetLayout = () => {
+    setLayouts(DEFAULT_LAYOUTS);
+    localStorage.removeItem('dashboardLayouts_v3');
+  };
 
   const toggleFilter = (key) => {
     setFilters(prev => {
@@ -152,14 +214,6 @@ const Dashboard = () => {
   };
 
   const activeCount = Object.values(filters).filter(Boolean).length;
-  let gridColsClass = "grid-cols-1";
-  if (activeCount === 2) gridColsClass = "grid-cols-1 md:grid-cols-2";
-  else if (activeCount === 3) gridColsClass = "grid-cols-1 md:grid-cols-3";
-  else if (activeCount >= 4) gridColsClass = "grid-cols-1 md:grid-cols-2 xl:grid-cols-4";
-
-  let chartGridColsClass = "grid-cols-1";
-  const chartActiveCount = [filters.uPhase, filters.uLine, filters.current, filters.frequency].filter(Boolean).length;
-  if (chartActiveCount > 1) chartGridColsClass = "grid-cols-1 lg:grid-cols-2";
 
   // Calculate Overall Status based on Frequency
   const isFreqSafe = data.frequency <= 52.5;
@@ -267,6 +321,13 @@ const Dashboard = () => {
             
             <div className="flex flex-wrap items-center gap-2 flex-1">
               <button 
+                onClick={resetLayout}
+                className="whitespace-nowrap px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all duration-300 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20"
+              >
+                <RefreshCw size={14} /> Reset Layout
+              </button>
+              <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1"></div>
+              <button 
                 onClick={showAll}
                 className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${
                   activeCount === 5 
@@ -342,107 +403,181 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* MONITORING CARDS */}
-      <h3 className="text-xl font-bold text-[#172b4d] dark:text-white font-heading mt-2">Real-time Monitoring</h3>
-      
-      <div className={`grid ${gridColsClass} gap-6 transition-all duration-500 ease-in-out`}>
+      {/* Filter Waktu Historis (Tetap statis di atas) */}
+      {(filters.uPhase || filters.uLine || filters.current || filters.frequency) && (
+        <div className="flex flex-col gap-4 mt-2 mb-4 animate-[slideUpFade_0.4s_ease-out]">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 bg-white dark:bg-[#151521] p-2.5 sm:p-2 rounded-xl border border-[#dfe1e6] dark:border-white/10 shadow-sm self-start w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <span className="sm:hidden text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8] w-10">Start:</span>
+                <input 
+                  type="datetime-local" 
+                  value={startTime}
+                  onChange={(e) => { setStartTime(e.target.value); setFilterError(null); }}
+                  className="flex-1 min-w-[140px] text-sm px-3 py-1.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none focus:border-[#0052cc]"
+                />
+              </div>
+              <span className="hidden sm:inline text-[#5e6c84] dark:text-[#94a3b8] text-sm font-medium">to</span>
+              <div className="flex items-center gap-2 w-full md:w-auto mt-1 sm:mt-0">
+                <span className="sm:hidden text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8] w-10">End:</span>
+                <input 
+                  type="datetime-local" 
+                  value={endTime}
+                  onChange={(e) => { setEndTime(e.target.value); setFilterError(null); }}
+                  className="flex-1 min-w-[140px] text-sm px-3 py-1.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none focus:border-[#0052cc]"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 border-t sm:border-t-0 sm:border-l border-[#dfe1e6] dark:border-white/10 pt-2.5 sm:pt-0 sm:pl-3 w-full md:w-auto mt-1 sm:mt-0">
+              <button 
+                onClick={handleApplyFilter}
+                className={`flex-1 sm:flex-none whitespace-nowrap px-4 py-1.5 rounded-lg text-sm font-semibold shadow-sm transition-colors ${
+                  isFiltering ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-[#0052cc] text-white hover:bg-[#0047b3]'
+                }`}
+              >
+                {isFiltering ? 'Filter Aktif' : 'Filter Chart'}
+              </button>
+              <button 
+                onClick={() => fetchTrends(false)}
+                disabled={loading}
+                className="px-3 py-1.5 bg-gray-50 dark:bg-white/5 border border-[#dfe1e6] dark:border-white/10 rounded-lg text-[#172b4d] dark:text-white hover:bg-[#ebecf0] dark:hover:bg-white/10 transition-all flex items-center justify-center shadow-sm"
+              >
+                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-xl border border-red-200 dark:border-red-800/30 mt-2 mb-4">
+          {error}
+        </div>
+      )}
 
-        {/* Phase Voltage Card */}
+      {/* DASHBOARD DRAGGABLE GRID */}
+      <div ref={containerRef}>
+      <ResponsiveGridLayout
+        className="layout -mx-2 mt-4"
+        width={width}
+        layouts={layouts}
+        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+        cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+        rowHeight={140}
+        compactType="horizontal"
+        preventCollision={false}
+        onLayoutChange={handleLayoutChange}
+        draggableHandle=".drag-handle"
+        margin={[16, 16]}
+      >
+        
         {filters.uPhase && (
-          <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out]">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 dark:bg-blue-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0052cc] to-[#4c9aff] flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                <Zap size={20} />
-              </div>
-              <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight">Phase Voltage (U Phase)</h3>
-            </div>
-            <div className="space-y-3 flex-1 flex flex-col justify-center">
-              {["A", "B", "C"].map((phase) => (
-                <div key={phase} className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
-                  <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Phase {phase}</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">{data.vPhase[phase].toFixed(1)}</span>
-                    <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">V</span>
-                  </div>
+          <div key="uPhaseCard" className="flex">
+            <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 dark:bg-blue-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+              <div className="flex items-center gap-3 mb-5 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0052cc] to-[#4c9aff] flex items-center justify-center text-white shadow-lg shadow-blue-500/20 pointer-events-none">
+                  <Zap size={20} />
                 </div>
-              ))}
+                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Phase Voltage (U Phase)</h3>
+                <GripHorizontal size={20} className="text-gray-400 mr-2" />
+              </div>
+              <div className="space-y-3 flex-1 flex flex-col justify-center">
+                {["A", "B", "C"].map((phase) => (
+                  <div key={phase} className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
+                    <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Phase {phase}</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">{data.vPhase[phase].toFixed(1)}</span>
+                      <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">V</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Line Voltage Card */}
         {filters.uLine && (
-          <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out_0.1s]">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 dark:bg-cyan-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00b8d9] to-[#36c9e5] flex items-center justify-center text-white shadow-lg shadow-cyan-500/20">
-                <Activity size={20} />
-              </div>
-              <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight">Line Voltage (U Line)</h3>
-            </div>
-            <div className="space-y-3 flex-1 flex flex-col justify-center">
-              {["AB", "BC", "CA"].map((line) => (
-                <div key={line} className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
-                  <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Line {line}</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">{data.vLine[line].toFixed(1)}</span>
-                    <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">V</span>
-                  </div>
+          <div key="uLineCard" className="flex">
+            <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 dark:bg-cyan-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+              <div className="flex items-center gap-3 mb-5 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00b8d9] to-[#36c9e5] flex items-center justify-center text-white shadow-lg shadow-cyan-500/20 pointer-events-none">
+                  <Activity size={20} />
                 </div>
-              ))}
+                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Line Voltage (U Line)</h3>
+                <GripHorizontal size={20} className="text-gray-400 mr-2" />
+              </div>
+              <div className="space-y-3 flex-1 flex flex-col justify-center">
+                {["AB", "BC", "CA"].map((line) => (
+                  <div key={line} className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
+                    <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Line {line}</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">{data.vLine[line].toFixed(1)}</span>
+                      <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">V</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Current Card */}
         {filters.current && (
-          <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out_0.2s]">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 dark:bg-amber-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ffab00] to-[#ffc400] flex items-center justify-center text-white shadow-lg shadow-amber-500/20">
-                <Waves size={20} />
-              </div>
-              <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight">Current (I)</h3>
-            </div>
-            <div className="space-y-3 flex-1 flex flex-col justify-center">
-              {["A", "B", "C"].map((phase) => (
-                <div key={phase} className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
-                  <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Phase {phase}</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">{data.current[phase].toFixed(3)}</span>
-                    <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">A</span>
-                  </div>
+          <div key="currentCard" className="flex">
+            <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 dark:bg-amber-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+              <div className="flex items-center gap-3 mb-5 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ffab00] to-[#ffc400] flex items-center justify-center text-white shadow-lg shadow-amber-500/20 pointer-events-none">
+                  <Waves size={20} />
                 </div>
-              ))}
+                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Current (I)</h3>
+                <GripHorizontal size={20} className="text-gray-400 mr-2" />
+              </div>
+              <div className="space-y-3 flex-1 flex flex-col justify-center">
+                {["A", "B", "C"].map((phase) => (
+                  <div key={phase} className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
+                    <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Phase {phase}</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">{data.current[phase].toFixed(3)}</span>
+                      <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">A</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Right Column: Freq & Stats */}
         {filters.power && (
-          <div className="flex flex-col gap-6 h-full animate-[slideUpFade_0.4s_ease-out_0.3s]">
-            <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex-1 group relative overflow-hidden">
+          <div key="freqCard" className="flex">
+            <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full group relative overflow-hidden flex flex-col bg-opacity-95 backdrop-blur">
               <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 dark:bg-indigo-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6554c0] to-[#8777d9] flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+              <div className="flex items-center gap-3 mb-4 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6554c0] to-[#8777d9] flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 pointer-events-none">
                   <Gauge size={20} />
                 </div>
-                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight">Frequency</h3>
+                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Frequency</h3>
+                <GripHorizontal size={20} className="text-gray-400 mr-2" />
               </div>
               <div className="mt-auto flex items-baseline gap-1">
                 <span className="text-3xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">{data.frequency.toFixed(2)}</span>
                 <span className="text-sm font-semibold text-[#8993a4] dark:text-[#64748b]">Hz</span>
               </div>
             </div>
-            <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex-1 group relative overflow-hidden">
+          </div>
+        )}
+
+        {filters.power && (
+          <div key="energyCard" className="flex">
+            <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full group relative overflow-hidden flex flex-col bg-opacity-95 backdrop-blur">
               <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 dark:bg-emerald-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#36b37e] to-[#57d9a3] flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+              <div className="flex items-center gap-3 mb-4 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#36b37e] to-[#57d9a3] flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 pointer-events-none">
                   <Activity size={20} />
                 </div>
-                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight">Total Active Energy</h3>
+                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Total Active Energy</h3>
+                <GripHorizontal size={20} className="text-gray-400 mr-2" />
               </div>
               <div className="mt-auto flex items-baseline gap-1">
                 <span className="text-3xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">{data.energy.toFixed(1)}</span>
@@ -451,185 +586,135 @@ const Dashboard = () => {
             </div>
           </div>
         )}
-      </div>
 
-      {/* TREND CHARTS */}
-      {error ? (
-        <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-xl border border-red-200 dark:border-red-800/30 mt-4">
-          {error}
-        </div>
-      ) : (
-        <>
-          {(filters.uPhase || filters.uLine || filters.current || filters.frequency) && (
-            <div className="flex flex-col gap-4 mt-8 mb-4">
-              <h3 className="text-xl font-bold text-[#172b4d] dark:text-white font-heading">Historical Trends</h3>
-              
-              {/* Date Time Filter for Charts - Responsive */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 bg-white dark:bg-[#151521] p-2.5 sm:p-2 rounded-xl border border-[#dfe1e6] dark:border-white/10 shadow-sm self-start w-full sm:w-auto">
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
-                  <div className="flex items-center gap-2 w-full md:w-auto">
-                    <span className="sm:hidden text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8] w-10">Start:</span>
-                    <input 
-                      type="datetime-local" 
-                      value={startTime}
-                      onChange={(e) => { setStartTime(e.target.value); setFilterError(null); }}
-                      className="flex-1 min-w-[140px] text-sm px-3 py-1.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none focus:border-[#0052cc]"
-                    />
-                  </div>
-                  <span className="hidden sm:inline text-[#5e6c84] dark:text-[#94a3b8] text-sm font-medium">to</span>
-                  <div className="flex items-center gap-2 w-full md:w-auto mt-1 sm:mt-0">
-                    <span className="sm:hidden text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8] w-10">End:</span>
-                    <input 
-                      type="datetime-local" 
-                      value={endTime}
-                      onChange={(e) => { setEndTime(e.target.value); setFilterError(null); }}
-                      className="flex-1 min-w-[140px] text-sm px-3 py-1.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none focus:border-[#0052cc]"
-                    />
-                  </div>
+        {/* CHARTS */}
+        {filters.uPhase && (
+          <div key="uPhaseChart" className="flex">
+            <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-full w-full bg-opacity-95 backdrop-blur">
+              <div className="flex items-center gap-3 mb-6 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#0052cc] to-[#4c9aff] pointer-events-none">
+                  <Activity size={20} />
                 </div>
-                <div className="flex items-center gap-2 border-t sm:border-t-0 sm:border-l border-[#dfe1e6] dark:border-white/10 pt-2.5 sm:pt-0 sm:pl-3 w-full md:w-auto mt-1 sm:mt-0">
-                  <button 
-                    onClick={handleApplyFilter}
-                    className={`flex-1 sm:flex-none whitespace-nowrap px-4 py-1.5 rounded-lg text-sm font-semibold shadow-sm transition-colors ${
-                      isFiltering ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-[#0052cc] text-white hover:bg-[#0047b3]'
-                    }`}
-                  >
-                    {isFiltering ? 'Filter Aktif' : 'Filter Chart'}
-                  </button>
-                  <button 
-                    onClick={() => fetchTrends(false)}
-                    disabled={loading}
-                    className="px-3 py-1.5 bg-gray-50 dark:bg-white/5 border border-[#dfe1e6] dark:border-white/10 rounded-lg text-[#172b4d] dark:text-white hover:bg-[#ebecf0] dark:hover:bg-white/10 transition-all flex items-center justify-center shadow-sm"
-                  >
-                    <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-                  </button>
-                </div>
+                <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Phase Voltage Trend</h3>
+                <GripHorizontal size={20} className="text-gray-400 mr-2" />
+              </div>
+              <div className="flex-1 w-full h-full min-h-[100px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
+                    <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                    <RechartsTooltip content={<CustomTooltip />} />
+                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                    <Line type="monotone" dataKey="phaseA" name="Phase A" stroke="#0052cc" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="phaseB" name="Phase B" stroke="#00e676" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="phaseC" name="Phase C" stroke="#ff8b00" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </div>
-          )}
-          <div className={`grid ${chartGridColsClass} gap-6 transition-all duration-500 ease-in-out`}>
-            
-            {/* Phase Voltage Chart */}
-            {filters.uPhase && (
-              <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-[400px] animate-[slideUpFade_0.4s_ease-out]">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#0052cc] to-[#4c9aff]">
-                    <Activity size={20} />
-                  </div>
-                  <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading">Phase Voltage Trend</h3>
-                </div>
-                <div className="flex-1 w-full h-full min-h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <RechartsTooltip content={<CustomTooltip />} />
-                      <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                      <Line type="monotone" dataKey="phaseA" name="Phase A" stroke="#0052cc" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                      <Line type="monotone" dataKey="phaseB" name="Phase B" stroke="#00e676" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                      <Line type="monotone" dataKey="phaseC" name="Phase C" stroke="#ff8b00" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-
-            {/* Line Voltage Chart (U Line) */}
-            {filters.uLine && (
-              <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-[400px] animate-[slideUpFade_0.4s_ease-out_0.1s]">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#00b8d9] to-[#79f2ff]">
-                    <Activity size={20} />
-                  </div>
-                  <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading">Line Voltage Trend (U Line)</h3>
-                </div>
-                <div className="flex-1 w-full h-full min-h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <RechartsTooltip content={<CustomTooltip />} />
-                      <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                      <Line type="monotone" dataKey="lineAB" name="Line AB" stroke="#00b8d9" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                      <Line type="monotone" dataKey="lineBC" name="Line BC" stroke="#6554c0" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                      <Line type="monotone" dataKey="lineCA" name="Line CA" stroke="#ff5630" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-
-            {/* Current Chart */}
-            {filters.current && (
-              <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-[400px] animate-[slideUpFade_0.4s_ease-out_0.2s]">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#ff5630] to-[#ff9873]">
-                    <Activity size={20} />
-                  </div>
-                  <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading">Current Trend</h3>
-                </div>
-                <div className="flex-1 w-full h-full min-h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <RechartsTooltip content={<CustomTooltip />} />
-                      <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                      <Line type="monotone" dataKey="currentA" name="Current A" stroke="#ff5630" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                      <Line type="monotone" dataKey="currentB" name="Current B" stroke="#6554c0" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                      <Line type="monotone" dataKey="currentC" name="Current C" stroke="#00b8d9" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-
-            {/* Frequency Chart */}
-            {filters.frequency && (
-              <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-[400px] animate-[slideUpFade_0.4s_ease-out_0.3s]">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#6554c0] to-[#998dd9]">
-                      <Activity size={20} />
-                    </div>
-                    <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading">Frequency Trend</h3>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm font-bold ${isFreqSafe ? 'text-emerald-500' : 'text-red-500'}`}>
-                      {isFreqSafe ? 'Safe' : 'Danger'}
-                    </span>
-                    <div className="relative w-4 h-4">
-                      <div className={`absolute inset-0 rounded-full blur-sm opacity-80 animate-pulse ${isFreqSafe ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                      <div className={`relative w-4 h-4 rounded-full ${isFreqSafe ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex-1 w-full h-full min-h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <RechartsTooltip content={<CustomTooltip />} />
-                      <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                      <ReferenceLine y={52.5} stroke="red" strokeDasharray="3 3" label={{ position: 'top', value: 'Limit (52.5)', fill: 'red', fontSize: 12 }} />
-                      <Line type="monotone" dataKey="frequency" name="Frequency (Hz)" stroke="#6554c0" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-
-
-
           </div>
-        </>
-      )}
+        )}
+
+        {filters.uLine && (
+          <div key="uLineChart" className="flex">
+            <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-full w-full bg-opacity-95 backdrop-blur">
+              <div className="flex items-center gap-3 mb-6 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#00b8d9] to-[#79f2ff] pointer-events-none">
+                  <Activity size={20} />
+                </div>
+                <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Line Voltage Trend (U Line)</h3>
+                <GripHorizontal size={20} className="text-gray-400 mr-2" />
+              </div>
+              <div className="flex-1 w-full h-full min-h-[100px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
+                    <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                    <RechartsTooltip content={<CustomTooltip />} />
+                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                    <Line type="monotone" dataKey="lineAB" name="Line AB" stroke="#00b8d9" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="lineBC" name="Line BC" stroke="#6554c0" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="lineCA" name="Line CA" stroke="#ff5630" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {filters.current && (
+          <div key="currentChart" className="flex">
+            <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-full w-full bg-opacity-95 backdrop-blur">
+              <div className="flex items-center gap-3 mb-6 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#ff5630] to-[#ff9873] pointer-events-none">
+                  <Activity size={20} />
+                </div>
+                <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Current Trend</h3>
+                <GripHorizontal size={20} className="text-gray-400 mr-2" />
+              </div>
+              <div className="flex-1 w-full h-full min-h-[100px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
+                    <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                    <RechartsTooltip content={<CustomTooltip />} />
+                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                    <Line type="monotone" dataKey="currentA" name="Current A" stroke="#ff5630" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="currentB" name="Current B" stroke="#6554c0" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="currentC" name="Current C" stroke="#00b8d9" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {filters.frequency && (
+          <div key="freqChart" className="flex">
+            <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-full w-full bg-opacity-95 backdrop-blur">
+              <div className="flex items-center justify-between mb-6 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#6554c0] to-[#998dd9] pointer-events-none">
+                    <Activity size={20} />
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading">Frequency Trend</h3>
+                </div>
+                <div className="flex items-center gap-2 mr-4">
+                  <span className={`text-sm font-bold ${isFreqSafe ? 'text-emerald-500' : 'text-red-500'}`}>
+                    {isFreqSafe ? 'Safe' : 'Danger'}
+                  </span>
+                  <div className="relative w-4 h-4">
+                    <div className={`absolute inset-0 rounded-full blur-sm opacity-80 animate-pulse ${isFreqSafe ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                    <div className={`relative w-4 h-4 rounded-full ${isFreqSafe ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                  </div>
+                </div>
+                <GripHorizontal size={20} className="text-gray-400 mr-2" />
+              </div>
+              <div className="flex-1 w-full h-full min-h-[100px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
+                    <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                    <RechartsTooltip content={<CustomTooltip />} />
+                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                    <ReferenceLine y={52.5} stroke="red" strokeDasharray="3 3" label={{ position: 'top', value: 'Limit (52.5)', fill: 'red', fontSize: 12 }} />
+                    <Line type="monotone" dataKey="frequency" name="Frequency (Hz)" stroke="#6554c0" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
+      </ResponsiveGridLayout>
+      </div>
+
     </div>
   );
 };
 
 export default Dashboard;
+

@@ -6,6 +6,33 @@ import {
 import { Thermometer, Gauge, Wifi, WifiOff, Filter, ChevronDown, RefreshCw, Activity } from "lucide-react";
 import { useApi } from '../contexts/ApiContext';
 import { useTemperatureData } from '../contexts/TemperatureDataContext';
+import { ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout';
+import { GripHorizontal } from 'lucide-react';
+
+
+const DEFAULT_LAYOUTS = {
+  lg: [
+    { i: 'oilLevelCard', x: 0, y: 0, w: 4, h: 1, minW: 3, minH: 1 },
+    { i: 'temperatureCard', x: 4, y: 0, w: 4, h: 1, minW: 3, minH: 1 },
+    { i: 'pressureCard', x: 8, y: 0, w: 4, h: 1, minW: 3, minH: 1 },
+    { i: 'temperatureChart', x: 0, y: 1, w: 6, h: 3, minW: 4, minH: 2 },
+    { i: 'pressureChart', x: 6, y: 1, w: 6, h: 3, minW: 4, minH: 2 }
+  ],
+  md: [
+    { i: 'oilLevelCard', x: 0, y: 0, w: 10, h: 1, minW: 3, minH: 1 },
+    { i: 'temperatureCard', x: 0, y: 1, w: 5, h: 1, minW: 3, minH: 1 },
+    { i: 'pressureCard', x: 5, y: 1, w: 5, h: 1, minW: 3, minH: 1 },
+    { i: 'temperatureChart', x: 0, y: 2, w: 10, h: 3, minW: 4, minH: 2 },
+    { i: 'pressureChart', x: 0, y: 5, w: 10, h: 3, minW: 4, minH: 2 }
+  ],
+  sm: [
+    { i: 'oilLevelCard', x: 0, y: 0, w: 6, h: 1, minW: 3, minH: 1 },
+    { i: 'temperatureCard', x: 0, y: 1, w: 6, h: 1, minW: 3, minH: 1 },
+    { i: 'pressureCard', x: 0, y: 2, w: 6, h: 1, minW: 3, minH: 1 },
+    { i: 'temperatureChart', x: 0, y: 3, w: 6, h: 3, minW: 4, minH: 2 },
+    { i: 'pressureChart', x: 0, y: 6, w: 6, h: 3, minW: 4, minH: 2 }
+  ]
+};
 
 const Temperature = () => {
   const { apiUrl } = useApi();
@@ -137,6 +164,27 @@ const Temperature = () => {
   else if (activeCount === 2) gridColsClass = "grid-cols-1 md:grid-cols-2";
   
   let chartGridColsClass = "grid-cols-1";
+  
+  const { width, containerRef } = useContainerWidth();
+  const [layouts, setLayouts] = useState(() => {
+    const savedLayouts = localStorage.getItem('dashboardLayouts_temp_v1');
+    return savedLayouts ? JSON.parse(savedLayouts) : DEFAULT_LAYOUTS;
+  });
+
+  const handleLayoutChange = (currentLayout, allLayouts) => {
+    const stringifiedLayouts = JSON.stringify(allLayouts);
+    const savedLayouts = localStorage.getItem('dashboardLayouts_temp_v1');
+    if (stringifiedLayouts !== savedLayouts) {
+      setLayouts(allLayouts);
+      localStorage.setItem('dashboardLayouts_temp_v1', stringifiedLayouts);
+    }
+  };
+
+  const resetLayout = () => {
+    setLayouts(DEFAULT_LAYOUTS);
+    localStorage.removeItem('dashboardLayouts_temp_v1');
+  };
+
   const chartActiveCount = [filters.temperature, filters.pressure].filter(Boolean).length;
   if (chartActiveCount > 1) chartGridColsClass = "grid-cols-1 lg:grid-cols-2";
 
@@ -201,6 +249,9 @@ const Temperature = () => {
               <div className="p-2 space-y-1">
                 <button onClick={() => { showAll(); setIsMobileMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-colors">
                   Show All
+                </button>
+                <button onClick={() => { resetLayout(); setIsMobileMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-colors">
+                  Reset Layout
                 </button>
                 <div className="h-px bg-gray-100 dark:bg-white/5 my-1 mx-2"></div>
                 <button onClick={() => toggleFilter('temperature')} className="w-full flex items-center gap-3 px-4 py-2 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-[#172b4d] dark:text-white">
@@ -291,86 +342,7 @@ const Temperature = () => {
         <h3 className="text-xl font-bold text-[#172b4d] dark:text-white font-heading">Real-time Monitoring</h3>
       </div>
 
-      <div className={`grid ${gridColsClass} gap-6 transition-all duration-500 ease-in-out`}>
-        {/* Oil Level Card (Always visible) */}
-        {filters.oilLevel && (
-        <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out]">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 dark:bg-emerald-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#36b37e] to-[#57d9a3] flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
-              <Activity size={24} />
-            </div>
-            <div>
-              <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight text-lg">Oil Level</h3>
-              <p className="text-sm text-[#5e6c84] dark:text-[#94a3b8]">Live reading from ADC</p>
-            </div>
-          </div>
-          <div className="flex-1 flex items-center justify-center">
-            <div className="flex items-baseline gap-2">
-              <span className={`text-4xl font-bold font-mono tracking-tighter ${isOilLevelSafe ? 'text-emerald-500' : 'text-red-500'}`}>
-                {isOilLevelSafe ? 'Active' : 'Non Active'}
-              </span>
-            </div>
-          </div>
-        </div>
-        )}
-        {/* Temperature Card */}
-        {filters.temperature && (
-          <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out]">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 dark:bg-orange-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#ff5630] to-[#ff8b00] flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
-                <Thermometer size={24} />
-              </div>
-              <div>
-                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight text-lg">Oil Temperature</h3>
-                <p className="text-sm text-[#5e6c84] dark:text-[#94a3b8]">Live reading from ADC</p>
-              </div>
-            </div>
-            <div className="flex-1 flex items-center justify-center">
-              <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tighter">
-                  {data.oil_temperature.toFixed(2)}
-                </span>
-                <span className="text-xl font-semibold text-[#8993a4] dark:text-[#64748b]">°C</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Pressure Card */}
-        {filters.pressure && (
-          <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out_0.1s]">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 dark:bg-indigo-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#6554c0] to-[#8777d9] flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-                <Gauge size={24} />
-              </div>
-              <div>
-                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight text-lg">Oil Pressure</h3>
-                <p className="text-sm text-[#5e6c84] dark:text-[#94a3b8]">Live reading from ADC</p>
-              </div>
-            </div>
-            <div className="flex-1 flex items-center justify-center">
-              <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tighter">
-                  {data.oil_pressure.toFixed(3)}
-                </span>
-                <span className="text-xl font-semibold text-[#8993a4] dark:text-[#64748b]">Bar</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* TREND CHARTS */}
-      {error ? (
-        <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-xl border border-red-200 dark:border-red-800/30 mt-4">
-          {error}
-        </div>
-      ) : (
-        <>
-          {(filters.temperature || filters.pressure) && (
+      {(filters.temperature || filters.pressure) && (
             <div className="flex flex-col gap-4 mt-8 mb-4">
               <h3 className="text-xl font-bold text-[#172b4d] dark:text-white font-heading">Historical Trends</h3>
               
@@ -417,16 +389,108 @@ const Temperature = () => {
               </div>
             </div>
           )}
-          <div className={`grid ${chartGridColsClass} gap-6 transition-all duration-500 ease-in-out`}>
-            
-            {/* Temperature Chart */}
+      <div ref={containerRef}>
+        <ResponsiveGridLayout
+          className="layout -mx-2 mt-4"
+          width={width}
+          layouts={layouts}
+          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+          cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+          rowHeight={180}
+          compactType="horizontal"
+          preventCollision={false}
+          onLayoutChange={handleLayoutChange}
+          draggableHandle=".drag-handle"
+          margin={[16, 16]}
+        >
+        {/* Oil Level Card (Always visible) */}
+        {filters.oilLevel && (
+          <div key="oilLevelCard" className="flex">
+        <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out]">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 dark:bg-emerald-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#36b37e] to-[#57d9a3] flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+              <Activity size={24} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight text-lg flex-1">Oil Level</h3>
+                <GripHorizontal size={20} className="text-gray-400 drag-handle cursor-move hover:opacity-80 transition-opacity" />
+              <p className="text-sm text-[#5e6c84] dark:text-[#94a3b8]">Live reading from ADC</p>
+            </div>
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="flex items-baseline gap-2">
+              <span className={`text-4xl font-bold font-mono tracking-tighter ${isOilLevelSafe ? 'text-emerald-500' : 'text-red-500'}`}>
+                {isOilLevelSafe ? 'Active' : 'Non Active'}
+              </span>
+            </div>
+          </div>
+        </div>
+        </div>
+        )}
+        {/* Temperature Card */}
+        {filters.temperature && (
+          <div key="temperatureCard" className="flex">
+          <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out]">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 dark:bg-orange-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#ff5630] to-[#ff8b00] flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
+                <Thermometer size={24} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight text-lg flex-1">Oil Temperature</h3>
+                <GripHorizontal size={20} className="text-gray-400 drag-handle cursor-move hover:opacity-80 transition-opacity" />
+                <p className="text-sm text-[#5e6c84] dark:text-[#94a3b8]">Live reading from ADC</p>
+              </div>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="flex items-baseline gap-2">
+                <span className="text-5xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tighter">
+                  {data.oil_temperature.toFixed(2)}
+                </span>
+                <span className="text-xl font-semibold text-[#8993a4] dark:text-[#64748b]">°C</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        )}
+
+        {/* Pressure Card */}
+        {filters.pressure && (
+          <div key="pressureCard" className="flex">
+          <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out_0.1s]">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 dark:bg-indigo-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#6554c0] to-[#8777d9] flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                <Gauge size={24} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight text-lg flex-1">Oil Pressure</h3>
+                <GripHorizontal size={20} className="text-gray-400 drag-handle cursor-move hover:opacity-80 transition-opacity" />
+                <p className="text-sm text-[#5e6c84] dark:text-[#94a3b8]">Live reading from ADC</p>
+              </div>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="flex items-baseline gap-2">
+                <span className="text-5xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tighter">
+                  {data.oil_pressure.toFixed(3)}
+                </span>
+                <span className="text-xl font-semibold text-[#8993a4] dark:text-[#64748b]">Bar</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        )}
+      {/* TREND CHARTS */}{/* Temperature Chart */}
             {filters.temperature && (
+              <div key="temperatureChart" className="flex">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-[400px] animate-[slideUpFade_0.4s_ease-out]">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#ff5630] to-[#ff8b00]">
                     <Activity size={20} />
                   </div>
-                  <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading">Temperature Trend</h3>
+                  <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Temperature Trend</h3>
+                  <GripHorizontal size={20} className="text-gray-400 drag-handle cursor-move hover:opacity-80 transition-opacity" />
                 </div>
                 <div className="flex-1 w-full h-full min-h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -441,17 +505,20 @@ const Temperature = () => {
                   </ResponsiveContainer>
                 </div>
               </div>
+            </div>
             )}
 
             {/* Pressure Chart */}
             {filters.pressure && (
+              <div key="pressureChart" className="flex">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-[400px] animate-[slideUpFade_0.4s_ease-out_0.1s]">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#6554c0] to-[#8777d9]">
                       <Activity size={20} />
                     </div>
-                    <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading">Pressure Trend</h3>
+                    <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Pressure Trend</h3>
+                  <GripHorizontal size={20} className="text-gray-400 drag-handle cursor-move hover:opacity-80 transition-opacity" />
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-bold ${isPressSafe ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -477,11 +544,10 @@ const Temperature = () => {
                   </ResponsiveContainer>
                 </div>
               </div>
+            </div>
             )}
-
-          </div>
-        </>
-      )}
+          </ResponsiveGridLayout>
+      </div>
     </div>
   );
 };

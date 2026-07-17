@@ -6,11 +6,50 @@ import {
 import { Filter, ChevronDown, RefreshCw, Settings, Activity, Wifi, WifiOff } from "lucide-react";
 import { useTrendData } from "../contexts/TrendDataContext";
 import { useApi } from '../contexts/ApiContext';
+import { ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout';
+import { GripHorizontal } from 'lucide-react';
+
+
+const DEFAULT_LAYOUTS = {
+  lg: [
+    { i: 'transformerDataCard', x: 0, y: 0, w: 12, h: 2, minW: 6, minH: 1 },
+    { i: 'efficiencyChart', x: 0, y: 2, w: 12, h: 3, minW: 6, minH: 2 }
+  ],
+  md: [
+    { i: 'transformerDataCard', x: 0, y: 0, w: 10, h: 2, minW: 6, minH: 1 },
+    { i: 'efficiencyChart', x: 0, y: 2, w: 10, h: 3, minW: 6, minH: 2 }
+  ],
+  sm: [
+    { i: 'transformerDataCard', x: 0, y: 0, w: 6, h: 2, minW: 3, minH: 1 },
+    { i: 'efficiencyChart', x: 0, y: 2, w: 6, h: 3, minW: 4, minH: 2 }
+  ]
+};
 
 const TransformerData = () => {
   // Shared context
   const { liveData, isLive } = useTrendData();
   const { apiUrl } = useApi();
+
+  // Layout State for Drag and Drop
+  const { width, containerRef } = useContainerWidth();
+  const [layouts, setLayouts] = useState(() => {
+    const savedLayouts = localStorage.getItem('dashboardLayouts_trafo_v1');
+    return savedLayouts ? JSON.parse(savedLayouts) : DEFAULT_LAYOUTS;
+  });
+
+  const handleLayoutChange = (currentLayout, allLayouts) => {
+    const stringifiedLayouts = JSON.stringify(allLayouts);
+    const savedLayouts = localStorage.getItem('dashboardLayouts_trafo_v1');
+    if (stringifiedLayouts !== savedLayouts) {
+      setLayouts(allLayouts);
+      localStorage.setItem('dashboardLayouts_trafo_v1', stringifiedLayouts);
+    }
+  };
+
+  const resetLayout = () => {
+    setLayouts(DEFAULT_LAYOUTS);
+    localStorage.removeItem('dashboardLayouts_trafo_v1');
+  };
 
   // Unified Filter State for both Monitoring and Charts
   const [filters, setFilters] = useState({
@@ -250,59 +289,7 @@ const TransformerData = () => {
         )}
       </div>
 
-      <div className={`grid ${gridColsClass} gap-6 transition-all duration-500 ease-in-out`}>
-        {/* Transformer Data Card */}
-        {filters.transformerData && (
-          <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out]">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-teal-500/5 dark:bg-teal-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#20c997] to-[#48c7a1] flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
-                <Settings size={20} />
-              </div>
-              <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight">Transformer Specs</h3>
-            </div>
-            <div className="space-y-3 flex-1 flex flex-col justify-center">
-              <div className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
-                <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Rated Power</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">100</span>
-                  <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">kVA</span>
-                </div>
-              </div>
-              <div className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
-                <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Rated Current (LV)</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">144</span>
-                  <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">A</span>
-                </div>
-              </div>
-              <div className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
-                <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">No Load Loss</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">150</span>
-                  <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">W</span>
-                </div>
-              </div>
-              <div className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
-                <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Full Load Loss</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">1200</span>
-                  <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">W</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* TREND CHARTS */}
-      {error ? (
-        <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-xl border border-red-200 dark:border-red-800/30 mt-4">
-          {error}
-        </div>
-      ) : (
-        <>
-          {filters.efficiency && (
+      {filters.efficiency && (
             <div className="flex flex-col gap-4 mt-8 mb-4">
               <h3 className="text-xl font-bold text-[#172b4d] dark:text-white font-heading">Historical Trends</h3>
               
@@ -349,16 +336,75 @@ const TransformerData = () => {
               </div>
             </div>
           )}
-          
-          <div className="grid grid-cols-1 gap-6 transition-all duration-500 ease-in-out">
-            {/* Efficiency Chart */}
+      <div ref={containerRef}>
+        <ResponsiveGridLayout
+          className="layout -mx-2 mt-4"
+          width={width}
+          layouts={layouts}
+          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+          cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+          rowHeight={160}
+          compactType="horizontal"
+          preventCollision={false}
+          onLayoutChange={handleLayoutChange}
+          draggableHandle=".drag-handle"
+          margin={[16, 16]}
+        >
+        {/* Transformer Data Card */}
+        {filters.transformerData && (
+          <div key="transformerDataCard" className="flex">
+          <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out]">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-teal-500/5 dark:bg-teal-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#20c997] to-[#48c7a1] flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
+                <Settings size={20} />
+              </div>
+              <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Transformer Specs</h3>
+                <GripHorizontal size={20} className="text-gray-400 drag-handle cursor-move hover:opacity-80 transition-opacity" />
+            </div>
+            <div className="space-y-3 flex-1 flex flex-col justify-center">
+              <div className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
+                <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Rated Power</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">100</span>
+                  <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">kVA</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
+                <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Rated Current (LV)</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">144</span>
+                  <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">A</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
+                <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">No Load Loss</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">150</span>
+                  <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">W</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
+                <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Full Load Loss</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">1200</span>
+                  <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">W</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+        )}
+      {/* TREND CHARTS */}{/* Efficiency Chart */}
             {filters.efficiency && (
+              <div key="efficiencyChart" className="flex">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-[400px] animate-[slideUpFade_0.4s_ease-out_0.4s]">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#e83e8c] to-[#f06292]">
                     <Activity size={20} />
                   </div>
-                  <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading">Transformer Efficiency (%)</h3>
+                  <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Transformer Efficiency (%)</h3>
+                  <GripHorizontal size={20} className="text-gray-400 drag-handle cursor-move hover:opacity-80 transition-opacity" />
                 </div>
                 <div className="flex-1 w-full h-full min-h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -373,11 +419,10 @@ const TransformerData = () => {
                   </ResponsiveContainer>
                 </div>
               </div>
+            </div>
             )}
-
-          </div>
-        </>
-      )}
+        </ResponsiveGridLayout>
+      </div>
     </div>
   );
 };
