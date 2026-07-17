@@ -24,33 +24,43 @@ model Transformer {
   power_capacity String  @default("1000kVA")
   type           String  @default("DyN")
   company_name   String?
+  company_code   String?
   username       String?
+
+  electricalReadings ElectricalReading[]
+  oilReadings        OilReading[]
 }
 
 model ElectricalReading {
-  id        Int      @id @default(autoincrement())
-  timestamp DateTime
-  phase_a   Float?
-  phase_b   Float?
-  phase_c   Float?
-  line_ab   Float?
-  line_bc   Float?
-  line_ca   Float?
-  current_a Float?
-  current_b Float?
-  current_c Float?
-  frequency Float?
-  power     Float?
-  energy    Float?
+  id            Int      @id @default(autoincrement())
+  transformerId Int?
+  timestamp     DateTime
+  phase_a       Float?
+  phase_b       Float?
+  phase_c       Float?
+  line_ab       Float?
+  line_bc       Float?
+  line_ca       Float?
+  current_a     Float?
+  current_b     Float?
+  current_c     Float?
+  frequency     Float?
+  power         Float?
+  energy        Float?
+
+  transformer   Transformer? @relation(fields: [transformerId], references: [id], onDelete: Cascade)
 }
 
 model OilReading {
-  id           Int      @id @default(autoincrement())
-  timestamp    DateTime
-  temperature  Float?
-  oil_level    Float?
-  moisture     Float?
-  acidity      Float?
+  id            Int      @id @default(autoincrement())
+  transformerId Int?
+  timestamp     DateTime
+  temperature   Float?
+  oil_level     Float?
+  moisture      Float?
+  acidity       Float?
+
+  transformer   Transformer? @relation(fields: [transformerId], references: [id], onDelete: Cascade)
 }
 
 model ProvisionToken {
