@@ -28,7 +28,7 @@ router.post("/generate-token", authenticateToken, async (req, res) => {
     tmu_username,
     tmu_password,
     tmu_phone,
-    transformers_list,
+    transformer_name,
     tmu_version,
   } = req.body;
 
@@ -39,11 +39,11 @@ router.post("/generate-token", authenticateToken, async (req, res) => {
     !tmu_username ||
     !tmu_password ||
     !tmu_phone ||
-    !transformers_list
+    !transformer_name
   ) {
     return res.status(400).json({
       error:
-        "Semua field (company_code, company_name, db_name, username, password, phone, transformers) wajib diisi",
+        "Semua field (company_code, company_name, db_name, username, password, phone, transformer_name) wajib diisi",
     });
   }
 
@@ -73,7 +73,7 @@ router.post("/generate-token", authenticateToken, async (req, res) => {
         tmu_username,
         tmu_password,
         tmu_phone,
-        transformers_list,
+        transformer_name,
         tmu_version,
         expires_at: expiresAt,
         created_by: req.user.username,
@@ -122,7 +122,7 @@ router.put("/tokens/:id", authenticateToken, async (req, res) => {
     tmu_username,
     tmu_password,
     tmu_phone,
-    transformers_list,
+    transformer_name,
     tmu_version,
   } = req.body;
 
@@ -145,7 +145,7 @@ router.put("/tokens/:id", authenticateToken, async (req, res) => {
         tmu_username,
         tmu_password,
         tmu_phone,
-        transformers_list,
+        transformer_name,
         tmu_version,
       },
     });
@@ -340,24 +340,18 @@ router.post("/activate", async (req, res) => {
       },
     });
 
-    if (tokenRow.transformers_list) {
-      const trafos = tokenRow.transformers_list
-        .split(",")
-        .map((t) => t.trim())
-        .filter((t) => t);
-      for (const tName of trafos) {
-        const exists = await prisma.transformer.findFirst({
-          where: { name: tName, username: clientUsername },
+    if (tokenRow.transformer_name) {
+      const exists = await prisma.transformer.findFirst({
+        where: { name: tokenRow.transformer_name, company_name: tokenRow.company_name },
+      });
+      if (!exists) {
+        await prisma.transformer.create({
+          data: {
+            name: tokenRow.transformer_name,
+            company_name: tokenRow.company_name,
+            username: clientUsername,
+          },
         });
-        if (!exists) {
-          await prisma.transformer.create({
-            data: {
-              name: tName,
-              company_name: tokenRow.company_name,
-              username: clientUsername,
-            },
-          });
-        }
       }
     }
 

@@ -11,9 +11,9 @@ router.get('/', authenticateToken, async (req, res) => {
         orderBy: { id: 'desc' }
       });
     } else {
-      // Filter by user's username
+      // Filter by user's company_name
       transformers = await prisma.transformer.findMany({
-        where: { username: req.user.username },
+        where: { company_name: req.user.company_name },
         orderBy: { id: 'desc' }
       });
     }
@@ -24,31 +24,6 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Unauthorized. Admin role required.' });
-  }
-  
-  const { name, power_capacity, type, status, company_name, username } = req.body;
-  if (!name) return res.status(400).json({ error: 'Name is required' });
-
-  try {
-    const newTrafo = await prisma.transformer.create({
-      data: {
-        name,
-        power_capacity: power_capacity || '1000kVA',
-        type: type || 'DyN',
-        status: status || 'Offline',
-        company_name: company_name || null,
-        username: username || null
-      }
-    });
-    res.json(newTrafo);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
 
 router.put('/:id', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') {
@@ -74,22 +49,6 @@ router.put('/:id', authenticateToken, async (req, res) => {
       }
     });
     res.json(updatedTrafo);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-router.delete('/:id', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Unauthorized. Admin role required.' });
-  }
-
-  const { id } = req.params;
-
-  try {
-    await prisma.transformer.delete({ where: { id: parseInt(id) } });
-    res.json({ message: 'Transformer deleted successfully' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });

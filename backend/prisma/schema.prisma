@@ -73,7 +73,7 @@ model ProvisionToken {
   tmu_username      String?
   tmu_password      String?
   tmu_phone         String?
-  transformers_list String?
+  transformer_name  String?
   created_at        DateTime  @default(now())
   expires_at        DateTime
   is_used           Int       @default(0) // 0 or 1

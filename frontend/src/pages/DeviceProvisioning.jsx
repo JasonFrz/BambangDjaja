@@ -10,7 +10,7 @@ const DeviceProvisioning = () => {
   const [tmuUsername, setTmuUsername] = useState('');
   const [tmuPassword, setTmuPassword] = useState('');
   const [tmuPhone, setTmuPhone] = useState('');
-  const [transformers, setTransformers] = useState(['']);
+  const [transformerName, setTransformerName] = useState('');
   const [tmuVersion, setTmuVersion] = useState(2);
   
   const [generatedToken, setGeneratedToken] = useState(null);
@@ -107,7 +107,7 @@ const DeviceProvisioning = () => {
     setTmuUsername('');
     setTmuPassword('');
     setTmuPhone('');
-    setTransformers(['']);
+    setTransformerName('');
     setTmuVersion(2);
     setEditingTokenId(null);
   }
@@ -126,7 +126,7 @@ const DeviceProvisioning = () => {
       tmu_username: tmuUsername,
       tmu_password: tmuPassword,
       tmu_phone: tmuPhone,
-      transformers_list: transformers.filter(t => t.trim() !== '').join(', '),
+      transformer_name: transformerName,
       tmu_version: Number(tmuVersion) 
     };
 
@@ -208,7 +208,7 @@ const DeviceProvisioning = () => {
     setTmuUsername(t.tmu_username || '');
     setTmuPassword(t.tmu_password || '');
     setTmuPhone(t.tmu_phone || '');
-    setTransformers(t.transformers_list ? t.transformers_list.split(',').map(s => s.trim()) : ['']);
+    setTransformerName(t.transformer_name || '');
     setTmuVersion(t.tmu_version || 2);
     
     setError('');
@@ -224,24 +224,6 @@ const DeviceProvisioning = () => {
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
-  
-  const handleAddTransformer = () => {
-    setTransformers([...transformers, '']);
-  };
-  
-  const handleTransformerChange = (index, value) => {
-    const newTransformers = [...transformers];
-    newTransformers[index] = value;
-    setTransformers(newTransformers);
-  };
-  
-  const handleRemoveTransformer = (index) => {
-    if (transformers.length > 1) {
-      const newTransformers = transformers.filter((_, i) => i !== index);
-      setTransformers(newTransformers);
-    }
-  };
-
   if (currentRole !== 'admin') return null;
 
   return (
@@ -386,39 +368,18 @@ const DeviceProvisioning = () => {
 
               <div className="space-y-3 md:col-span-2">
                 <label className="text-sm font-semibold text-[#172b4d] dark:text-white flex justify-between items-center">
-                  <span>List Trafo</span>
-                  <button 
-                    type="button" 
-                    onClick={handleAddTransformer}
-                    className="text-xs text-[#0052cc] dark:text-[#4c9aff] hover:underline font-medium flex items-center gap-1"
-                  >
-                    + Tambah Trafo
-                  </button>
+                  <span>Nama Trafo</span>
                 </label>
-                {transformers.map((trafo, index) => (
-                  <div key={index} className="flex gap-2 items-center animate-fade-in">
-                    <div className="bg-[#f4f5f7] dark:bg-white/5 border border-[#dfe1e6] dark:border-white/10 rounded-xl px-3 py-3 text-xs font-bold text-[#5e6c84] dark:text-[#94a3b8] w-10 text-center shrink-0">
-                      {index + 1}
-                    </div>
-                    <input 
-                      type="text" 
-                      value={trafo}
-                      onChange={(e) => handleTransformerChange(index, e.target.value)}
-                      className="w-full bg-[#f4f5f7] dark:bg-[#070a13] border border-[#dfe1e6] dark:border-white/10 rounded-xl py-3 px-4 text-[#172b4d] dark:text-white text-sm outline-none focus:border-[#4c9aff] transition-all"
-                      placeholder={`Nama Trafo ke-${index + 1}`}
-                      required
-                    />
-                    {transformers.length > 1 && (
-                      <button 
-                        type="button" 
-                        onClick={() => handleRemoveTransformer(index)}
-                        className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors shrink-0"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                <div className="flex gap-2 items-center animate-fade-in">
+                  <input 
+                    type="text" 
+                    value={transformerName}
+                    onChange={(e) => setTransformerName(e.target.value)}
+                    className="w-full bg-[#f4f5f7] dark:bg-[#070a13] border border-[#dfe1e6] dark:border-white/10 rounded-xl py-3 px-4 text-[#172b4d] dark:text-white text-sm outline-none focus:border-[#4c9aff] transition-all"
+                    placeholder="Masukkan Nama Trafo (contoh: Trafo 1)"
+                    required
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
