@@ -74,9 +74,15 @@ const ManageTransformers = () => {
     setSuccess('');
     setIsLoading(true);
 
+    if (!editingTrafoId) {
+       setError("Cannot create transformer manually.");
+       setIsLoading(false);
+       return;
+    }
+
     try {
-      const url = editingTrafoId ? `${apiUrl}/api/transformers/${editingTrafoId}` : `${apiUrl}/api/transformers`;
-      const method = editingTrafoId ? 'PUT' : 'POST';
+      const url = `${apiUrl}/api/transformers/${editingTrafoId}`;
+      const method = 'PUT';
       const body = JSON.stringify({ 
         name, 
         power_capacity: `${powerCapacity}kVA`, 
@@ -98,11 +104,11 @@ const ManageTransformers = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess(editingTrafoId ? `Transformer updated successfully!` : `Transformer created successfully!`);
+        setSuccess(`Transformer updated successfully!`);
         resetForm();
         fetchTransformers();
       } else {
-        setError(data.error || `Failed to ${editingTrafoId ? 'update' : 'create'} transformer`);
+        setError(data.error || `Failed to update transformer`);
       }
     } catch (err) {
       setError('Cannot connect to server');
@@ -123,36 +129,6 @@ const ManageTransformers = () => {
     setShowForm(true);
     setError('');
     setSuccess('');
-  };
-
-  const handleDelete = async (id, trafoName) => {
-    if (!window.confirm(`Are you sure you want to delete transformer '${trafoName}'?`)) return;
-    
-    setError('');
-    setSuccess('');
-    setIsLoading(true);
-
-    try {
-      const response = await fetch(`${apiUrl}/api/transformers/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        setSuccess(`Transformer deleted successfully!`);
-        if (editingTrafoId === id) {
-          resetForm();
-        }
-        fetchTransformers();
-      } else {
-        const data = await response.json();
-        setError(data.error || 'Failed to delete transformer');
-      }
-    } catch (err) {
-      setError('Cannot connect to server');
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const resetForm = () => {
@@ -179,18 +155,10 @@ const ManageTransformers = () => {
             Manage Transformers
           </h1>
           <p className="text-[#5e6c84] dark:text-[#94a3b8] text-sm mt-1">
-            Create, edit, and assign transformers to companies
+            Edit and manage transformers
           </p>
         </div>
-        {!showForm && (
-          <button 
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#0052cc] hover:bg-[#0047b3] text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
-          >
-            <Plus size={16} />
-            Add Transformer
-          </button>
-        )}
+        
       </div>
 
       {error && (
@@ -301,7 +269,7 @@ const ManageTransformers = () => {
                   disabled={isLoading}
                   className={`px-6 py-2.5 rounded-xl text-white font-semibold text-sm transition-colors disabled:opacity-70 ${editingTrafoId ? 'bg-orange-600 hover:bg-orange-700' : 'bg-[#0052cc] hover:bg-[#0047b3]'}`}
                 >
-                  {isLoading ? (editingTrafoId ? 'Updating...' : 'Saving...') : (editingTrafoId ? 'Update Transformer' : 'Add Transformer')}
+                  {isLoading ? 'Updating...' : 'Update Transformer'}
                 </button>
               </div>
             </form>
@@ -376,13 +344,7 @@ const ManageTransformers = () => {
                         >
                           <Edit size={16} />
                         </button>
-                        <button 
-                          onClick={() => handleDelete(t.id, t.name)}
-                          className="p-2 inline-flex items-center justify-center rounded-lg bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 transition-colors"
-                          title="Delete Transformer"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        
                       </div>
                     </td>
                   </tr>
