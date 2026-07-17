@@ -3,10 +3,15 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const prisma = require("../prismaClient");
 const CryptoJS = require("crypto-js");
-const { authenticateToken } = require("../middleware/auth");
+const { authenticateToken, authenticateDevice } = require("../middleware/auth");
+const { generateApiKey, hashApiKey } = require("../utils/apiKey");
 
-router.get("/verify", async (req, res) => {
-  return res.status(200).json("placeholder");
+const CLOUD_URL = process.env.CLOUD_URL;
+
+router.get("/verify", authenticateDevice, async (req, res) => {
+  return res.status(200).json({
+    serial_number: req.device.serial_number,
+  });
 });
 
 router.post("/generate-token", authenticateToken, async (req, res) => {
@@ -356,14 +361,12 @@ router.post("/activate", async (req, res) => {
       }
     }
 
+    const apiKey = generateApiKey();
+    hashApiKey(apiKey);
+
     return res.json({
       status: 200,
       env_config: {
-        DATABASE_URL:
-          "postgresql://neondb_owner:npg_MYeZfpyDU5H4@ep-wandering-dust-at5yztr1.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require",
-        COMPANY_CODE: tokenRow.company_code,
-        TMU_USERNAME: clientUsername,
-        TMU_PASSWORD: clientPassword,
         MODBUS_PORT: "/dev/ttyACM0",
         MODBUS_BAUDRATE: 9600,
         MODBUS_PARITY: "N",
@@ -371,6 +374,8 @@ router.post("/activate", async (req, res) => {
         MODBUS_BYTESIZE: 8,
         ADC_ADDRESS: "0x48",
         ADC_BUSNUM: 1,
+        CLOUD_URL: CLOUD_URL,
+        API_KEY: hashApiKey(apiKey),
       },
       tmu_version: tokenRow.tmu_version,
       message: "Provisioning successful",
