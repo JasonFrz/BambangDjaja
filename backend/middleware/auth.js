@@ -34,9 +34,10 @@ const authenticateDevice = async (req, res, next) => {
 
   try {
     const device = await prisma.registeredDevice.findUnique({
-      where: { api_key_hash: hashApiKey(apiKey) },
+      where: { api_key: hashApiKey(apiKey) },
     });
     if (!device) return res.status(401).json({ error: "API key is invalid" });
+
     req.device = device;
     next();
   } catch (dbErr) {

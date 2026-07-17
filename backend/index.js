@@ -35,6 +35,7 @@ const transformerRoutes = require("./routes/transformers");
 const provisioningRoutes = require("./routes/provisioning");
 const trendRoutes = require("./routes/trends");
 const whatsappRoutes = require("./routes/whatsapp");
+const syncRoutes = require("./routes/sync");
 
 app.use("/api", authRoutes);
 app.use("/api/users", userRoutes);
@@ -42,6 +43,7 @@ app.use("/api/transformers", transformerRoutes);
 app.use("/api/provision", provisioningRoutes);
 app.use("/api/trends", trendRoutes);
 app.use("/api/whatsapp", whatsappRoutes);
+app.use("/api/sync", syncRoutes);
 
 server.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);

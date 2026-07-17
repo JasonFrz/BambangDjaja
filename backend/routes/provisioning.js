@@ -294,20 +294,7 @@ router.post("/activate", async (req, res) => {
       },
     });
 
-    await prisma.registeredDevice.upsert({
-      where: { serial_number },
-      update: {
-        provision_token,
-        provisioned_at: new Date(),
-        status: "provisioned",
-      },
-      create: {
-        serial_number,
-        company_code: tokenRow.company_code,
-        tmu_version: tokenRow.tmu_version,
-        provision_token,
-      },
-    });
+    const apiKey = generateApiKey();
 
     const clientUsername = tokenRow.tmu_username;
     const clientPassword = tokenRow.tmu_password;
@@ -340,12 +327,17 @@ router.post("/activate", async (req, res) => {
       },
     });
 
+    let trafoRecord = null;
+
     if (tokenRow.transformer_name) {
-      const exists = await prisma.transformer.findFirst({
-        where: { name: tokenRow.transformer_name, company_name: tokenRow.company_name },
+      trafoRecord = await prisma.transformer.findFirst({
+        where: {
+          name: tokenRow.transformer_name,
+          company_name: tokenRow.company_name,
+        },
       });
-      if (!exists) {
-        await prisma.transformer.create({
+      if (!trafoRecord) {
+        trafoRecord = await prisma.transformer.create({
           data: {
             name: tokenRow.transformer_name,
             company_name: tokenRow.company_name,
@@ -355,8 +347,24 @@ router.post("/activate", async (req, res) => {
       }
     }
 
-    const apiKey = generateApiKey();
-    hashApiKey(apiKey);
+    await prisma.registeredDevice.upsert({
+      where: { serial_number },
+      update: {
+        provision_token,
+        provisioned_at: new Date(),
+        status: "provisioned",
+        ...(trafoRecord ? { transformer_id: trafoRecord.id } : {}),
+      },
+      create: {
+        serial_number,
+        company_code: tokenRow.company_code,
+        tmu_version: tokenRow.tmu_version,
+        provision_token,
+        api_key: hashApiKey(apiKey),
+        status: "provisioned",
+        ...(trafoRecord ? { transformer_id: trafoRecord.id } : {}),
+      },
+    });
 
     return res.json({
       status: 200,
@@ -369,7 +377,7 @@ router.post("/activate", async (req, res) => {
         ADC_ADDRESS: "0x48",
         ADC_BUSNUM: 1,
         CLOUD_URL: CLOUD_URL,
-        API_KEY: hashApiKey(apiKey),
+        API_KEY: apiKey,
       },
       tmu_version: tokenRow.tmu_version,
       message: "Provisioning successful",

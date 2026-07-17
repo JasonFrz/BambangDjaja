@@ -26,6 +26,7 @@ model Transformer {
   company_name   String?
   company_code   String?
   username       String?
+  device RegisteredDevice?
 
   electricalReadings ElectricalReading[]
   oilReadings        OilReading[]
@@ -33,7 +34,7 @@ model Transformer {
 
 model ElectricalReading {
   id            Int      @id @default(autoincrement())
-  transformerId Int?
+  transformer_id Int?
   timestamp     DateTime
   phase_a       Float?
   phase_b       Float?
@@ -48,19 +49,18 @@ model ElectricalReading {
   power         Float?
   energy        Float?
 
-  transformer   Transformer? @relation(fields: [transformerId], references: [id], onDelete: Cascade)
+  transformer   Transformer? @relation(fields: [transformer_id], references: [id], onDelete: Cascade)
 }
 
 model OilReading {
   id            Int      @id @default(autoincrement())
-  transformerId Int?
+  transformer_id Int?
   timestamp     DateTime
-  temperature   Float?
+  oil_pressure  Float?
+  oil_temperature   Float?
   oil_level     Float?
-  moisture      Float?
-  acidity       Float?
 
-  transformer   Transformer? @relation(fields: [transformerId], references: [id], onDelete: Cascade)
+  transformer   Transformer? @relation(fields: [transformer_id], references: [id], onDelete: Cascade)
 }
 
 model ProvisionToken {
@@ -94,8 +94,10 @@ model RegisteredDevice {
   provisioned_at  DateTime  @default(now())
   last_online     DateTime?
   status          String    @default("provisioned") // provisioned, online, offline
-  ip_address      String?
-  
+  api_key         String @unique
+  transformer_id Int? @unique
+  transformer   Transformer? @relation(fields: [transformer_id], references: [id])
+
   @@index([serial_number])
   @@index([company_code])
 }
