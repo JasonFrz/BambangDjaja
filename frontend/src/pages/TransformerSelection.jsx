@@ -44,6 +44,9 @@ const TransformerSelection = () => {
     setSelectedTrafoName(trafo.name);
     setIsTransitioning(true);
     
+    // Simpan ID trafo ke session storage untuk digunakan oleh WebSocket
+    sessionStorage.setItem('selectedTrafoId', trafo.id);
+    
     // Simulate loading transition delay before actually navigating
     setTimeout(() => {
       navigate('/dashboard');

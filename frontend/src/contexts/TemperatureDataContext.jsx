@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import { io } from "socket.io-client";
 import { useApi } from './ApiContext';
 
@@ -22,6 +23,43 @@ export const TemperatureDataProvider = ({ children }) => {
 
   const lastDataRef = useRef(null);
 
+  // Fetch initial history (last 50)
+  useEffect(() => {
+    const trafoId = sessionStorage.getItem('selectedTrafoId');
+    const token = sessionStorage.getItem('token');
+    if (!trafoId || !token) return;
+
+    axios.get(`${apiUrl}/api/transformers/${trafoId}/history`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(res => {
+      const historical = res.data.oil.map(reading => {
+        const date = new Date(reading.timestamp);
+        return {
+          time: date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' }),
+          timestamp: date.toISOString(),
+          oil_temperature: reading.oil_temperature || 0,
+          oil_pressure: reading.oil_pressure || 0,
+          oil_level: reading.oil_level ? 1 : 0
+        };
+      });
+      if (historical.length > 0) {
+        lastDataRef.current = historical[historical.length - 1];
+        setLiveData(historical);
+        
+        // Update current `data` state with latest
+        const latest = historical[historical.length - 1];
+        setData(prev => ({
+          ...prev,
+          oil_temperature: latest.oil_temperature,
+          oil_pressure: latest.oil_pressure,
+          oil_level: latest.oil_level === 1
+        }));
+      }
+    })
+    .catch(err => console.error("Failed to load historical temperature data", err));
+  }, [apiUrl]);
+
   useEffect(() => {
     const socket = io(apiUrl, {
       transports: ["websocket"],
@@ -31,6 +69,10 @@ export const TemperatureDataProvider = ({ children }) => {
 
     socket.on("connect", () => {
       setIsConnected(true);
+      const trafoId = sessionStorage.getItem('selectedTrafoId');
+      if (trafoId) {
+        socket.emit("subscribe_transformer", trafoId);
+      }
     });
 
     socket.on("oil_sensor", (msg) => {

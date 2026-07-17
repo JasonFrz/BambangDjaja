@@ -43,10 +43,43 @@ router.post("/", authenticateDevice, async (req, res) => {
 
     if (electricalData.length) {
       await prisma.electricalReading.createMany({ data: electricalData });
+      
+      // Emit websocket for realtime monitoring
+      const latestE = electricalData[electricalData.length - 1];
+      const io = req.app.get("io");
+      if (io) {
+        io.to("trafo_" + transformerId).emit("meter", {
+          phaseA: latestE.phase_a,
+          phaseB: latestE.phase_b,
+          phaseC: latestE.phase_c,
+          lineAB: latestE.line_ab,
+          lineBC: latestE.line_bc,
+          lineCA: latestE.line_ca,
+          currentA: latestE.current_a,
+          currentB: latestE.current_b,
+          currentC: latestE.current_c,
+          frequency: latestE.frequency,
+          power: latestE.power,
+          energy: latestE.energy,
+          modbus_connected: true
+        });
+      }
     }
 
     if (oilData.length) {
       await prisma.oilReading.createMany({ data: oilData });
+      
+      // Emit websocket for realtime monitoring
+      const latestO = oilData[oilData.length - 1];
+      const io = req.app.get("io");
+      if (io) {
+        io.to("trafo_" + transformerId).emit("oil_sensor", {
+          oil_temperature: latestO.oil_temperature,
+          oil_pressure: latestO.oil_pressure,
+          timestamp: latestO.timestamp,
+          adc_connected: true
+        });
+      }
     }
 
     await prisma.registeredDevice.update({

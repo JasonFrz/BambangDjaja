@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useApi } from './ApiContext';
 
@@ -12,6 +13,44 @@ export const TrendDataProvider = ({ children }) => {
   const { data: wsData, isConnected } = useWebSocket(apiUrl);
   const isLive = isConnected && (!wsData || wsData.modbus_connected !== false);
   const lastDataRef = useRef(null);
+
+  // Fetch initial history (last 50)
+  useEffect(() => {
+    const trafoId = sessionStorage.getItem('selectedTrafoId');
+    const token = sessionStorage.getItem('token');
+    if (!trafoId || !token) return;
+
+    axios.get(`${apiUrl}/api/transformers/${trafoId}/history`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(res => {
+      const historical = res.data.electrical.map(reading => {
+        const date = new Date(reading.timestamp);
+        return {
+          time: date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' }),
+          timestamp: date.toISOString(),
+          phaseA: reading.phase_a || 0,
+          phaseB: reading.phase_b || 0,
+          phaseC: reading.phase_c || 0,
+          lineAB: reading.line_ab || 0,
+          lineBC: reading.line_bc || 0,
+          lineCA: reading.line_ca || 0,
+          currentA: reading.current_a || 0,
+          currentB: reading.current_b || 0,
+          currentC: reading.current_c || 0,
+          frequency: reading.frequency || 0,
+          power: reading.power || 0,
+          energy: reading.energy || 0,
+          efficiency: 0,
+        };
+      });
+      if (historical.length > 0) {
+        lastDataRef.current = historical[historical.length - 1];
+        setLiveData(historical);
+      }
+    })
+    .catch(err => console.error("Failed to load historical trend data", err));
+  }, [apiUrl]);
 
   useEffect(() => {
     if (!wsData || !wsData.modbus_connected) return;

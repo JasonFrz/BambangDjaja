@@ -16,9 +16,17 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
+app.set("io", io);
 
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
+
+  socket.on("subscribe_transformer", (trafoId) => {
+    if (trafoId) {
+      socket.join("trafo_" + trafoId);
+      console.log(`Client ${socket.id} subscribed to trafo_${trafoId}`);
+    }
+  });
 
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);

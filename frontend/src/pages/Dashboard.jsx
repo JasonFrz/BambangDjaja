@@ -119,8 +119,20 @@ const Dashboard = () => {
   useEffect(() => {
     if (wsData && wsData.vPhase && wsData.vLine) {
       setData(wsData);
+    } else if (liveData && liveData.length > 0) {
+      // Gunakan data historis terakhir jika wsData belum ada
+      const latest = liveData[liveData.length - 1];
+      setData({
+        vPhase: { A: latest.phaseA || 0, B: latest.phaseB || 0, C: latest.phaseC || 0 },
+        vLine: { AB: latest.lineAB || 0, BC: latest.lineBC || 0, CA: latest.lineCA || 0 },
+        current: { A: latest.currentA || 0, B: latest.currentB || 0, C: latest.currentC || 0 },
+        frequency: latest.frequency || 0,
+        power: latest.power || 0,
+        energy: latest.energy || 0,
+        efficiency: latest.efficiency || 0,
+      });
     }
-  }, [wsData]);
+  }, [wsData, liveData]);
 
   // Trends Data State
   const [trendData, setTrendData] = useState([]);

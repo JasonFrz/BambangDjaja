@@ -24,6 +24,32 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+router.get('/:id/history', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Ambil 50 data terakhir, urutkan dari yang terbaru, lalu reverse agar ascending (lama -> baru)
+    const electrical = await prisma.electricalReading.findMany({
+      where: { transformer_id: parseInt(id) },
+      orderBy: { timestamp: 'desc' },
+      take: 50
+    });
+    
+    const oil = await prisma.oilReading.findMany({
+      where: { transformer_id: parseInt(id) },
+      orderBy: { timestamp: 'desc' },
+      take: 50
+    });
+
+    res.json({
+      electrical: electrical.reverse(),
+      oil: oil.reverse()
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error fetching history' });
+  }
+});
 
 router.put('/:id', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') {
