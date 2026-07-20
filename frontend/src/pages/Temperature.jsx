@@ -12,25 +12,25 @@ import { GripHorizontal } from 'lucide-react';
 
 const DEFAULT_LAYOUTS = {
   lg: [
-    { i: 'oilLevelCard', x: 0, y: 0, w: 4, h: 1, minW: 3, minH: 1 },
-    { i: 'temperatureCard', x: 4, y: 0, w: 4, h: 1, minW: 3, minH: 1 },
-    { i: 'pressureCard', x: 8, y: 0, w: 4, h: 1, minW: 3, minH: 1 },
-    { i: 'temperatureChart', x: 0, y: 1, w: 6, h: 3, minW: 4, minH: 2 },
-    { i: 'pressureChart', x: 6, y: 1, w: 6, h: 3, minW: 4, minH: 2 }
+    { i: 'oilLevelCard', x: 0, y: 0, w: 4, h: 1, minW: 1, minH: 1 },
+    { i: 'temperatureCard', x: 4, y: 0, w: 4, h: 1, minW: 1, minH: 1 },
+    { i: 'pressureCard', x: 8, y: 0, w: 4, h: 1, minW: 1, minH: 1 },
+    { i: 'temperatureChart', x: 0, y: 1, w: 6, h: 3, minW: 1, minH: 1 },
+    { i: 'pressureChart', x: 6, y: 1, w: 6, h: 3, minW: 1, minH: 1 }
   ],
   md: [
-    { i: 'oilLevelCard', x: 0, y: 0, w: 10, h: 1, minW: 3, minH: 1 },
-    { i: 'temperatureCard', x: 0, y: 1, w: 5, h: 1, minW: 3, minH: 1 },
-    { i: 'pressureCard', x: 5, y: 1, w: 5, h: 1, minW: 3, minH: 1 },
-    { i: 'temperatureChart', x: 0, y: 2, w: 10, h: 3, minW: 4, minH: 2 },
-    { i: 'pressureChart', x: 0, y: 5, w: 10, h: 3, minW: 4, minH: 2 }
+    { i: 'oilLevelCard', x: 0, y: 0, w: 10, h: 1, minW: 1, minH: 1 },
+    { i: 'temperatureCard', x: 0, y: 1, w: 5, h: 1, minW: 1, minH: 1 },
+    { i: 'pressureCard', x: 5, y: 1, w: 5, h: 1, minW: 1, minH: 1 },
+    { i: 'temperatureChart', x: 0, y: 2, w: 10, h: 3, minW: 1, minH: 1 },
+    { i: 'pressureChart', x: 0, y: 5, w: 10, h: 3, minW: 1, minH: 1 }
   ],
   sm: [
-    { i: 'oilLevelCard', x: 0, y: 0, w: 6, h: 1, minW: 3, minH: 1 },
-    { i: 'temperatureCard', x: 0, y: 1, w: 6, h: 1, minW: 3, minH: 1 },
-    { i: 'pressureCard', x: 0, y: 2, w: 6, h: 1, minW: 3, minH: 1 },
-    { i: 'temperatureChart', x: 0, y: 3, w: 6, h: 3, minW: 4, minH: 2 },
-    { i: 'pressureChart', x: 0, y: 6, w: 6, h: 3, minW: 4, minH: 2 }
+    { i: 'oilLevelCard', x: 0, y: 0, w: 6, h: 1, minW: 1, minH: 1 },
+    { i: 'temperatureCard', x: 0, y: 1, w: 6, h: 1, minW: 1, minH: 1 },
+    { i: 'pressureCard', x: 0, y: 2, w: 6, h: 1, minW: 1, minH: 1 },
+    { i: 'temperatureChart', x: 0, y: 3, w: 6, h: 3, minW: 1, minH: 1 },
+    { i: 'pressureChart', x: 0, y: 6, w: 6, h: 3, minW: 1, minH: 1 }
   ]
 };
 
@@ -287,12 +287,19 @@ const Temperature = () => {
             <button 
               onClick={showAll}
               className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${
-                activeCount === 2 
+                activeCount === 3 
                   ? 'bg-gray-800 text-white dark:bg-white dark:text-black shadow-md scale-100'
                   : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:scale-105'
               }`}
             >
               Show All
+            </button>
+
+            <button 
+              onClick={resetLayout}
+              className="whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:scale-105 flex items-center gap-1"
+            >
+              <RefreshCw size={14} /> Reset Layout
             </button>
 
             <button 
@@ -401,12 +408,12 @@ const Temperature = () => {
           preventCollision={false}
           onLayoutChange={handleLayoutChange}
           draggableHandle=".drag-handle"
-          margin={[16, 16]}
+          margin={[10, 10]}
         >
         {/* Oil Level Card (Always visible) */}
         {filters.oilLevel && (
-          <div key="oilLevelCard" className="flex">
-        <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out]">
+          <div key="oilLevelCard" className="w-full h-full">
+        <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out] h-full w-full">
           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 dark:bg-emerald-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#36b37e] to-[#57d9a3] flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
@@ -430,8 +437,8 @@ const Temperature = () => {
         )}
         {/* Temperature Card */}
         {filters.temperature && (
-          <div key="temperatureCard" className="flex">
-          <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out]">
+          <div key="temperatureCard" className="w-full h-full">
+          <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out] h-full w-full">
             <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 dark:bg-orange-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#ff5630] to-[#ff8b00] flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
@@ -457,8 +464,8 @@ const Temperature = () => {
 
         {/* Pressure Card */}
         {filters.pressure && (
-          <div key="pressureCard" className="flex">
-          <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out_0.1s]">
+          <div key="pressureCard" className="w-full h-full">
+          <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out_0.1s] h-full w-full">
             <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 dark:bg-indigo-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#6554c0] to-[#8777d9] flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
@@ -483,8 +490,8 @@ const Temperature = () => {
         )}
       {/* TREND CHARTS */}{/* Temperature Chart */}
             {filters.temperature && (
-              <div key="temperatureChart" className="flex">
-              <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-[400px] animate-[slideUpFade_0.4s_ease-out]">
+              <div key="temperatureChart" className="w-full h-full">
+              <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out] h-full w-full">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#ff5630] to-[#ff8b00]">
                     <Activity size={20} />
@@ -510,8 +517,8 @@ const Temperature = () => {
 
             {/* Pressure Chart */}
             {filters.pressure && (
-              <div key="pressureChart" className="flex">
-              <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-[400px] animate-[slideUpFade_0.4s_ease-out_0.1s]">
+              <div key="pressureChart" className="w-full h-full">
+              <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out_0.1s] h-full w-full">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#6554c0] to-[#8777d9]">

@@ -16,37 +16,37 @@ import 'react-resizable/css/styles.css';
 
 const DEFAULT_LAYOUTS = {
   lg: [
-    { i: 'uPhaseCard', x: 0, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-    { i: 'uLineCard', x: 3, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-    { i: 'currentCard', x: 6, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-    { i: 'freqCard', x: 9, y: 0, w: 3, h: 1, minW: 2, minH: 1 },
-    { i: 'energyCard', x: 9, y: 1, w: 3, h: 1, minW: 2, minH: 1 },
-    { i: 'uPhaseChart', x: 0, y: 2, w: 6, h: 3, minW: 4, minH: 2 },
-    { i: 'uLineChart', x: 6, y: 2, w: 6, h: 3, minW: 4, minH: 2 },
-    { i: 'currentChart', x: 0, y: 5, w: 6, h: 3, minW: 4, minH: 2 },
-    { i: 'freqChart', x: 6, y: 5, w: 6, h: 3, minW: 4, minH: 2 }
+    { i: 'uPhaseCard', x: 0, y: 0, w: 3, h: 2, minW: 1, minH: 1 },
+    { i: 'uLineCard', x: 3, y: 0, w: 3, h: 2, minW: 1, minH: 1 },
+    { i: 'currentCard', x: 6, y: 0, w: 3, h: 2, minW: 1, minH: 1 },
+    { i: 'freqCard', x: 9, y: 0, w: 3, h: 1, minW: 1, minH: 1 },
+    { i: 'energyCard', x: 9, y: 1, w: 3, h: 1, minW: 1, minH: 1 },
+    { i: 'uPhaseChart', x: 0, y: 2, w: 6, h: 3, minW: 1, minH: 1 },
+    { i: 'uLineChart', x: 6, y: 2, w: 6, h: 3, minW: 1, minH: 1 },
+    { i: 'currentChart', x: 0, y: 5, w: 6, h: 3, minW: 1, minH: 1 },
+    { i: 'freqChart', x: 6, y: 5, w: 6, h: 3, minW: 1, minH: 1 }
   ],
   md: [
-    { i: 'uPhaseCard', x: 0, y: 0, w: 5, h: 2, minW: 3, minH: 2 },
-    { i: 'uLineCard', x: 5, y: 0, w: 5, h: 2, minW: 3, minH: 2 },
-    { i: 'currentCard', x: 0, y: 2, w: 5, h: 2, minW: 3, minH: 2 },
-    { i: 'freqCard', x: 5, y: 2, w: 5, h: 1, minW: 3, minH: 1 },
-    { i: 'energyCard', x: 5, y: 3, w: 5, h: 1, minW: 3, minH: 1 },
-    { i: 'uPhaseChart', x: 0, y: 4, w: 10, h: 3, minW: 4, minH: 2 },
-    { i: 'uLineChart', x: 0, y: 7, w: 10, h: 3, minW: 4, minH: 2 },
-    { i: 'currentChart', x: 0, y: 10, w: 10, h: 3, minW: 4, minH: 2 },
-    { i: 'freqChart', x: 0, y: 13, w: 10, h: 3, minW: 4, minH: 2 }
+    { i: 'uPhaseCard', x: 0, y: 0, w: 5, h: 2, minW: 1, minH: 1 },
+    { i: 'uLineCard', x: 5, y: 0, w: 5, h: 2, minW: 1, minH: 1 },
+    { i: 'currentCard', x: 0, y: 2, w: 5, h: 2, minW: 1, minH: 1 },
+    { i: 'freqCard', x: 5, y: 2, w: 5, h: 1, minW: 1, minH: 1 },
+    { i: 'energyCard', x: 5, y: 3, w: 5, h: 1, minW: 1, minH: 1 },
+    { i: 'uPhaseChart', x: 0, y: 4, w: 10, h: 3, minW: 1, minH: 1 },
+    { i: 'uLineChart', x: 0, y: 7, w: 10, h: 3, minW: 1, minH: 1 },
+    { i: 'currentChart', x: 0, y: 10, w: 10, h: 3, minW: 1, minH: 1 },
+    { i: 'freqChart', x: 0, y: 13, w: 10, h: 3, minW: 1, minH: 1 }
   ],
   sm: [
-    { i: 'uPhaseCard', x: 0, y: 0, w: 6, h: 2, minW: 2, minH: 2 },
-    { i: 'uLineCard', x: 0, y: 2, w: 6, h: 2, minW: 2, minH: 2 },
-    { i: 'currentCard', x: 0, y: 4, w: 6, h: 2, minW: 2, minH: 2 },
-    { i: 'freqCard', x: 0, y: 6, w: 6, h: 1, minW: 2, minH: 1 },
-    { i: 'energyCard', x: 0, y: 7, w: 6, h: 1, minW: 2, minH: 1 },
-    { i: 'uPhaseChart', x: 0, y: 8, w: 6, h: 3, minW: 3, minH: 2 },
-    { i: 'uLineChart', x: 0, y: 11, w: 6, h: 3, minW: 3, minH: 2 },
-    { i: 'currentChart', x: 0, y: 14, w: 6, h: 3, minW: 3, minH: 2 },
-    { i: 'freqChart', x: 0, y: 17, w: 6, h: 3, minW: 3, minH: 2 }
+    { i: 'uPhaseCard', x: 0, y: 0, w: 6, h: 2, minW: 1, minH: 1 },
+    { i: 'uLineCard', x: 0, y: 2, w: 6, h: 2, minW: 1, minH: 1 },
+    { i: 'currentCard', x: 0, y: 4, w: 6, h: 2, minW: 1, minH: 1 },
+    { i: 'freqCard', x: 0, y: 6, w: 6, h: 1, minW: 1, minH: 1 },
+    { i: 'energyCard', x: 0, y: 7, w: 6, h: 1, minW: 1, minH: 1 },
+    { i: 'uPhaseChart', x: 0, y: 8, w: 6, h: 3, minW: 1, minH: 1 },
+    { i: 'uLineChart', x: 0, y: 11, w: 6, h: 3, minW: 1, minH: 1 },
+    { i: 'currentChart', x: 0, y: 14, w: 6, h: 3, minW: 1, minH: 1 },
+    { i: 'freqChart', x: 0, y: 17, w: 6, h: 3, minW: 1, minH: 1 }
   ]
 };
 

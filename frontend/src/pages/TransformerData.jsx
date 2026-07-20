@@ -12,16 +12,16 @@ import { GripHorizontal } from 'lucide-react';
 
 const DEFAULT_LAYOUTS = {
   lg: [
-    { i: 'transformerDataCard', x: 0, y: 0, w: 12, h: 2, minW: 6, minH: 1 },
-    { i: 'efficiencyChart', x: 0, y: 2, w: 12, h: 3, minW: 6, minH: 2 }
+    { i: 'transformerDataCard', x: 0, y: 0, w: 12, h: 2, minW: 1, minH: 1 },
+    { i: 'efficiencyChart', x: 0, y: 2, w: 12, h: 3, minW: 1, minH: 1 }
   ],
   md: [
-    { i: 'transformerDataCard', x: 0, y: 0, w: 10, h: 2, minW: 6, minH: 1 },
-    { i: 'efficiencyChart', x: 0, y: 2, w: 10, h: 3, minW: 6, minH: 2 }
+    { i: 'transformerDataCard', x: 0, y: 0, w: 10, h: 2, minW: 1, minH: 1 },
+    { i: 'efficiencyChart', x: 0, y: 2, w: 10, h: 3, minW: 1, minH: 1 }
   ],
   sm: [
-    { i: 'transformerDataCard', x: 0, y: 0, w: 6, h: 2, minW: 3, minH: 1 },
-    { i: 'efficiencyChart', x: 0, y: 2, w: 6, h: 3, minW: 4, minH: 2 }
+    { i: 'transformerDataCard', x: 0, y: 0, w: 6, h: 2, minW: 1, minH: 1 },
+    { i: 'efficiencyChart', x: 0, y: 2, w: 6, h: 3, minW: 1, minH: 1 }
   ]
 };
 
@@ -259,6 +259,13 @@ const TransformerData = () => {
               </button>
 
               <button 
+                onClick={resetLayout}
+                className="whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:scale-105 flex items-center gap-1"
+              >
+                <RefreshCw size={14} /> Reset Layout
+              </button>
+
+              <button 
                 onClick={() => toggleFilter('efficiency')}
                 className={`whitespace-nowrap px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all duration-300 ${
                   filters.efficiency 
@@ -348,12 +355,12 @@ const TransformerData = () => {
           preventCollision={false}
           onLayoutChange={handleLayoutChange}
           draggableHandle=".drag-handle"
-          margin={[16, 16]}
+          margin={[10, 10]}
         >
         {/* Transformer Data Card */}
         {filters.transformerData && (
-          <div key="transformerDataCard" className="flex">
-          <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out]">
+          <div key="transformerDataCard" className="w-full h-full">
+          <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out] h-full w-full">
             <div className="absolute top-0 right-0 w-24 h-24 bg-teal-500/5 dark:bg-teal-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#20c997] to-[#48c7a1] flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
@@ -397,8 +404,8 @@ const TransformerData = () => {
         )}
       {/* TREND CHARTS */}{/* Efficiency Chart */}
             {filters.efficiency && (
-              <div key="efficiencyChart" className="flex">
-              <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-[400px] animate-[slideUpFade_0.4s_ease-out_0.4s]">
+              <div key="efficiencyChart" className="w-full h-full">
+              <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out_0.4s] h-full w-full">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#e83e8c] to-[#f06292]">
                     <Activity size={20} />
