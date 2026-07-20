@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import axios from 'axios';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer 
@@ -32,23 +32,17 @@ const TransformerData = () => {
 
   // Layout State for Drag and Drop
   const { width, containerRef } = useContainerWidth();
+  const STORAGE_KEY_TRAFO = 'dashboardLayouts_trafo_v4';
+  const ALL_KEYS_TRAFO = useMemo(() => ['transformerDataCard', 'efficiencyChart'], []);
+
   const [layouts, setLayouts] = useState(() => {
-    const savedLayouts = localStorage.getItem('dashboardLayouts_trafo_v1');
+    const savedLayouts = localStorage.getItem('dashboardLayouts_trafo_v4');
     return savedLayouts ? JSON.parse(savedLayouts) : DEFAULT_LAYOUTS;
   });
 
-  const handleLayoutChange = (currentLayout, allLayouts) => {
-    const stringifiedLayouts = JSON.stringify(allLayouts);
-    const savedLayouts = localStorage.getItem('dashboardLayouts_trafo_v1');
-    if (stringifiedLayouts !== savedLayouts) {
-      setLayouts(allLayouts);
-      localStorage.setItem('dashboardLayouts_trafo_v1', stringifiedLayouts);
-    }
-  };
-
   const resetLayout = () => {
     setLayouts(DEFAULT_LAYOUTS);
-    localStorage.removeItem('dashboardLayouts_trafo_v1');
+    localStorage.removeItem('dashboardLayouts_trafo_v4');
   };
 
   // Unified Filter State for both Monitoring and Charts
@@ -59,6 +53,33 @@ const TransformerData = () => {
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [warning, setWarning] = useState("");
+
+  const filterKey = useMemo(() => Object.values(filters).map(v => v ? '1' : '0').join(''), [filters]);
+
+  const handleLayoutChange = useCallback((currentLayout, allLayouts) => {
+    setLayouts(prev => {
+      const merged = {};
+      Object.keys(DEFAULT_LAYOUTS).forEach(bp => {
+        const rglItems = allLayouts[bp] || [];
+        const rglMap = new Map(rglItems.map(item => [item.i, { ...item }]));
+        
+        merged[bp] = ALL_KEYS_TRAFO.map(key => {
+          if (rglMap.has(key)) {
+            return rglMap.get(key);
+          }
+          const saved = (prev[bp] || []).find(i => i.i === key);
+          return saved ? { ...saved } : DEFAULT_LAYOUTS[bp].find(i => i.i === key);
+        });
+      });
+      
+      const newStr = JSON.stringify(merged);
+      const prevStr = JSON.stringify(prev);
+      if (newStr === prevStr) return prev;
+      
+      localStorage.setItem('dashboardLayouts_trafo_v4', newStr);
+      return merged;
+    });
+  }, [ALL_KEYS_TRAFO]);
 
   const toggleFilter = (key) => {
     setFilters(prev => {
@@ -345,6 +366,7 @@ const TransformerData = () => {
           )}
       <div ref={containerRef}>
         <ResponsiveGridLayout
+          key={filterKey}
           className="layout -mx-2 mt-4"
           width={width}
           layouts={layouts}

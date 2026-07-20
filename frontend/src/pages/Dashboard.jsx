@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import axios from 'axios';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine 
@@ -68,23 +68,45 @@ const Dashboard = () => {
   const [warning, setWarning] = useState("");
   const { width, containerRef } = useContainerWidth();
 
+  const STORAGE_KEY = 'dashboardLayouts_v6';
+  const ALL_KEYS = useMemo(() => ['uPhaseCard', 'uLineCard', 'currentCard', 'freqCard', 'energyCard', 'uPhaseChart', 'uLineChart', 'currentChart', 'freqChart'], []);
+
   const [layouts, setLayouts] = useState(() => {
-    const savedLayouts = localStorage.getItem('dashboardLayouts_v3');
+    const savedLayouts = localStorage.getItem('dashboardLayouts_v6');
     return savedLayouts ? JSON.parse(savedLayouts) : DEFAULT_LAYOUTS;
   });
 
-  const handleLayoutChange = (currentLayout, allLayouts) => {
-    const stringifiedLayouts = JSON.stringify(allLayouts);
-    const savedLayouts = localStorage.getItem('dashboardLayouts_v3');
-    if (stringifiedLayouts !== savedLayouts) {
-      setLayouts(allLayouts);
-      localStorage.setItem('dashboardLayouts_v3', stringifiedLayouts);
-    }
-  };
+  // Force RGL to fully remount when filters change, so it re-reads layouts prop
+  const filterKey = useMemo(() => Object.values(filters).map(v => v ? '1' : '0').join(''), [filters]);
+
+  const handleLayoutChange = useCallback((currentLayout, allLayouts) => {
+    setLayouts(prev => {
+      const merged = {};
+      Object.keys(DEFAULT_LAYOUTS).forEach(bp => {
+        const rglItems = allLayouts[bp] || [];
+        const rglMap = new Map(rglItems.map(item => [item.i, { ...item }]));
+        
+        merged[bp] = ALL_KEYS.map(key => {
+          if (rglMap.has(key)) {
+            return rglMap.get(key);
+          }
+          const saved = (prev[bp] || []).find(i => i.i === key);
+          return saved ? { ...saved } : DEFAULT_LAYOUTS[bp].find(i => i.i === key);
+        });
+      });
+      
+      const newStr = JSON.stringify(merged);
+      const prevStr = JSON.stringify(prev);
+      if (newStr === prevStr) return prev;
+      
+      localStorage.setItem('dashboardLayouts_v6', newStr);
+      return merged;
+    });
+  }, [ALL_KEYS]);
 
   const resetLayout = () => {
     setLayouts(DEFAULT_LAYOUTS);
-    localStorage.removeItem('dashboardLayouts_v3');
+    localStorage.removeItem('dashboardLayouts_v6');
   };
 
   const toggleFilter = (key) => {
@@ -470,6 +492,7 @@ const Dashboard = () => {
       {/* DASHBOARD DRAGGABLE GRID */}
       <div ref={containerRef}>
       <ResponsiveGridLayout
+        key={filterKey}
         className="layout -mx-2 mt-4"
         width={width}
         layouts={layouts}

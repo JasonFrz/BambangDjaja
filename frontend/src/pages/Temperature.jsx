@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import axios from 'axios';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine 
@@ -166,23 +166,44 @@ const Temperature = () => {
   let chartGridColsClass = "grid-cols-1";
   
   const { width, containerRef } = useContainerWidth();
+  const STORAGE_KEY_TEMP = 'dashboardLayouts_temp_v4';
+  const ALL_KEYS_TEMP = useMemo(() => ['oilLevelCard', 'temperatureCard', 'pressureCard', 'temperatureChart', 'pressureChart'], []);
+
   const [layouts, setLayouts] = useState(() => {
-    const savedLayouts = localStorage.getItem('dashboardLayouts_temp_v1');
+    const savedLayouts = localStorage.getItem('dashboardLayouts_temp_v4');
     return savedLayouts ? JSON.parse(savedLayouts) : DEFAULT_LAYOUTS;
   });
 
-  const handleLayoutChange = (currentLayout, allLayouts) => {
-    const stringifiedLayouts = JSON.stringify(allLayouts);
-    const savedLayouts = localStorage.getItem('dashboardLayouts_temp_v1');
-    if (stringifiedLayouts !== savedLayouts) {
-      setLayouts(allLayouts);
-      localStorage.setItem('dashboardLayouts_temp_v1', stringifiedLayouts);
-    }
-  };
+  const filterKey = useMemo(() => Object.values(filters).map(v => v ? '1' : '0').join(''), [filters]);
+
+  const handleLayoutChange = useCallback((currentLayout, allLayouts) => {
+    setLayouts(prev => {
+      const merged = {};
+      Object.keys(DEFAULT_LAYOUTS).forEach(bp => {
+        const rglItems = allLayouts[bp] || [];
+        const rglMap = new Map(rglItems.map(item => [item.i, { ...item }]));
+        
+        merged[bp] = ALL_KEYS_TEMP.map(key => {
+          if (rglMap.has(key)) {
+            return rglMap.get(key);
+          }
+          const saved = (prev[bp] || []).find(i => i.i === key);
+          return saved ? { ...saved } : DEFAULT_LAYOUTS[bp].find(i => i.i === key);
+        });
+      });
+      
+      const newStr = JSON.stringify(merged);
+      const prevStr = JSON.stringify(prev);
+      if (newStr === prevStr) return prev;
+      
+      localStorage.setItem('dashboardLayouts_temp_v4', newStr);
+      return merged;
+    });
+  }, [ALL_KEYS_TEMP]);
 
   const resetLayout = () => {
     setLayouts(DEFAULT_LAYOUTS);
-    localStorage.removeItem('dashboardLayouts_temp_v1');
+    localStorage.removeItem('dashboardLayouts_temp_v4');
   };
 
   const chartActiveCount = [filters.temperature, filters.pressure].filter(Boolean).length;
@@ -398,6 +419,7 @@ const Temperature = () => {
           )}
       <div ref={containerRef}>
         <ResponsiveGridLayout
+          key={filterKey}
           className="layout -mx-2 mt-4"
           width={width}
           layouts={layouts}
