@@ -53,6 +53,9 @@ app.use("/api/trends", trendRoutes);
 app.use("/api/whatsapp", whatsappRoutes);
 app.use("/api/sync", syncRoutes);
 
+const startRealtimePoller = require("./utils/realtimePoller");
+
 server.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
+  startRealtimePoller(io);
 });
