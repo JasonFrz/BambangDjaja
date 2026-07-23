@@ -28,18 +28,18 @@ export const TrendDataProvider = ({ children }) => {
         return {
           time: date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' }),
           timestamp: date.toISOString(),
-          phaseA: reading.phase_a || 0,
-          phaseB: reading.phase_b || 0,
-          phaseC: reading.phase_c || 0,
-          lineAB: reading.line_ab || 0,
-          lineBC: reading.line_bc || 0,
-          lineCA: reading.line_ca || 0,
-          currentA: reading.current_a || 0,
-          currentB: reading.current_b || 0,
-          currentC: reading.current_c || 0,
-          frequency: reading.frequency || 0,
-          power: reading.power || 0,
-          energy: reading.energy || 0,
+          phaseA: parseFloat(reading.phase_a) || 0,
+          phaseB: parseFloat(reading.phase_b) || 0,
+          phaseC: parseFloat(reading.phase_c) || 0,
+          lineAB: parseFloat(reading.line_ab) || 0,
+          lineBC: parseFloat(reading.line_bc) || 0,
+          lineCA: parseFloat(reading.line_ca) || 0,
+          currentA: parseFloat(reading.current_a) || 0,
+          currentB: parseFloat(reading.current_b) || 0,
+          currentC: parseFloat(reading.current_c) || 0,
+          frequency: parseFloat(reading.frequency) || 0,
+          power: parseFloat(reading.power) || 0,
+          energy: parseFloat(reading.energy) || 0,
           efficiency: 0,
         };
       });
@@ -54,12 +54,13 @@ export const TrendDataProvider = ({ children }) => {
   useEffect(() => {
     if (!wsData || !wsData.modbus_connected) return;
 
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' });
+    // Use backend timestamp if provided, else current time
+    const dataDate = wsData.timestamp ? new Date(wsData.timestamp) : new Date();
+    const timeStr = dataDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' });
 
     const newPoint = {
       time: timeStr,
-      timestamp: now.toISOString(),
+      timestamp: dataDate.toISOString(),
       phaseA: wsData.vPhase?.A || 0,
       phaseB: wsData.vPhase?.B || 0,
       phaseC: wsData.vPhase?.C || 0,

@@ -61,6 +61,7 @@ export const useWebSocket = (url) => {
         power: msg.power || 0,
         energy: msg.energy || 0,
         efficiency: (msg.efficiency_value && msg.efficiency_value.length > 0) ? msg.efficiency_value[0] : (msg.efficiency || 0),
+        timestamp: msg.timestamp,
         modbus_connected: msg.modbus_connected !== false, // defaults to true if undefined
       };
 

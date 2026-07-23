@@ -36,18 +36,19 @@ const startRealtimePoller = (io, activeSubscriptions) => {
             if (lastId !== latestElectrical.id) {
               lastSeenElectrical[roomName] = latestElectrical.id;
               io.to(roomName).emit("meter", {
-                phaseA: latestElectrical.phase_a,
-                phaseB: latestElectrical.phase_b,
-                phaseC: latestElectrical.phase_c,
-                lineAB: latestElectrical.line_ab,
-                lineBC: latestElectrical.line_bc,
-                lineCA: latestElectrical.line_ca,
-                currentA: latestElectrical.current_a,
-                currentB: latestElectrical.current_b,
-                currentC: latestElectrical.current_c,
-                frequency: latestElectrical.frequency,
-                power: latestElectrical.power,
-                energy: latestElectrical.energy,
+                phaseA: parseFloat(latestElectrical.phase_a) || 0,
+                phaseB: parseFloat(latestElectrical.phase_b) || 0,
+                phaseC: parseFloat(latestElectrical.phase_c) || 0,
+                lineAB: parseFloat(latestElectrical.line_ab) || 0,
+                lineBC: parseFloat(latestElectrical.line_bc) || 0,
+                lineCA: parseFloat(latestElectrical.line_ca) || 0,
+                currentA: parseFloat(latestElectrical.current_a) || 0,
+                currentB: parseFloat(latestElectrical.current_b) || 0,
+                currentC: parseFloat(latestElectrical.current_c) || 0,
+                frequency: parseFloat(latestElectrical.frequency) || 0,
+                power: parseFloat(latestElectrical.power) || 0,
+                energy: parseFloat(latestElectrical.energy) || 0,
+                timestamp: latestElectrical.timestamp,
                 modbus_connected: true,
               });
             }
