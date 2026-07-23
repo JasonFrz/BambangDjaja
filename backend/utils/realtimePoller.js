@@ -32,9 +32,9 @@ const startRealtimePoller = (io, activeSubscriptions) => {
           
           if (elecRows.length > 0) {
             const latestElectrical = elecRows[0];
-            const lastId = lastSeenElectrical[trafoId];
+            const lastId = lastSeenElectrical[roomName];
             if (lastId !== latestElectrical.id) {
-              lastSeenElectrical[trafoId] = latestElectrical.id;
+              lastSeenElectrical[roomName] = latestElectrical.id;
               io.to(roomName).emit("meter", {
                 phaseA: latestElectrical.phase_a,
                 phaseB: latestElectrical.phase_b,
@@ -60,9 +60,9 @@ const startRealtimePoller = (io, activeSubscriptions) => {
 
           if (oilRows.length > 0) {
             const latestOil = oilRows[0];
-            const lastId = lastSeenOil[trafoId];
+            const lastId = lastSeenOil[roomName];
             if (lastId !== latestOil.id) {
-              lastSeenOil[trafoId] = latestOil.id;
+              lastSeenOil[roomName] = latestOil.id;
               io.to(roomName).emit("oil_sensor", {
                 oil_temperature: latestOil.oil_temperature,
                 oil_pressure: latestOil.oil_pressure,

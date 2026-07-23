@@ -69,7 +69,7 @@ export const TemperatureDataProvider = ({ children }) => {
 
     socket.on("connect", () => {
       setIsConnected(true);
-      const trafoId = sessionStorage.getItem('selectedTrafoId');
+      const trafoId = sessionStorage.getItem('selectedTrafoId') || '1';
       const dbName = sessionStorage.getItem('company_name');
       if (trafoId) {
         socket.emit("subscribe_transformer", { trafoId, dbName });

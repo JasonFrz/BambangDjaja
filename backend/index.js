@@ -28,12 +28,10 @@ io.on("connection", (socket) => {
     const trafoId = data.trafoId || data;
     const dbName = data.dbName;
     
-    if (trafoId) {
-      const roomName = "trafo_" + trafoId;
+    if (trafoId && dbName) {
+      const roomName = `trafo_${dbName}_${trafoId}`;
       socket.join(roomName);
-      if (dbName) {
-        activeSubscriptions.set(roomName, dbName);
-      }
+      activeSubscriptions.set(roomName, dbName);
       console.log(`Client ${socket.id} subscribed to ${roomName} for DB: ${dbName}`);
     }
   });

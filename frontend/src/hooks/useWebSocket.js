@@ -17,7 +17,7 @@ export const useWebSocket = (url) => {
       setIsConnected(true);
       console.log("Connected to Pilot SPM33 backend");
       
-      const trafoId = sessionStorage.getItem('selectedTrafoId');
+      const trafoId = sessionStorage.getItem('selectedTrafoId') || '1';
       const dbName = sessionStorage.getItem('company_name');
       if (trafoId) {
         socket.emit("subscribe_transformer", { trafoId, dbName });

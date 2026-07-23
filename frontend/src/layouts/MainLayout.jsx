@@ -40,7 +40,7 @@ const MainLayout = () => {
     sessionStorage.removeItem('username');
     sessionStorage.removeItem('role');
     sessionStorage.removeItem('company_name');
-    navigate('/login');
+    window.location.href = '/login';
   };
 
   return (

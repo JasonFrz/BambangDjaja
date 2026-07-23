@@ -52,7 +52,7 @@ const Login = () => {
         sessionStorage.setItem('role', data.role);
         sessionStorage.setItem('phone', data.phone || '');
         sessionStorage.setItem('company_name', data.company_name || '');
-        navigate('/');
+        window.location.href = '/';
       } else {
         setError(data.error || 'Login failed');
       }
