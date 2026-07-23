@@ -38,9 +38,9 @@ export const TemperatureDataProvider = ({ children }) => {
         return {
           time: date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' }),
           timestamp: date.toISOString(),
-          oil_temperature: reading.oil_temperature || 0,
-          oil_pressure: reading.oil_pressure || 0,
-          oil_level: reading.oil_level ? 1 : 0
+          oil_temperature: parseFloat(reading.oil_temperature) || 0,
+          oil_pressure: parseFloat(reading.oil_pressure) || 0,
+          oil_level: 1 // Hardcoded per user request
         };
       });
       if (historical.length > 0) {
@@ -53,7 +53,7 @@ export const TemperatureDataProvider = ({ children }) => {
           ...prev,
           oil_temperature: latest.oil_temperature,
           oil_pressure: latest.oil_pressure,
-          oil_level: latest.oil_level === 1
+          oil_level: latest.oil_level == 1
         }));
       }
     })
@@ -93,12 +93,12 @@ export const TemperatureDataProvider = ({ children }) => {
       setIsLive(connected);
 
       if (connected) {
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' });
+        const dataDate = msg.timestamp ? new Date(msg.timestamp) : new Date();
+        const timeStr = dataDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' });
         
         const newPoint = {
           time: timeStr,
-          timestamp: now.toISOString(),
+          timestamp: dataDate.toISOString(),
           oil_temperature: newTemp,
           oil_pressure: newPress,
           oil_level: newLevel

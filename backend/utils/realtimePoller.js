@@ -1,4 +1,5 @@
 const { getDbConnection } = require('./db');
+const { calculateEfficiency } = require('./efficiency');
 
 const startRealtimePoller = (io, activeSubscriptions) => {
   // Store the last seen IDs for each transformer so we don't send duplicates
@@ -48,6 +49,7 @@ const startRealtimePoller = (io, activeSubscriptions) => {
                 frequency: parseFloat(latestElectrical.frequency) || 0,
                 power: parseFloat(latestElectrical.power) || 0,
                 energy: parseFloat(latestElectrical.energy) || 0,
+                efficiency: calculateEfficiency(latestElectrical.current_a, latestElectrical.current_b, latestElectrical.current_c),
                 timestamp: latestElectrical.timestamp,
                 modbus_connected: true,
               });
@@ -65,9 +67,9 @@ const startRealtimePoller = (io, activeSubscriptions) => {
             if (lastId !== latestOil.id) {
               lastSeenOil[roomName] = latestOil.id;
               io.to(roomName).emit("oil_sensor", {
-                oil_temperature: latestOil.oil_temperature,
-                oil_pressure: latestOil.oil_pressure,
-                oil_level: latestOil.oil_level === 1 ? true : false,
+                oil_temperature: parseFloat(latestOil.oil_temperature) || 0,
+                oil_pressure: parseFloat(latestOil.oil_pressure) || 0,
+                oil_level: true, // Data terletak di backend bukan db
                 timestamp: latestOil.timestamp,
                 adc_connected: true,
               });

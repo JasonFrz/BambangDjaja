@@ -40,7 +40,7 @@ export const TrendDataProvider = ({ children }) => {
           frequency: parseFloat(reading.frequency) || 0,
           power: parseFloat(reading.power) || 0,
           energy: parseFloat(reading.energy) || 0,
-          efficiency: 0,
+          efficiency: parseFloat(reading.efficiency) || 0,
         };
       });
       if (historical.length > 0) {

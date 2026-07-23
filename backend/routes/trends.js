@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { getDbConnection } = require('../utils/db');
+const { calculateEfficiency } = require('../utils/efficiency');
 
 // Middleware to extract db_name from headers
 const extractDb = (req, res, next) => {
@@ -28,7 +29,13 @@ router.get("/", extractDb, async (req, res) => {
     query += ' ORDER BY timestamp ASC LIMIT 1000';
     
     const [rows] = await db.execute(query, params);
-    res.status(200).json(rows);
+    
+    const rowsWithEfficiency = rows.map(row => ({
+      ...row,
+      efficiency: calculateEfficiency(row.current_a, row.current_b, row.current_c)
+    }));
+    
+    res.status(200).json(rowsWithEfficiency);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Server error" });
@@ -51,7 +58,13 @@ router.get("/meter", extractDb, async (req, res) => {
     query += ' ORDER BY timestamp ASC LIMIT 1000';
     
     const [rows] = await db.execute(query, params);
-    res.status(200).json(rows);
+    
+    const rowsWithEfficiency = rows.map(row => ({
+      ...row,
+      efficiency: calculateEfficiency(row.current_a, row.current_b, row.current_c)
+    }));
+    
+    res.status(200).json(rowsWithEfficiency);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Server error" });
