@@ -15,8 +15,8 @@ const MainLayout = () => {
   const dropdownRef = useRef(null);
 
   // Determine what type of dashboard we are currently showing
-  const isTransformerDashboard = role === 'user' && (location.pathname === '/dashboard' || location.pathname === '/temperature' || location.pathname === '/transformer-data');
-  const isAdminDashboard = role === 'admin';
+  const isTransformerDashboard = location.pathname === '/dashboard' || location.pathname === '/temperature' || location.pathname === '/transformer-data';
+  const isAdminDashboard = role === 'admin' && (location.pathname === '/users');
   const showSidebar = isTransformerDashboard || isAdminDashboard;
 
   // Close dropdown when clicking outside
@@ -37,33 +37,11 @@ const MainLayout = () => {
   }, []);
 
   const handleLogout = () => {
-    sessionStorage.removeItem('token');
     sessionStorage.removeItem('username');
     sessionStorage.removeItem('role');
+    sessionStorage.removeItem('company_name');
     navigate('/login');
   };
-
-  // Auto-logout secara periodik jika token expired
-  useEffect(() => {
-    const checkExpiration = () => {
-      const token = sessionStorage.getItem('token');
-      if (!token) return;
-      
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.exp * 1000 < Date.now()) {
-          handleLogout(); // Token kadaluarsa, langsung logout
-        }
-      } catch (e) {
-        handleLogout();
-      }
-    };
-
-    const intervalId = setInterval(checkExpiration, 60000);
-    checkExpiration();
-    
-    return () => clearInterval(intervalId);
-  }, []);
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#f4f7fe] dark:bg-[#0b1120] transition-colors duration-300 overflow-hidden">

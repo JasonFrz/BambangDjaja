@@ -28,7 +28,6 @@ const AddUser = () => {
   const { apiUrl } = useApi();
   const navigate = useNavigate();
   const currentRole = sessionStorage.getItem('role');
-  const token = sessionStorage.getItem('token');
   
   useEffect(() => {
     if (currentRole !== 'admin') {
@@ -41,9 +40,7 @@ const AddUser = () => {
   const fetchUsers = async () => {
     setIsLoadingUsers(true);
     try {
-      const response = await fetch(`${apiUrl}/api/users`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await fetch(`${apiUrl}/api/users`);
       const data = await response.json();
       if (response.ok) {
         setUsers(data);
@@ -71,8 +68,7 @@ const AddUser = () => {
       const response = await fetch(url, {
         method,
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body
       });
@@ -123,8 +119,7 @@ const AddUser = () => {
 
     try {
       const response = await fetch(`${apiUrl}/api/users/${username}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        method: 'DELETE'
       });
 
       if (response.ok) {
@@ -155,8 +150,7 @@ const AddUser = () => {
       const response = await fetch(`${apiUrl}/api/users/${changingPasswordUser}/password`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ password: newPassword })
       });

@@ -18,13 +18,23 @@ app.use(cors());
 app.use(express.json());
 app.set("io", io);
 
+const activeSubscriptions = new Map(); // map roomName -> dbName
+
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
 
-  socket.on("subscribe_transformer", (trafoId) => {
+  socket.on("subscribe_transformer", (data) => {
+    // data can be { trafoId, dbName }
+    const trafoId = data.trafoId || data;
+    const dbName = data.dbName;
+    
     if (trafoId) {
-      socket.join("trafo_" + trafoId);
-      console.log(`Client ${socket.id} subscribed to trafo_${trafoId}`);
+      const roomName = "trafo_" + trafoId;
+      socket.join(roomName);
+      if (dbName) {
+        activeSubscriptions.set(roomName, dbName);
+      }
+      console.log(`Client ${socket.id} subscribed to ${roomName} for DB: ${dbName}`);
     }
   });
 
@@ -39,23 +49,15 @@ app.get("/api/health", (req, res) => {
 
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
-const transformerRoutes = require("./routes/transformers");
-const provisioningRoutes = require("./routes/provisioning");
 const trendRoutes = require("./routes/trends");
-const whatsappRoutes = require("./routes/whatsapp");
-const syncRoutes = require("./routes/sync");
 
 app.use("/api", authRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/transformers", transformerRoutes);
-app.use("/api/provision", provisioningRoutes);
 app.use("/api/trends", trendRoutes);
-app.use("/api/whatsapp", whatsappRoutes);
-app.use("/api/sync", syncRoutes);
 
 const startRealtimePoller = require("./utils/realtimePoller");
 
 server.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
-  startRealtimePoller(io);
+  startRealtimePoller(io, activeSubscriptions);
 });

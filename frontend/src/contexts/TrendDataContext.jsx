@@ -14,17 +14,16 @@ export const TrendDataProvider = ({ children }) => {
   const isLive = isConnected && (!wsData || wsData.modbus_connected !== false);
   const lastDataRef = useRef(null);
 
-  // Fetch initial history (last 50)
+  // Fetch initial history from MySQL
   useEffect(() => {
-    const trafoId = sessionStorage.getItem('selectedTrafoId');
-    const token = sessionStorage.getItem('token');
-    if (!trafoId || !token) return;
+    const dbName = sessionStorage.getItem('company_name');
+    if (!dbName) return;
 
-    axios.get(`${apiUrl}/api/transformers/${trafoId}/history`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    axios.get(`${apiUrl}/api/trends/meter`, {
+      headers: { 'X-DB-Name': dbName }
     })
     .then(res => {
-      const historical = res.data.electrical.map(reading => {
+      const historical = res.data.map(reading => {
         const date = new Date(reading.timestamp);
         return {
           time: date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' }),

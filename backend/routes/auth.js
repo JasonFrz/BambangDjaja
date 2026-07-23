@@ -1,27 +1,93 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const prisma = require('../prismaClient');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dev';
+const crypto = require('crypto');
+const { getDbConnection, getAllDatabases } = require('../utils/db');
 
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Missing username or password' });
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Missing username or password' });
+  }
   
   try {
-    const user = await prisma.user.findUnique({ where: { username } });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ error: 'username atau password invalid' });
+    const databases = await getAllDatabases();
+    console.log('Databases found:', databases);
+    let foundUser = null;
+    let foundDbName = null;
+
+    for (const dbName of databases) {
+      console.log(`Checking database: ${dbName}...`);
+      try {
+        const db = await getDbConnection(dbName);
+        const [rows] = await db.execute('SELECT * FROM users WHERE username = ? LIMIT 1', [username]);
+        
+        if (rows.length > 0) {
+          console.log(`User found in DB: ${dbName}`);
+          const user = rows[0];
+          
+          // The password column could be named 'password' or 'password_hash'
+          const storedHash = user.password_hash || user.password;
+          
+          if (!storedHash) {
+            console.log(`No password/password_hash column found for user in ${dbName}`);
+            continue;
+          }
+
+          console.log(`Stored hash starts with: ${storedHash.substring(0, 10)}... (length: ${storedHash.length})`);
+          
+          let isMatch = false;
+          
+          if (storedHash.startsWith('$2a$') || storedHash.startsWith('$2b$')) {
+            // bcrypt hash
+            isMatch = await bcrypt.compare(password, storedHash);
+          } else if (storedHash.length === 64 && /^[a-f0-9]+$/i.test(storedHash)) {
+            // SHA-256 hex hash
+            const sha256 = crypto.createHash('sha256').update(password).digest('hex');
+            isMatch = sha256 === storedHash;
+          } else if (storedHash.length === 32 && /^[a-f0-9]+$/i.test(storedHash)) {
+            // MD5 hex hash
+            const md5 = crypto.createHash('md5').update(password).digest('hex');
+            isMatch = md5 === storedHash;
+          } else {
+            // Plain text comparison
+            isMatch = password === storedHash;
+          }
+          
+          if (isMatch) {
+            console.log(`Password matched for user in ${dbName}`);
+            foundUser = user;
+            foundDbName = dbName;
+            break;
+          } else {
+            console.log(`Password did NOT match for user in ${dbName}`);
+          }
+        } else {
+          console.log(`User not found in ${dbName}`);
+        }
+      } catch (err) {
+        console.error(`Skipping DB ${dbName} due to error:`, err.message);
+        continue;
+      }
     }
     
-    const token = jwt.sign({ username: user.username, role: user.role, company_name: user.company_name }, JWT_SECRET, { expiresIn: '2h' });
-    res.json({ token, username: user.username, role: user.role, company_name: user.company_name, phone: user.phone || '' });
+    if (!foundUser) {
+      console.log('Login failed: user not found or password incorrect across all databases.');
+      return res.status(401).json({ error: 'Username atau password invalid' });
+    }
+    
+    res.json({ 
+      success: true,
+      username: foundUser.username, 
+      role: foundUser.role || 'user', 
+      company_name: foundDbName,
+      phone: foundUser.phone || '' 
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error: ' + error.message });
   }
 });
 
 module.exports = router;
+

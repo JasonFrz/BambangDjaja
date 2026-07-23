@@ -1,45 +1,82 @@
 const express = require("express");
 const router = express.Router();
-const prisma = require("../prismaClient");
-const axios = require("axios");
+const { getDbConnection } = require('../utils/db');
 
-const IRIV_SERVER = process.env.IRIV_SERVER;
-const IRIV_API_KEY = process.env.IRIV_API_KEY;
+// Middleware to extract db_name from headers
+const extractDb = (req, res, next) => {
+  const dbName = req.headers['x-db-name'];
+  if (!dbName) {
+    return res.status(400).json({ error: "Missing X-DB-Name header" });
+  }
+  req.dbName = dbName;
+  next();
+};
 
-router.get("/meter", async (req, res) => {
+router.get("/", extractDb, async (req, res) => {
   const { start, end } = req.query;
   try {
-    const response = await axios.get(`${IRIV_SERVER}/api/trends/meter`, {
-      params: {
-        start,
-        end,
-      },
-      headers: {
-        "X-API-Key": IRIV_API_KEY,
-      },
-    });
-
-    res.status(200).json(response.data);
+    const db = await getDbConnection(req.dbName);
+    
+    let query = 'SELECT * FROM electrical_readings';
+    const params = [];
+    
+    if (start && end) {
+      query += ' WHERE timestamp >= ? AND timestamp <= ?';
+      params.push(start, end);
+    }
+    
+    query += ' ORDER BY timestamp ASC LIMIT 1000';
+    
+    const [rows] = await db.execute(query, params);
+    res.status(200).json(rows);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-router.get("/oil", async (req, res) => {
+router.get("/meter", extractDb, async (req, res) => {
   const { start, end } = req.query;
   try {
-    const response = await axios.get(`${IRIV_SERVER}/api/trends/oil`, {
-      params: {
-        start,
-        end,
-      },
-      headers: {
-        "X-API-Key": IRIV_API_KEY,
-      },
-    });
-
-    res.status(200).json(response.data);
+    const db = await getDbConnection(req.dbName);
+    
+    let query = 'SELECT * FROM electrical_readings';
+    const params = [];
+    
+    if (start && end) {
+      query += ' WHERE timestamp >= ? AND timestamp <= ?';
+      params.push(start, end);
+    }
+    
+    query += ' ORDER BY timestamp ASC LIMIT 1000';
+    
+    const [rows] = await db.execute(query, params);
+    res.status(200).json(rows);
   } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.get("/oil", extractDb, async (req, res) => {
+  const { start, end } = req.query;
+  try {
+    const db = await getDbConnection(req.dbName);
+    
+    let query = 'SELECT * FROM oil_readings';
+    const params = [];
+    
+    if (start && end) {
+      query += ' WHERE timestamp >= ? AND timestamp <= ?';
+      params.push(start, end);
+    }
+    
+    query += ' ORDER BY timestamp ASC LIMIT 1000';
+    
+    const [rows] = await db.execute(query, params);
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Server error" });
   }
 });

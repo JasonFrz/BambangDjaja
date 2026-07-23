@@ -1,38 +1,53 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const prisma = require('../prismaClient');
-const { authenticateToken } = require('../middleware/auth');
+const { getDbConnection } = require('../utils/db');
 
-router.post('/', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Unauthorized. Admin role required.' });
+// Middleware to extract db_name and verify admin role (optional, based on headers for now since tokens are removed)
+const checkAdmin = async (req, res, next) => {
+  const dbName = req.headers['x-db-name'];
+  const username = req.headers['x-username'];
+  
+  if (!dbName || !username) {
+    return res.status(400).json({ error: 'Missing X-DB-Name or X-Username header' });
   }
   
   try {
-    const { username, password, role, company_name, db_name, phone } = req.body;
+    const db = await getDbConnection(dbName);
+    const [rows] = await db.execute('SELECT role FROM users WHERE username = ?', [username]);
+    
+    if (rows.length === 0 || rows[0].role !== 'admin') {
+      return res.status(403).json({ error: 'Unauthorized. Admin role required.' });
+    }
+    
+    req.dbName = dbName;
+    req.db = db;
+    next();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+router.post('/', checkAdmin, async (req, res) => {
+  try {
+    const { username, password, role, company_name, phone } = req.body;
     
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password are required' });
     }
     
-    const existingUser = await prisma.user.findUnique({ where: { username } });
-    if (existingUser) {
+    const [existing] = await req.db.execute('SELECT id FROM users WHERE username = ?', [username]);
+    if (existing.length > 0) {
       return res.status(400).json({ error: 'Username already exists' });
     }
     
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    await prisma.user.create({
-      data: {
-        username,
-        password: hashedPassword,
-        role: role || 'user',
-        company_name,
-        db_name,
-        phone: phone || null
-      }
-    });
+    await req.db.execute(
+      'INSERT INTO users (username, password, role, company_name, db_name, phone) VALUES (?, ?, ?, ?, ?, ?)',
+      [username, hashedPassword, role || 'user', company_name || req.dbName, req.dbName, phone || null]
+    );
     
     res.status(201).json({ message: 'user berhasil dibuat!' });
   } catch (error) {
@@ -41,15 +56,9 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
-router.get('/', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Unauthorized. Admin role required.' });
-  }
-  
+router.get('/', checkAdmin, async (req, res) => {
   try {
-    const users = await prisma.user.findMany({
-      orderBy: { id: 'desc' }
-    });
+    const [users] = await req.db.execute('SELECT id, username, role, company_name, db_name, phone FROM users ORDER BY id DESC');
     
     const usersWithDetails = users.map(u => ({
       id: u.id,
@@ -67,11 +76,7 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-router.put('/:username/password', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Unauthorized. Admin role required.' });
-  }
-  
+router.put('/:username/password', checkAdmin, async (req, res) => {
   const { username } = req.params;
   const { password } = req.body;
   
@@ -81,16 +86,7 @@ router.put('/:username/password', authenticateToken, async (req, res) => {
   
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    await prisma.user.update({
-      where: { username },
-      data: { password: hashedPassword }
-    });
-    
-    // Also update provision token if exists
-    await prisma.provisionToken.updateMany({
-      where: { tmu_username: username },
-      data: { tmu_password: password }
-    });
+    await req.db.execute('UPDATE users SET password = ? WHERE username = ?', [hashedPassword, username]);
     
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
@@ -99,28 +95,28 @@ router.put('/:username/password', authenticateToken, async (req, res) => {
   }
 });
 
-router.put('/:username', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Unauthorized. Admin role required.' });
-  }
-
+router.put('/:username', checkAdmin, async (req, res) => {
   const { username } = req.params;
   const { company_name, db_name, role, phone } = req.body;
 
   try {
-    const user = await prisma.user.findUnique({ where: { username } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    const [existing] = await req.db.execute('SELECT id FROM users WHERE username = ?', [username]);
+    if (existing.length === 0) return res.status(404).json({ error: 'User not found' });
 
-    const updateData = {};
-    if (company_name !== undefined) updateData.company_name = company_name;
-    if (db_name !== undefined) updateData.db_name = db_name;
-    if (role !== undefined) updateData.role = role;
-    if (phone !== undefined) updateData.phone = phone;
+    let query = 'UPDATE users SET ';
+    const params = [];
+    const updates = [];
+    
+    if (company_name !== undefined) { updates.push('company_name = ?'); params.push(company_name); }
+    if (db_name !== undefined) { updates.push('db_name = ?'); params.push(db_name); }
+    if (role !== undefined) { updates.push('role = ?'); params.push(role); }
+    if (phone !== undefined) { updates.push('phone = ?'); params.push(phone); }
 
-    await prisma.user.update({
-      where: { username },
-      data: updateData
-    });
+    if (updates.length > 0) {
+      query += updates.join(', ') + ' WHERE username = ?';
+      params.push(username);
+      await req.db.execute(query, params);
+    }
 
     res.json({ message: 'User updated successfully' });
   } catch (error) {
@@ -129,18 +125,14 @@ router.put('/:username', authenticateToken, async (req, res) => {
   }
 });
 
-router.delete('/:username', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Unauthorized. Admin role required.' });
-  }
-
+router.delete('/:username', checkAdmin, async (req, res) => {
   const { username } = req.params;
 
   try {
-    const user = await prisma.user.findUnique({ where: { username } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    const [existing] = await req.db.execute('SELECT id FROM users WHERE username = ?', [username]);
+    if (existing.length === 0) return res.status(404).json({ error: 'User not found' });
 
-    await prisma.user.delete({ where: { username } });
+    await req.db.execute('DELETE FROM users WHERE username = ?', [username]);
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error(error);

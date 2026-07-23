@@ -47,7 +47,7 @@ const Login = () => {
         } else {
           localStorage.removeItem('savedUsername');
         }
-        sessionStorage.setItem('token', data.token);
+        // sessionStorage.setItem('token', data.token); // No longer needed
         sessionStorage.setItem('username', data.username);
         sessionStorage.setItem('role', data.role);
         sessionStorage.setItem('phone', data.phone || '');
@@ -152,6 +152,7 @@ const Login = () => {
 
               <form onSubmit={handleLogin} className="flex flex-col gap-5">
                 
+
                 {/* Username Input */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-[#8e9bb0] uppercase tracking-wider pl-1">
