@@ -54,8 +54,18 @@ app.use("/api/users", userRoutes);
 app.use("/api/trends", trendRoutes);
 
 const startRealtimePoller = require("./utils/realtimePoller");
+const { initWhatsApp } = require("./utils/whatsappClient");
+const whatsappRoutes = require("./routes/whatsappRoutes");
+
+app.use("/api/whatsapp", whatsappRoutes);
 
 server.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
   startRealtimePoller(io, activeSubscriptions);
+  
+  // Initialize WhatsApp in the background
+  setTimeout(() => {
+    initWhatsApp();
+  }, 2000);
 });
+

@@ -31,7 +31,7 @@ const checkAdmin = async (req, res, next) => {
 
 router.post('/', checkAdmin, async (req, res) => {
   try {
-    const { username, password, role, company_name, phone } = req.body;
+    const { username, password, role, company_name, nomor_telpon } = req.body;
     
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password are required' });
@@ -45,8 +45,8 @@ router.post('/', checkAdmin, async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     
     await req.db.execute(
-      'INSERT INTO users (username, password, role, company_name, db_name, phone) VALUES (?, ?, ?, ?, ?, ?)',
-      [username, hashedPassword, role || 'user', company_name || req.dbName, req.dbName, phone || null]
+      'INSERT INTO users (username, password, role, company_name, db_name, nomor_telpon) VALUES (?, ?, ?, ?, ?, ?)',
+      [username, hashedPassword, role || 'user', company_name || req.dbName, req.dbName, nomor_telpon || null]
     );
     
     res.status(201).json({ message: 'user berhasil dibuat!' });
@@ -58,7 +58,7 @@ router.post('/', checkAdmin, async (req, res) => {
 
 router.get('/', checkAdmin, async (req, res) => {
   try {
-    const [users] = await req.db.execute('SELECT id, username, role, company_name, db_name, phone FROM users ORDER BY id DESC');
+    const [users] = await req.db.execute('SELECT id, username, role, company_name, db_name, nomor_telpon FROM users ORDER BY id DESC');
     
     const usersWithDetails = users.map(u => ({
       id: u.id,
@@ -66,7 +66,7 @@ router.get('/', checkAdmin, async (req, res) => {
       role: u.role,
       company_name: u.company_name || '-',
       db_name: u.db_name || '-',
-      phone: u.phone || ''
+      nomor_telpon: u.nomor_telpon || ''
     }));
     
     res.json(usersWithDetails);
@@ -97,7 +97,7 @@ router.put('/:username/password', checkAdmin, async (req, res) => {
 
 router.put('/:username', checkAdmin, async (req, res) => {
   const { username } = req.params;
-  const { company_name, db_name, role, phone } = req.body;
+  const { company_name, db_name, role, nomor_telpon } = req.body;
 
   try {
     const [existing] = await req.db.execute('SELECT id FROM users WHERE username = ?', [username]);
@@ -110,7 +110,7 @@ router.put('/:username', checkAdmin, async (req, res) => {
     if (company_name !== undefined) { updates.push('company_name = ?'); params.push(company_name); }
     if (db_name !== undefined) { updates.push('db_name = ?'); params.push(db_name); }
     if (role !== undefined) { updates.push('role = ?'); params.push(role); }
-    if (phone !== undefined) { updates.push('phone = ?'); params.push(phone); }
+    if (nomor_telpon !== undefined) { updates.push('nomor_telpon = ?'); params.push(nomor_telpon); }
 
     if (updates.length > 0) {
       query += updates.join(', ') + ' WHERE username = ?';

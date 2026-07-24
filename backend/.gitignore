@@ -5,3 +5,4 @@ node_modules
 /generated/prisma
 wa_session/
 .wwebjs_cache/
+.wwebjs_auth/

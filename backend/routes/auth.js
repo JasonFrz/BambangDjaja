@@ -81,7 +81,7 @@ router.post('/login', async (req, res) => {
       username: foundUser.username, 
       role: foundUser.role || 'user', 
       company_name: foundDbName,
-      phone: foundUser.phone || '' 
+      phone: foundUser.nomor_telpon || '' 
     });
   } catch (error) {
     console.error(error);

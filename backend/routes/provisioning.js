@@ -27,7 +27,7 @@ router.post("/generate-token", authenticateToken, async (req, res) => {
     db_name,
     tmu_username,
     tmu_password,
-    tmu_phone,
+    tmu_nomor_telpon,
     transformer_name,
     tmu_version,
   } = req.body;
@@ -38,12 +38,12 @@ router.post("/generate-token", authenticateToken, async (req, res) => {
     !db_name ||
     !tmu_username ||
     !tmu_password ||
-    !tmu_phone ||
+    !tmu_nomor_telpon ||
     !transformer_name
   ) {
     return res.status(400).json({
       error:
-        "Semua field (company_code, company_name, db_name, username, password, phone, transformer_name) wajib diisi",
+        "Semua field (company_code, company_name, db_name, username, password, nomor_telpon, transformer_name) wajib diisi",
     });
   }
 
@@ -72,7 +72,7 @@ router.post("/generate-token", authenticateToken, async (req, res) => {
         db_name,
         tmu_username,
         tmu_password,
-        tmu_phone,
+        tmu_nomor_telpon,
         transformer_name,
         tmu_version,
         expires_at: expiresAt,
@@ -121,7 +121,7 @@ router.put("/tokens/:id", authenticateToken, async (req, res) => {
     db_name,
     tmu_username,
     tmu_password,
-    tmu_phone,
+    tmu_nomor_telpon,
     transformer_name,
     tmu_version,
   } = req.body;
@@ -144,7 +144,7 @@ router.put("/tokens/:id", authenticateToken, async (req, res) => {
         db_name,
         tmu_username,
         tmu_password,
-        tmu_phone,
+        tmu_nomor_telpon,
         transformer_name,
         tmu_version,
       },
@@ -315,7 +315,7 @@ router.post("/activate", async (req, res) => {
         password: hashedPassword,
         company_name: tokenRow.company_name,
         db_name: tokenRow.db_name,
-        phone: tokenRow.tmu_phone,
+        nomor_telpon: tokenRow.tmu_nomor_telpon,
       },
       create: {
         username: clientUsername,
@@ -323,7 +323,7 @@ router.post("/activate", async (req, res) => {
         role: "user",
         company_name: tokenRow.company_name,
         db_name: tokenRow.db_name,
-        phone: tokenRow.tmu_phone,
+        nomor_telpon: tokenRow.tmu_nomor_telpon,
       },
     });
 

@@ -32,7 +32,7 @@ async function main() {
         password: hashedPassword,
         role: "user",
         company_name: "PT. Klien Trafo",
-        phone: "08123456789",
+        nomor_telpon: "08123456789",
       },
     });
     console.log('Seeded user "user"');

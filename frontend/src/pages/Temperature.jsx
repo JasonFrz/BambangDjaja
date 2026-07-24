@@ -3,11 +3,10 @@ import axios from 'axios';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine 
 } from 'recharts';
-import { Thermometer, Gauge, Wifi, WifiOff, Filter, ChevronDown, RefreshCw, Activity } from "lucide-react";
+import { Thermometer, Gauge, Wifi, WifiOff, Filter, ChevronDown, RefreshCw, Activity, Settings, Edit3, GripHorizontal } from "lucide-react";
 import { useApi } from '../contexts/ApiContext';
 import { useTemperatureData } from '../contexts/TemperatureDataContext';
 import { ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout';
-import { GripHorizontal } from 'lucide-react';
 
 
 const DEFAULT_LAYOUTS = {
@@ -67,8 +66,8 @@ const Temperature = () => {
     setFilters({ temperature: true, pressure: true, oilLevel: true });
   };
 
-  // Trends Data State
   const [trendData, setTrendData] = useState([]);
+  const [dataInterval, setDataInterval] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -77,6 +76,10 @@ const Temperature = () => {
   const [endTime, setEndTime] = useState('');
   const [isFiltering, setIsFiltering] = useState(false);
   const [filterError, setFilterError] = useState(null);
+  
+  // Layout Management State
+  const [isEditingLayout, setIsEditingLayout] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const fetchTrends = async (forceFilter = false) => {
     try {
@@ -140,13 +143,39 @@ const Temperature = () => {
     setLoading(false);
   }, [isFiltering]);
 
-  const chartData = isFiltering ? trendData : liveData;
+  const rawChartData = isFiltering ? trendData : liveData;
+  const chartData = useMemo(() => {
+    let processData = rawChartData;
+    if (dataInterval > 1) {
+      const downsampled = [];
+      let lastTime = null;
+      rawChartData.forEach(point => {
+        const pointTime = new Date(point.timestamp || new Date()).getTime();
+        if (!lastTime || (pointTime - lastTime) >= dataInterval * 1000) {
+          downsampled.push(point);
+          lastTime = pointTime;
+        }
+      });
+      processData = downsampled;
+    } else if (!isFiltering) {
+      const maxLivePoints = 30;
+      if (processData.length > maxLivePoints) {
+        processData = processData.slice(processData.length - maxLivePoints);
+      }
+    }
+    return processData.map(d => ({
+        ...d,
+        timestampMs: new Date(d.timestamp || new Date()).getTime()
+    }));
+  }, [rawChartData, dataInterval, isFiltering]);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white dark:bg-[#151521] border border-[#dfe1e6] dark:border-white/10 p-3 rounded-lg shadow-lg">
-          <p className="font-semibold text-[#172b4d] dark:text-white mb-2">{label}</p>
+          <p className="font-semibold text-[#172b4d] dark:text-white mb-2">
+            {typeof label === 'number' ? new Date(label).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : label}
+          </p>
           {payload.map((entry, index) => (
             <p key={index} style={{ color: entry.color }} className="text-sm font-medium">
               {entry.name}: {entry.value.toFixed(3)}
@@ -220,7 +249,7 @@ const Temperature = () => {
       <div className="mb-2 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h2 className="text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1 transition-colors flex items-center gap-4">
-            Temperature & Pressure
+            Dashboard Physical
             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-[#151521] border border-gray-200 dark:border-white/10 shadow-sm mt-1 sm:mt-0">
               <span className="text-sm font-semibold text-[#5e6c84] dark:text-[#94a3b8]">Overall Status:</span>
               <span className={`text-sm font-bold ${isPressSafe ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -250,130 +279,77 @@ const Temperature = () => {
         </div>
       )}
 
-      {/* Unified Filter Bar */}
-      <div className="relative z-20 -mx-4 px-4 sm:mx-0 sm:px-0 mb-2">
-        {/* Mobile Dropdown */}
-        <div className="md:hidden relative w-full mb-3">
-          <button 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="w-full flex items-center justify-between bg-white/60 dark:bg-[#151521]/80 backdrop-blur-xl border border-white/40 dark:border-white/10 px-4 py-3 rounded-xl shadow-sm text-sm font-semibold text-[#172b4d] dark:text-white"
-          >
-            <div className="flex items-center gap-2">
-              <Filter size={16} className="text-[#5e6c84] dark:text-[#94a3b8]" />
-              <span>View Filters ({activeCount} Active)</span>
-            </div>
-            <ChevronDown size={16} className={`transition-transform duration-300 ${isMobileMenuOpen ? 'rotate-180' : ''}`} />
-          </button>
-          
-          {isMobileMenuOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#151521] border border-gray-100 dark:border-white/10 rounded-xl shadow-xl overflow-hidden animate-[slideUpFade_0.2s_ease-out] z-50">
-              <div className="p-2 space-y-1">
-                <button onClick={() => { showAll(); setIsMobileMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-colors">
-                  Show All
-                </button>
-                <button onClick={() => { resetLayout(); setIsMobileMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-colors">
-                  Reset Layout
-                </button>
-                <div className="h-px bg-gray-100 dark:bg-white/5 my-1 mx-2"></div>
-                <button onClick={() => toggleFilter('temperature')} className="w-full flex items-center gap-3 px-4 py-2 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-[#172b4d] dark:text-white">
-                  <div className={`flex-shrink-0 w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${filters.temperature ? 'bg-orange-500 border-orange-500' : 'border-gray-300 dark:border-gray-600'}`}>
-                    {filters.temperature && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
-                  </div>
-                  <Thermometer size={14} className={filters.temperature ? 'text-orange-500' : 'text-gray-400'} /> Temperature
-                </button>
-                <button onClick={() => toggleFilter('pressure')} className="w-full flex items-center gap-3 px-4 py-2 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-[#172b4d] dark:text-white">
-                  <div className={`flex-shrink-0 w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${filters.pressure ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300 dark:border-gray-600'}`}>
-                    {filters.pressure && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
-                  </div>
-                  <Gauge size={14} className={filters.pressure ? 'text-indigo-500' : 'text-gray-400'} /> Pressure
-                </button>
-                <button onClick={() => toggleFilter('oilLevel')} className="w-full flex items-center gap-3 px-4 py-2 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-[#172b4d] dark:text-white">
-                  <div className={`flex-shrink-0 w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${filters.oilLevel ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 dark:border-gray-600'}`}>
-                    {filters.oilLevel && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
-                  </div>
-                  <Activity size={14} className={filters.oilLevel ? 'text-emerald-500' : 'text-gray-400'} /> Oil Level
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col xl:flex-row justify-between items-start gap-4 mb-6">
-          {/* Desktop Filter Bar */}
-          <div className="hidden md:flex items-center gap-3 bg-white/40 dark:bg-[#151521]/60 backdrop-blur-xl border border-white/40 dark:border-white/10 p-2 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-            <div className="flex items-center gap-2 px-3 py-2 text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm whitespace-nowrap border-r border-gray-200 dark:border-white/10 mr-1">
-              <Filter size={16} /> Views
-            </div>
-            
-            <button 
-              onClick={showAll}
-              className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${
-                activeCount === 3 
-                  ? 'bg-gray-800 text-white dark:bg-white dark:text-black shadow-md scale-100'
-                  : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:scale-105'
-              }`}
-            >
+      {/* Show Options Card */}
+      <div className="bg-white dark:bg-[#151521] p-5 rounded-2xl border border-[#dfe1e6] dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-4 animate-[slideUpFade_0.3s_ease-out]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 pb-3 border-b border-[#dfe1e6] dark:border-white/10 gap-3">
+          <div className="flex items-center gap-2">
+            <Settings size={18} className="text-[#5e6c84] dark:text-[#94a3b8]" />
+            <h3 className="font-semibold text-[#172b4d] dark:text-white">Show Options</h3>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={showAll} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
               Show All
             </button>
-
             <button 
-              onClick={resetLayout}
-              className="whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:scale-105 flex items-center gap-1"
+              onClick={() => setIsEditingLayout(!isEditingLayout)} 
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 ${isEditingLayout ? 'bg-[#0052cc] text-white' : 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20'}`}
             >
-              <RefreshCw size={14} /> Reset Layout
+              <Edit3 size={12} /> {isEditingLayout ? 'Done Editing' : 'Edit Layout'}
             </button>
-
-            <button 
-              onClick={() => toggleFilter('temperature')}
-              className={`whitespace-nowrap px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all duration-300 ${
-                filters.temperature 
-                  ? 'bg-orange-50 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300 border-orange-200 dark:border-orange-500/30 shadow-sm border'
-                  : 'bg-transparent text-gray-400 border border-transparent hover:bg-gray-50 dark:hover:bg-white/5 opacity-60'
-              }`}
-            >
-              <Thermometer size={14} className={filters.temperature ? 'animate-pulse' : ''} /> Temperature
-            </button>
-
-            <button 
-              onClick={() => toggleFilter('pressure')}
-              className={`whitespace-nowrap px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all duration-300 ${
-                filters.pressure 
-                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30 shadow-sm border'
-                  : 'bg-transparent text-gray-400 border border-transparent hover:bg-gray-50 dark:hover:bg-white/5 opacity-60'
-              }`}
-            >
-              <Gauge size={14} className={filters.pressure ? 'animate-pulse' : ''} /> Pressure
-            </button>
-
-            <button 
-              onClick={() => toggleFilter('oilLevel')}
-              className={`whitespace-nowrap px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all duration-300 ${
-                filters.oilLevel 
-                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30 shadow-sm border'
-                  : 'bg-transparent text-gray-400 border border-transparent hover:bg-gray-50 dark:hover:bg-white/5 opacity-60'
-              }`}
-            >
-              <Activity size={14} className={filters.oilLevel ? 'animate-pulse' : ''} /> Oil Level
-            </button>
+            
+            <div className="relative">
+              <button 
+                onClick={() => setShowResetConfirm(true)} 
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors flex items-center gap-1"
+              >
+                <RefreshCw size={12} /> Reset Layout
+              </button>
+              
+              {showResetConfirm && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-[#151521] border border-[#dfe1e6] dark:border-white/10 shadow-xl rounded-xl p-3 z-50 animate-[slideUpFade_0.2s_ease-out]">
+                  <p className="text-sm font-semibold text-[#172b4d] dark:text-white mb-3">Reset layout to default?</p>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => { resetLayout(); setShowResetConfirm(false); }}
+                      className="flex-1 px-2 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      Yes
+                    </button>
+                    <button 
+                      onClick={() => setShowResetConfirm(false)}
+                      className="flex-1 px-2 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-[#172b4d] dark:text-white text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+            <input type="checkbox" checked={filters.temperature} onChange={() => toggleFilter('temperature')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Temperature</span>
+          </label>
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+            <input type="checkbox" checked={filters.pressure} onChange={() => toggleFilter('pressure')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Pressure</span>
+          </label>
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+            <input type="checkbox" checked={filters.oilLevel} onChange={() => toggleFilter('oilLevel')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Oil Level</span>
+          </label>
         </div>
         {filterError && (
-          <span className="text-red-500 dark:text-red-400 text-sm font-medium mb-4 block animate-[fadeIn_0.3s_ease-out]">
+          <span className="text-red-500 dark:text-red-400 text-sm font-medium mt-3 block animate-[fadeIn_0.3s_ease-out]">
             {filterError}
           </span>
         )}
       </div>
 
-      {/* MONITORING CARDS */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-2 mb-6 gap-2">
-        <h3 className="text-xl font-bold text-[#172b4d] dark:text-white font-heading">Real-time Monitoring</h3>
-      </div>
-
       {(filters.temperature || filters.pressure) && (
-            <div className="flex flex-col gap-4 mt-8 mb-4">
-              <h3 className="text-xl font-bold text-[#172b4d] dark:text-white font-heading">Historical Trends</h3>
-              
+            <div className="flex flex-col gap-4 mb-4">
               {/* Date Time Filter for Charts - Responsive */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 bg-white dark:bg-[#151521] p-2.5 sm:p-2 rounded-xl border border-[#dfe1e6] dark:border-white/10 shadow-sm self-start w-full sm:w-auto">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
@@ -397,27 +373,43 @@ const Temperature = () => {
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-2 border-t sm:border-t-0 sm:border-l border-[#dfe1e6] dark:border-white/10 pt-2.5 sm:pt-0 sm:pl-3 w-full md:w-auto mt-1 sm:mt-0">
-                  <button 
-                    onClick={handleApplyFilter}
-                    className={`flex-1 sm:flex-none whitespace-nowrap px-4 py-1.5 rounded-lg text-sm font-semibold shadow-sm transition-colors ${
-                      isFiltering ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-[#0052cc] text-white hover:bg-[#0047b3]'
-                    }`}
-                  >
-                    {isFiltering ? 'Filter Aktif' : 'Filter Chart'}
-                  </button>
-                  <button 
-                    onClick={() => fetchTrends(false)}
-                    disabled={loading}
-                    className="px-3 py-1.5 bg-gray-50 dark:bg-white/5 border border-[#dfe1e6] dark:border-white/10 rounded-lg text-[#172b4d] dark:text-white hover:bg-[#ebecf0] dark:hover:bg-white/10 transition-all flex items-center justify-center shadow-sm"
-                  >
-                    <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-                  </button>
+                <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2 border-t sm:border-t-0 sm:border-l border-[#dfe1e6] dark:border-white/10 pt-2.5 sm:pt-0 sm:pl-3 w-full md:w-auto mt-1 sm:mt-0">
+                  <div className="flex items-center gap-2 w-full lg:w-auto lg:mr-2">
+                    <span className="text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8] w-12 sm:w-10 lg:w-auto">Interval:</span>
+                    <select
+                      value={dataInterval}
+                      onChange={(e) => setDataInterval(Number(e.target.value))}
+                      className="flex-1 lg:flex-none px-3 py-1.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white text-sm outline-none focus:border-[#0052cc] shadow-sm cursor-pointer"
+                    >
+                      <option className="bg-white dark:bg-[#151521] text-[#172b4d] dark:text-white" value={1}>1 Detik (Live)</option>
+                      <option className="bg-white dark:bg-[#151521] text-[#172b4d] dark:text-white" value={5}>5 Detik</option>
+                      <option className="bg-white dark:bg-[#151521] text-[#172b4d] dark:text-white" value={10}>10 Detik</option>
+                      <option className="bg-white dark:bg-[#151521] text-[#172b4d] dark:text-white" value={30}>30 Detik</option>
+                      <option className="bg-white dark:bg-[#151521] text-[#172b4d] dark:text-white" value={60}>1 Menit</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2 w-full lg:w-auto">
+                    <button 
+                      onClick={handleApplyFilter}
+                      className={`flex-1 lg:flex-none whitespace-nowrap px-4 py-1.5 rounded-lg text-sm font-semibold shadow-sm transition-colors ${
+                        isFiltering ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-[#0052cc] text-white hover:bg-[#0047b3]'
+                      }`}
+                    >
+                      {isFiltering ? 'Filter Aktif' : 'Filter Chart'}
+                    </button>
+                    <button 
+                      onClick={() => fetchTrends(false)}
+                      disabled={loading}
+                      className="px-3 py-1.5 bg-gray-50 dark:bg-white/5 border border-[#dfe1e6] dark:border-white/10 rounded-lg text-[#172b4d] dark:text-white hover:bg-[#ebecf0] dark:hover:bg-white/10 transition-all flex items-center justify-center shadow-sm"
+                    >
+                      <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           )}
-      <div ref={containerRef}>
+      <div ref={containerRef} className={isEditingLayout ? 'ring-2 ring-[#0052cc] ring-opacity-50 rounded-xl p-1 bg-[#0052cc]/5 dark:bg-[#0052cc]/10 transition-all' : 'transition-all'}>
         <ResponsiveGridLayout
           key={filterKey}
           className="layout -mx-2 mt-4"
@@ -425,34 +417,31 @@ const Temperature = () => {
           layouts={layouts}
           breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
           cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
-          rowHeight={180}
+          rowHeight={140}
           compactType="horizontal"
           preventCollision={false}
           onLayoutChange={handleLayoutChange}
           draggableHandle=".drag-handle"
-          margin={[10, 10]}
+          margin={[16, 16]}
+          isDraggable={isEditingLayout}
+          isResizable={isEditingLayout}
         >
         {/* Oil Level Card (Always visible) */}
         {filters.oilLevel && (
           <div key="oilLevelCard" className="w-full h-full">
-        <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out] h-full w-full">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 dark:bg-emerald-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#36b37e] to-[#57d9a3] flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
-              <Activity size={24} />
+        <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden h-full w-full bg-opacity-95 backdrop-blur animate-[slideUpFade_0.4s_ease-out]">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 dark:bg-emerald-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
+          <div className="flex items-center gap-3 mb-4 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#36b37e] to-[#57d9a3] flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 pointer-events-none">
+              <Activity size={20} />
             </div>
-            <div>
-              <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight text-lg flex-1">Oil Level</h3>
-                <GripHorizontal size={20} className="text-gray-400 drag-handle cursor-move hover:opacity-80 transition-opacity" />
-              <p className="text-sm text-[#5e6c84] dark:text-[#94a3b8]">Live reading from ADC</p>
-            </div>
+            <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Oil Level</h3>
+            <GripHorizontal size={20} className="text-gray-400 mr-2" />
           </div>
-          <div className="flex-1 flex items-center justify-center">
-            <div className="flex items-baseline gap-2">
-              <span className={`text-4xl font-bold font-mono tracking-tighter ${isOilLevelSafe ? 'text-emerald-500' : 'text-red-500'}`}>
-                {isOilLevelSafe ? 'Active' : 'Non Active'}
-              </span>
-            </div>
+          <div className="mt-auto flex items-baseline gap-1">
+            <span className={`text-3xl font-bold font-mono tracking-tight ${isOilLevelSafe ? 'text-emerald-500' : 'text-red-500'}`}>
+              {isOilLevelSafe ? 'Active' : 'Non Active'}
+            </span>
           </div>
         </div>
         </div>
@@ -460,25 +449,20 @@ const Temperature = () => {
         {/* Temperature Card */}
         {filters.temperature && (
           <div key="temperatureCard" className="w-full h-full">
-          <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out] h-full w-full">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 dark:bg-orange-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#ff5630] to-[#ff8b00] flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
-                <Thermometer size={24} />
+          <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden h-full w-full bg-opacity-95 backdrop-blur animate-[slideUpFade_0.4s_ease-out]">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-orange-500/5 dark:bg-orange-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
+            <div className="flex items-center gap-3 mb-4 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff5630] to-[#ff8b00] flex items-center justify-center text-white shadow-lg shadow-orange-500/20 pointer-events-none">
+                <Thermometer size={20} />
               </div>
-              <div>
-                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight text-lg flex-1">Oil Temperature</h3>
-                <GripHorizontal size={20} className="text-gray-400 drag-handle cursor-move hover:opacity-80 transition-opacity" />
-                <p className="text-sm text-[#5e6c84] dark:text-[#94a3b8]">Live reading from ADC</p>
-              </div>
+              <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Oil Temp</h3>
+              <GripHorizontal size={20} className="text-gray-400 mr-2" />
             </div>
-            <div className="flex-1 flex items-center justify-center">
-              <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tighter">
-                  {data.oil_temperature.toFixed(2)}
-                </span>
-                <span className="text-xl font-semibold text-[#8993a4] dark:text-[#64748b]">°C</span>
-              </div>
+            <div className="mt-auto flex items-baseline gap-1">
+              <span className="text-3xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">
+                {data.oil_temperature.toFixed(2)}
+              </span>
+              <span className="text-sm font-semibold text-[#8993a4] dark:text-[#64748b]">°C</span>
             </div>
           </div>
         </div>
@@ -487,25 +471,20 @@ const Temperature = () => {
         {/* Pressure Card */}
         {filters.pressure && (
           <div key="pressureCard" className="w-full h-full">
-          <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden animate-[slideUpFade_0.4s_ease-out_0.1s] h-full w-full">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 dark:bg-indigo-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#6554c0] to-[#8777d9] flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-                <Gauge size={24} />
+          <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden h-full w-full bg-opacity-95 backdrop-blur animate-[slideUpFade_0.4s_ease-out_0.1s]">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 dark:bg-indigo-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
+            <div className="flex items-center gap-3 mb-4 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6554c0] to-[#8777d9] flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 pointer-events-none">
+                <Gauge size={20} />
               </div>
-              <div>
-                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight text-lg flex-1">Oil Pressure</h3>
-                <GripHorizontal size={20} className="text-gray-400 drag-handle cursor-move hover:opacity-80 transition-opacity" />
-                <p className="text-sm text-[#5e6c84] dark:text-[#94a3b8]">Live reading from ADC</p>
-              </div>
+              <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Oil Pressure</h3>
+              <GripHorizontal size={20} className="text-gray-400 mr-2" />
             </div>
-            <div className="flex-1 flex items-center justify-center">
-              <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tighter">
-                  {data.oil_pressure.toFixed(3)}
-                </span>
-                <span className="text-xl font-semibold text-[#8993a4] dark:text-[#64748b]">Bar</span>
-              </div>
+            <div className="mt-auto flex items-baseline gap-1">
+              <span className="text-3xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">
+                {data.oil_pressure.toFixed(3)}
+              </span>
+              <span className="text-sm font-semibold text-[#8993a4] dark:text-[#64748b]">Bar</span>
             </div>
           </div>
         </div>
@@ -525,7 +504,7 @@ const Temperature = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <XAxis dataKey="timestampMs" type="number" scale="time" domain={['dataMin', 'dataMax']} tickCount={8} tickFormatter={(time) => new Date(time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
@@ -563,7 +542,7 @@ const Temperature = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} minTickGap={60} />
                       <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />

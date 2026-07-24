@@ -163,7 +163,7 @@ const MainLayout = () => {
                 <>
                   <Link 
                     to="/dashboard"
-                    title={isSidebarCollapsed ? "Voltage" : undefined}
+                    title={isSidebarCollapsed ? "Dashboard Electrical" : undefined}
                     className={`flex items-center py-3 rounded-xl font-medium transition-all ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} ${
                       location.pathname === '/dashboard' 
                         ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
@@ -171,7 +171,7 @@ const MainLayout = () => {
                     }`}
                   >
                     <LayoutDashboard size={20} className="shrink-0" />
-                    {!isSidebarCollapsed && <span className="truncate">Voltage</span>}
+                    {!isSidebarCollapsed && <span className="truncate">Dashboard Electrical</span>}
                   </Link>
                   <Link 
                     to="/transformer-data"
@@ -187,7 +187,7 @@ const MainLayout = () => {
                   </Link>
                   <Link 
                     to="/temperature"
-                    title={isSidebarCollapsed ? "Temperature" : undefined}
+                    title={isSidebarCollapsed ? "Dashboard Physical" : undefined}
                     className={`flex items-center py-3 rounded-xl font-medium transition-all ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} ${
                       location.pathname === '/temperature' 
                         ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
@@ -195,7 +195,7 @@ const MainLayout = () => {
                     }`}
                   >
                     <TrendingUp size={20} className="shrink-0" />
-                    {!isSidebarCollapsed && <span className="truncate">Temperature</span>}
+                    {!isSidebarCollapsed && <span className="truncate">Dashboard Physical</span>}
                   </Link>
                 </>
               )}
@@ -237,7 +237,7 @@ const MainLayout = () => {
             }`}
           >
             <LayoutDashboard size={20} />
-            <span className="text-[10px] font-medium">Voltage</span>
+            <span className="text-[10px] font-medium">Electrical</span>
           </Link>
           <Link 
             to="/transformer-data"
@@ -259,7 +259,7 @@ const MainLayout = () => {
             }`}
           >
             <TrendingUp size={20} />
-            <span className="text-[10px] font-medium">Temperature</span>
+            <span className="text-[10px] font-medium">Physical</span>
           </Link>
         </nav>
       )}

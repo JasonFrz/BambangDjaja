@@ -62,8 +62,8 @@ const AddUser = () => {
       const url = editingUser ? `${apiUrl}/api/users/${editingUser}` : `${apiUrl}/api/users`;
       const method = editingUser ? 'PUT' : 'POST';
       const body = editingUser 
-        ? JSON.stringify({ role, company_name: companyName, db_name: dbName, phone })
-        : JSON.stringify({ username, password, role, company_name: companyName, db_name: dbName, phone });
+        ? JSON.stringify({ role, company_name: companyName, db_name: dbName, nomor_telpon: phone })
+        : JSON.stringify({ username, password, role, company_name: companyName, db_name: dbName, nomor_telpon: phone });
 
       const response = await fetch(url, {
         method,
@@ -103,7 +103,7 @@ const AddUser = () => {
     setRole(u.role);
     setCompanyName(u.company_name === '-' ? '' : u.company_name);
     setDbName(u.db_name === '-' ? '' : u.db_name);
-    setPhone(u.phone || '+62');
+    setPhone(u.nomor_telpon || '+62');
     setShowCreateForm(true);
     setChangingPasswordUser(null);
     setError('');
@@ -406,15 +406,15 @@ const AddUser = () => {
                       </span>
                     </td>
                     <td className="p-4 text-sm text-[#172b4d] dark:text-gray-300">
-                      {u.phone ? (
+                      {u.nomor_telpon ? (
                         <a 
-                          href={`https://wa.me/${u.phone.replace('+', '')}`} 
+                          href={`https://wa.me/${u.nomor_telpon.replace('+', '')}`} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-green-600 dark:text-green-400 hover:underline"
                         >
                           <Phone size={12} />
-                          {u.phone}
+                          {u.nomor_telpon}
                         </a>
                       ) : '-'}
                     </td>

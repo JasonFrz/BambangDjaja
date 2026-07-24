@@ -4,7 +4,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine 
 } from 'recharts';
 import { Link, useLocation } from "react-router-dom";
-import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Filter, ChevronDown, RefreshCw, Settings, GripHorizontal } from "lucide-react";
+import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Filter, ChevronDown, RefreshCw, Settings, GripHorizontal, Edit3, Send, LogOut } from "lucide-react";
 import { useTrendData } from "../contexts/TrendDataContext";
 import { useApi } from '../contexts/ApiContext';
 
@@ -16,37 +16,49 @@ import 'react-resizable/css/styles.css';
 
 const DEFAULT_LAYOUTS = {
   lg: [
-    { i: 'uPhaseCard', x: 0, y: 0, w: 3, h: 2, minW: 1, minH: 1 },
-    { i: 'uLineCard', x: 3, y: 0, w: 3, h: 2, minW: 1, minH: 1 },
-    { i: 'currentCard', x: 6, y: 0, w: 3, h: 2, minW: 1, minH: 1 },
-    { i: 'freqCard', x: 9, y: 0, w: 3, h: 1, minW: 1, minH: 1 },
-    { i: 'energyCard', x: 9, y: 1, w: 3, h: 1, minW: 1, minH: 1 },
-    { i: 'uPhaseChart', x: 0, y: 2, w: 6, h: 3, minW: 1, minH: 1 },
-    { i: 'uLineChart', x: 6, y: 2, w: 6, h: 3, minW: 1, minH: 1 },
-    { i: 'currentChart', x: 0, y: 5, w: 6, h: 3, minW: 1, minH: 1 },
-    { i: 'freqChart', x: 6, y: 5, w: 6, h: 3, minW: 1, minH: 1 }
+    { i: 'statusCard', x: 0, y: 0, w: 12, h: 1, minW: 3, minH: 1 },
+    { i: 'uPhaseCard', x: 0, y: 1, w: 3, h: 2, minW: 2, minH: 2 },
+    { i: 'uLineCard', x: 3, y: 1, w: 3, h: 2, minW: 2, minH: 2 },
+    { i: 'currentCard', x: 6, y: 1, w: 3, h: 2, minW: 2, minH: 2 },
+    { i: 'powerCard', x: 9, y: 1, w: 3, h: 2, minW: 2, minH: 2 },
+    { i: 'freqCard', x: 0, y: 3, w: 6, h: 1, minW: 2, minH: 1 },
+    { i: 'energyCard', x: 6, y: 3, w: 6, h: 1, minW: 2, minH: 1 },
+    { i: 'uPhaseChart', x: 0, y: 4, w: 6, h: 3, minW: 2, minH: 2 },
+    { i: 'uLineChart', x: 6, y: 4, w: 6, h: 3, minW: 2, minH: 2 },
+    { i: 'currentChart', x: 0, y: 7, w: 6, h: 3, minW: 2, minH: 2 },
+    { i: 'powerChart', x: 6, y: 7, w: 6, h: 3, minW: 2, minH: 2 },
+    { i: 'freqChart', x: 0, y: 10, w: 12, h: 3, minW: 2, minH: 2 },
+    { i: 'efficiencyChart', x: 0, y: 13, w: 12, h: 3, minW: 2, minH: 2 }
   ],
   md: [
-    { i: 'uPhaseCard', x: 0, y: 0, w: 5, h: 2, minW: 1, minH: 1 },
-    { i: 'uLineCard', x: 5, y: 0, w: 5, h: 2, minW: 1, minH: 1 },
-    { i: 'currentCard', x: 0, y: 2, w: 5, h: 2, minW: 1, minH: 1 },
-    { i: 'freqCard', x: 5, y: 2, w: 5, h: 1, minW: 1, minH: 1 },
-    { i: 'energyCard', x: 5, y: 3, w: 5, h: 1, minW: 1, minH: 1 },
-    { i: 'uPhaseChart', x: 0, y: 4, w: 10, h: 3, minW: 1, minH: 1 },
-    { i: 'uLineChart', x: 0, y: 7, w: 10, h: 3, minW: 1, minH: 1 },
-    { i: 'currentChart', x: 0, y: 10, w: 10, h: 3, minW: 1, minH: 1 },
-    { i: 'freqChart', x: 0, y: 13, w: 10, h: 3, minW: 1, minH: 1 }
+    { i: 'statusCard', x: 0, y: 0, w: 10, h: 1, minW: 2, minH: 1 },
+    { i: 'uPhaseCard', x: 0, y: 1, w: 5, h: 2, minW: 2, minH: 2 },
+    { i: 'uLineCard', x: 5, y: 1, w: 5, h: 2, minW: 2, minH: 2 },
+    { i: 'currentCard', x: 0, y: 3, w: 5, h: 2, minW: 2, minH: 2 },
+    { i: 'powerCard', x: 5, y: 3, w: 5, h: 2, minW: 2, minH: 2 },
+    { i: 'freqCard', x: 0, y: 5, w: 5, h: 1, minW: 2, minH: 1 },
+    { i: 'energyCard', x: 5, y: 5, w: 5, h: 1, minW: 2, minH: 1 },
+    { i: 'uPhaseChart', x: 0, y: 6, w: 10, h: 3, minW: 2, minH: 2 },
+    { i: 'uLineChart', x: 0, y: 9, w: 10, h: 3, minW: 2, minH: 2 },
+    { i: 'currentChart', x: 0, y: 12, w: 10, h: 3, minW: 2, minH: 2 },
+    { i: 'powerChart', x: 0, y: 15, w: 10, h: 3, minW: 2, minH: 2 },
+    { i: 'freqChart', x: 0, y: 18, w: 10, h: 3, minW: 2, minH: 2 },
+    { i: 'efficiencyChart', x: 0, y: 21, w: 10, h: 3, minW: 2, minH: 2 }
   ],
   sm: [
-    { i: 'uPhaseCard', x: 0, y: 0, w: 6, h: 2, minW: 1, minH: 1 },
-    { i: 'uLineCard', x: 0, y: 2, w: 6, h: 2, minW: 1, minH: 1 },
-    { i: 'currentCard', x: 0, y: 4, w: 6, h: 2, minW: 1, minH: 1 },
-    { i: 'freqCard', x: 0, y: 6, w: 6, h: 1, minW: 1, minH: 1 },
-    { i: 'energyCard', x: 0, y: 7, w: 6, h: 1, minW: 1, minH: 1 },
-    { i: 'uPhaseChart', x: 0, y: 8, w: 6, h: 3, minW: 1, minH: 1 },
-    { i: 'uLineChart', x: 0, y: 11, w: 6, h: 3, minW: 1, minH: 1 },
-    { i: 'currentChart', x: 0, y: 14, w: 6, h: 3, minW: 1, minH: 1 },
-    { i: 'freqChart', x: 0, y: 17, w: 6, h: 3, minW: 1, minH: 1 }
+    { i: 'statusCard', x: 0, y: 0, w: 6, h: 1, minW: 1, minH: 1 },
+    { i: 'uPhaseCard', x: 0, y: 1, w: 6, h: 2, minW: 1, minH: 2 },
+    { i: 'uLineCard', x: 0, y: 3, w: 6, h: 2, minW: 1, minH: 2 },
+    { i: 'currentCard', x: 0, y: 5, w: 6, h: 2, minW: 1, minH: 2 },
+    { i: 'powerCard', x: 0, y: 7, w: 6, h: 2, minW: 1, minH: 2 },
+    { i: 'freqCard', x: 0, y: 9, w: 6, h: 1, minW: 1, minH: 1 },
+    { i: 'energyCard', x: 0, y: 10, w: 6, h: 1, minW: 1, minH: 1 },
+    { i: 'uPhaseChart', x: 0, y: 11, w: 6, h: 3, minW: 1, minH: 2 },
+    { i: 'uLineChart', x: 0, y: 14, w: 6, h: 3, minW: 1, minH: 2 },
+    { i: 'currentChart', x: 0, y: 17, w: 6, h: 3, minW: 1, minH: 2 },
+    { i: 'powerChart', x: 0, y: 20, w: 6, h: 3, minW: 1, minH: 2 },
+    { i: 'freqChart', x: 0, y: 23, w: 6, h: 3, minW: 1, minH: 2 },
+    { i: 'efficiencyChart', x: 0, y: 26, w: 6, h: 3, minW: 1, minH: 2 }
   ]
 };
 
@@ -57,22 +69,28 @@ const Dashboard = () => {
 
   // Unified Filter State for both Monitoring and Charts
   const [filters, setFilters] = useState({
+    status: true,
     uPhase: true,
     uLine: true,
     current: true,
     power: true,
-    frequency: true
+    energy: true,
+    frequency: true,
+    efficiency: true
   });
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [warning, setWarning] = useState("");
   const { width, containerRef } = useContainerWidth();
 
-  const STORAGE_KEY = 'dashboardLayouts_v6';
-  const ALL_KEYS = useMemo(() => ['uPhaseCard', 'uLineCard', 'currentCard', 'freqCard', 'energyCard', 'uPhaseChart', 'uLineChart', 'currentChart', 'freqChart'], []);
+  const STORAGE_KEY = 'dashboardLayouts_v8';
+  const ALL_KEYS = useMemo(() => [
+    'statusCard', 'uPhaseCard', 'uLineCard', 'currentCard', 'powerCard', 'freqCard', 'energyCard', 
+    'uPhaseChart', 'uLineChart', 'currentChart', 'powerChart', 'freqChart', 'efficiencyChart'
+  ], []);
 
   const [layouts, setLayouts] = useState(() => {
-    const savedLayouts = localStorage.getItem('dashboardLayouts_v6');
+    const savedLayouts = localStorage.getItem('dashboardLayouts_v7');
     return savedLayouts ? JSON.parse(savedLayouts) : DEFAULT_LAYOUTS;
   });
 
@@ -99,14 +117,14 @@ const Dashboard = () => {
       const prevStr = JSON.stringify(prev);
       if (newStr === prevStr) return prev;
       
-      localStorage.setItem('dashboardLayouts_v6', newStr);
+      localStorage.setItem('dashboardLayouts_v7', newStr);
       return merged;
     });
   }, [ALL_KEYS]);
 
   const resetLayout = () => {
     setLayouts(DEFAULT_LAYOUTS);
-    localStorage.removeItem('dashboardLayouts_v6');
+    localStorage.removeItem('dashboardLayouts_v7');
   };
 
   const toggleFilter = (key) => {
@@ -124,40 +142,83 @@ const Dashboard = () => {
   };
 
   const showAll = () => {
-    setFilters({ uPhase: true, uLine: true, current: true, power: true, frequency: true });
+    setFilters({ status: true, uPhase: true, uLine: true, current: true, power: true, energy: true, frequency: true, efficiency: true });
+  };
+
+  const [waNotif, setWaNotif] = useState({ message: '', type: '' });
+  
+  const showWaNotif = (message, type) => {
+    setWaNotif({ message, type });
+    setTimeout(() => {
+      setWaNotif({ message: '', type: '' });
+    }, 5000);
   };
 
   // Monitoring Data State
   const [data, setData] = useState({
-    vPhase: { A: 0.0, B: 0.0, C: 0.0 },
-    vLine: { AB: 0.0, BC: 0.0, CA: 0.0 },
-    current: { A: 0.0, B: 0.0, C: 0.0 },
+    vPhase: { A: 0.0, B: 0.0, C: 0.0, Avg: 0.0 },
+    vLine: { AB: 0.0, BC: 0.0, CA: 0.0, Avg: 0.0 },
+    current: { A: 0.0, B: 0.0, C: 0.0, N: 0.0, Avg: 0.0, Unbalance: 0.0 },
     frequency: 0.0,
-    power: 0.0,
-    energy: 0.0,
+    power: { ActiveTotal: 0.0, ReactiveTotal: 0.0, ApparentTotal: 0.0, PFTotal: 0.0, ActiveA: 0.0, ActiveB: 0.0, ActiveC: 0.0 },
+    energy: { ActiveTotal: 0.0, ReactiveTotal: 0.0 },
     efficiency: 0.0,
+    status: { OnOff: 0, Relay: 0, Alarm: 0, Synced: 0 }
   });
 
   useEffect(() => {
-    if (wsData && wsData.vPhase && wsData.vLine) {
-      setData(wsData);
+    if (wsData && wsData.phaseA !== undefined) { // Check if it's new schema
+      setData({
+        vPhase: { A: wsData.phaseA || 0, B: wsData.phaseB || 0, C: wsData.phaseC || 0, Avg: wsData.avgPhaseV || 0 },
+        vLine: { AB: wsData.lineAB || 0, BC: wsData.lineBC || 0, CA: wsData.lineCA || 0, Avg: wsData.avgLineV || 0 },
+        current: { A: wsData.currentA || 0, B: wsData.currentB || 0, C: wsData.currentC || 0, N: wsData.currentN || 0, Avg: wsData.avgCurrent || 0, Unbalance: wsData.currentUnbalance || 0 },
+        frequency: wsData.frequency || 0,
+        power: { 
+          ActiveTotal: wsData.powerActiveTotal || 0, 
+          ReactiveTotal: wsData.powerReactiveTotal || 0, 
+          ApparentTotal: wsData.powerApparentTotal || 0, 
+          PFTotal: wsData.pfTotal || 0,
+          ActiveA: wsData.powerActiveA || 0,
+          ActiveB: wsData.powerActiveB || 0,
+          ActiveC: wsData.powerActiveC || 0
+        },
+        energy: { 
+          ActiveTotal: wsData.energyActiveTotal || 0, 
+          ReactiveTotal: wsData.energyReactiveTotal || 0 
+        },
+        efficiency: wsData.efficiency || 0,
+        status: { OnOff: wsData.onOffStatus || 0, Relay: wsData.relayStatus || 0, Alarm: wsData.alarmStatus || 0, Synced: wsData.synced || 0 }
+      });
     } else if (liveData && liveData.length > 0) {
       // Gunakan data historis terakhir jika wsData belum ada
       const latest = liveData[liveData.length - 1];
       setData({
-        vPhase: { A: latest.phaseA || 0, B: latest.phaseB || 0, C: latest.phaseC || 0 },
-        vLine: { AB: latest.lineAB || 0, BC: latest.lineBC || 0, CA: latest.lineCA || 0 },
-        current: { A: latest.currentA || 0, B: latest.currentB || 0, C: latest.currentC || 0 },
+        vPhase: { A: latest.phaseA || 0, B: latest.phaseB || 0, C: latest.phaseC || 0, Avg: latest.avgPhaseV || 0 },
+        vLine: { AB: latest.lineAB || 0, BC: latest.lineBC || 0, CA: latest.lineCA || 0, Avg: latest.avgLineV || 0 },
+        current: { A: latest.currentA || 0, B: latest.currentB || 0, C: latest.currentC || 0, N: latest.currentN || 0, Avg: latest.avgCurrent || 0, Unbalance: latest.currentUnbalance || 0 },
         frequency: latest.frequency || 0,
-        power: latest.power || 0,
-        energy: latest.energy || 0,
+        power: { 
+          ActiveTotal: latest.powerActiveTotal || 0, 
+          ReactiveTotal: latest.powerReactiveTotal || 0, 
+          ApparentTotal: latest.powerApparentTotal || 0, 
+          PFTotal: latest.pfTotal || 0,
+          ActiveA: latest.powerActiveA || 0,
+          ActiveB: latest.powerActiveB || 0,
+          ActiveC: latest.powerActiveC || 0
+        },
+        energy: { 
+          ActiveTotal: latest.energyActiveTotal || 0, 
+          ReactiveTotal: latest.energyReactiveTotal || 0 
+        },
         efficiency: latest.efficiency || 0,
+        status: { OnOff: latest.onOffStatus || 0, Relay: latest.relayStatus || 0, Alarm: latest.alarmStatus || 0, Synced: latest.synced || 0 }
       });
     }
   }, [wsData, liveData]);
 
   // Trends Data State
   const [trendData, setTrendData] = useState([]);
+  const [dataInterval, setDataInterval] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -166,6 +227,10 @@ const Dashboard = () => {
   const [endTime, setEndTime] = useState('');
   const [isFiltering, setIsFiltering] = useState(false);
   const [filterError, setFilterError] = useState(null);
+  
+  // Layout Management State
+  const [isEditingLayout, setIsEditingLayout] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const fetchTrends = async (forceFilter = false) => {
     try {
@@ -229,13 +294,39 @@ const Dashboard = () => {
     setLoading(false);
   }, [isFiltering]);
 
-  const chartData = isFiltering ? trendData : liveData;
+  const rawChartData = isFiltering ? trendData : liveData;
+  const chartData = useMemo(() => {
+    let processData = rawChartData;
+    if (dataInterval > 1) {
+      const downsampled = [];
+      let lastTime = null;
+      rawChartData.forEach(point => {
+        const pointTime = new Date(point.timestamp || new Date()).getTime();
+        if (!lastTime || (pointTime - lastTime) >= dataInterval * 1000) {
+          downsampled.push(point);
+          lastTime = pointTime;
+        }
+      });
+      processData = downsampled;
+    } else if (!isFiltering) {
+      const maxLivePoints = 30;
+      if (processData.length > maxLivePoints) {
+        processData = processData.slice(processData.length - maxLivePoints);
+      }
+    }
+    return processData.map(d => ({
+        ...d,
+        timestampMs: new Date(d.timestamp || new Date()).getTime()
+    }));
+  }, [rawChartData, dataInterval, isFiltering]);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white dark:bg-[#151521] border border-[#dfe1e6] dark:border-white/10 p-3 rounded-lg shadow-lg">
-          <p className="font-semibold text-[#172b4d] dark:text-white mb-2">{label}</p>
+          <p className="font-semibold text-[#172b4d] dark:text-white mb-2">
+            {typeof label === 'number' ? new Date(label).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : label}
+          </p>
           {payload.map((entry, index) => (
             <p key={index} style={{ color: entry.color }} className="text-sm font-medium">
               {entry.name}: {entry.value.toFixed(2)}
@@ -249,6 +340,37 @@ const Dashboard = () => {
 
   const activeCount = Object.values(filters).filter(Boolean).length;
 
+
+  const handleTestWA = async () => {
+    try {
+      const dbName = sessionStorage.getItem('company_name');
+      const username = sessionStorage.getItem('username');
+      if (!dbName || !username) {
+        showWaNotif("Session expired, please login again.", "error");
+        return;
+      }
+      
+      const res = await axios.post(`${apiUrl}/api/whatsapp/test`, {
+        frequency: data.frequency,
+        dbName,
+        username
+      });
+      showWaNotif("✅ " + res.data.message, "success");
+    } catch (error) {
+      showWaNotif("❌ Gagal uji WA: " + (error.response?.data?.error || error.message), "error");
+    }
+  };
+
+  const handleLogoutWA = async () => {
+    if (!window.confirm("Apakah Anda yakin ingin menghapus sesi WhatsApp (Logout)? Anda harus scan ulang QR code di server terminal.")) return;
+    try {
+      const res = await axios.post(`${apiUrl}/api/whatsapp/logout`);
+      showWaNotif("✅ " + res.data.message, "success");
+    } catch (error) {
+      showWaNotif("❌ Gagal logout WA: " + (error.response?.data?.error || error.message), "error");
+    }
+  };
+
   // Calculate Overall Status based on Frequency
   const isFreqSafe = data.frequency <= 52.5;
 
@@ -259,7 +381,7 @@ const Dashboard = () => {
       <div className="mb-2 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h2 className="text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1 transition-colors flex items-center gap-4">
-            Voltage Dashboard
+            Dashboard Electrical
             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-[#151521] border border-gray-200 dark:border-white/10 shadow-sm mt-1 sm:mt-0">
               <span className="text-sm font-semibold text-[#5e6c84] dark:text-[#94a3b8]">Overall Status:</span>
               <span className={`text-sm font-bold ${isFreqSafe ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -289,149 +411,90 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Unified Filter Bar */}
-      <div className="relative z-20 -mx-4 px-4 sm:mx-0 sm:px-0 mb-2">
-        {/* Mobile Dropdown */}
-        <div className="md:hidden relative w-full mb-3">
-          <button 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="w-full flex items-center justify-between bg-white/60 dark:bg-[#151521]/80 backdrop-blur-xl border border-white/40 dark:border-white/10 px-4 py-3 rounded-xl shadow-sm text-sm font-semibold text-[#172b4d] dark:text-white"
-          >
-            <div className="flex items-center gap-2">
-              <Filter size={16} className="text-[#5e6c84] dark:text-[#94a3b8]" />
-              <span>View Filters ({activeCount} Active)</span>
-            </div>
-            <ChevronDown size={16} className={`transition-transform duration-300 ${isMobileMenuOpen ? 'rotate-180' : ''}`} />
-          </button>
-          
-          {isMobileMenuOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#151521] border border-gray-100 dark:border-white/10 rounded-xl shadow-xl overflow-hidden animate-[slideUpFade_0.2s_ease-out] z-50">
-              <div className="p-2 space-y-1">
-                <button onClick={() => { showAll(); setIsMobileMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-colors">
-                  Show All
-                </button>
-                <div className="h-px bg-gray-100 dark:bg-white/5 my-1 mx-2"></div>
-                <button onClick={() => toggleFilter('uPhase')} className="w-full flex items-center gap-3 px-4 py-2 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-[#172b4d] dark:text-white">
-                  <div className={`flex-shrink-0 w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${filters.uPhase ? 'bg-blue-500 border-blue-500' : 'border-gray-300 dark:border-gray-600'}`}>
-                    {filters.uPhase && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
-                  </div>
-                  <Zap size={14} className={filters.uPhase ? 'text-blue-500' : 'text-gray-400'} /> U Phase
-                </button>
-                <button onClick={() => toggleFilter('uLine')} className="w-full flex items-center gap-3 px-4 py-2 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-[#172b4d] dark:text-white">
-                  <div className={`flex-shrink-0 w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${filters.uLine ? 'bg-cyan-500 border-cyan-500' : 'border-gray-300 dark:border-gray-600'}`}>
-                    {filters.uLine && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
-                  </div>
-                  <Activity size={14} className={filters.uLine ? 'text-cyan-500' : 'text-gray-400'} /> U Line
-                </button>
-                <button onClick={() => toggleFilter('current')} className="w-full flex items-center gap-3 px-4 py-2 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-[#172b4d] dark:text-white">
-                  <div className={`flex-shrink-0 w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${filters.current ? 'bg-amber-500 border-amber-500' : 'border-gray-300 dark:border-gray-600'}`}>
-                    {filters.current && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
-                  </div>
-                  <Waves size={14} className={filters.current ? 'text-amber-500' : 'text-gray-400'} /> Current
-                </button>
-                <button onClick={() => toggleFilter('power')} className="w-full flex items-center gap-3 px-4 py-2 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-[#172b4d] dark:text-white">
-                  <div className={`flex-shrink-0 w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${filters.power ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300 dark:border-gray-600'}`}>
-                    {filters.power && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
-                  </div>
-                  <Gauge size={14} className={filters.power ? 'text-indigo-500' : 'text-gray-400'} /> Freq & Energy
-                </button>
-                <button onClick={() => toggleFilter('frequency')} className="w-full flex items-center gap-3 px-4 py-2 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-[#172b4d] dark:text-white">
-                  <div className={`flex-shrink-0 w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${filters.frequency ? 'bg-purple-500 border-purple-500' : 'border-gray-300 dark:border-gray-600'}`}>
-                    {filters.frequency && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
-                  </div>
-                  <Activity size={14} className={filters.frequency ? 'text-purple-500' : 'text-gray-400'} /> Frequency Chart
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col xl:flex-row justify-between items-start gap-4 mb-6">
-          {/* Desktop Filter Bar */}
-          <div className="hidden md:flex items-stretch gap-1 bg-white/40 dark:bg-[#151521]/60 backdrop-blur-xl border border-white/40 dark:border-white/10 p-2 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-            <div className="flex items-center gap-2 px-3 py-2 text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm whitespace-nowrap border-r border-gray-200 dark:border-white/10 mr-2">
-              <Filter size={16} /> Views
-            </div>
+      {/* Show Options Card */}
+      <div className="bg-white dark:bg-[#151521] p-5 rounded-2xl border border-[#dfe1e6] dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-4 animate-[slideUpFade_0.3s_ease-out]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 pb-3 border-b border-[#dfe1e6] dark:border-white/10 gap-3">
+          <div className="flex items-center gap-2">
+            <Settings size={18} className="text-[#5e6c84] dark:text-[#94a3b8]" />
+            <h3 className="font-semibold text-[#172b4d] dark:text-white">Show Options</h3>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={showAll} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
+              Show All
+            </button>
+            <button 
+              onClick={() => setIsEditingLayout(!isEditingLayout)} 
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 ${isEditingLayout ? 'bg-[#0052cc] text-white' : 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20'}`}
+            >
+              <Edit3 size={12} /> {isEditingLayout ? 'Done Editing' : 'Edit Layout'}
+            </button>
             
-            <div className="flex flex-wrap items-center gap-2 flex-1">
+            <div className="relative">
               <button 
-                onClick={resetLayout}
-                className="whitespace-nowrap px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all duration-300 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20"
+                onClick={() => setShowResetConfirm(true)} 
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors flex items-center gap-1"
               >
-                <RefreshCw size={14} /> Reset Layout
+                <RefreshCw size={12} /> Reset Layout
               </button>
-              <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1"></div>
-              <button 
-                onClick={showAll}
-                className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${
-                  activeCount === 5 
-                    ? 'bg-gray-800 text-white dark:bg-white dark:text-black shadow-md scale-100'
-                    : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:scale-105'
-                }`}
-              >
-                Show All
-              </button>
-
-              <button 
-                onClick={() => toggleFilter('uPhase')}
-                className={`whitespace-nowrap px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all duration-300 ${
-                  filters.uPhase 
-                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 border-blue-200 dark:border-blue-500/30 shadow-sm border'
-                    : 'bg-transparent text-gray-400 border border-transparent hover:bg-gray-50 dark:hover:bg-white/5 opacity-60'
-                }`}
-              >
-                <Zap size={14} className={filters.uPhase ? 'animate-pulse' : ''} /> U Phase
-              </button>
-
-              <button 
-                onClick={() => toggleFilter('uLine')}
-                className={`whitespace-nowrap px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all duration-300 ${
-                  filters.uLine 
-                    ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300 border-cyan-200 dark:border-cyan-500/30 shadow-sm border'
-                    : 'bg-transparent text-gray-400 border border-transparent hover:bg-gray-50 dark:hover:bg-white/5 opacity-60'
-                }`}
-              >
-                <Activity size={14} className={filters.uLine ? 'animate-pulse' : ''} /> U Line
-              </button>
-
-              <button 
-                onClick={() => toggleFilter('current')}
-                className={`whitespace-nowrap px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all duration-300 ${
-                  filters.current 
-                    ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border-amber-200 dark:border-amber-500/30 shadow-sm border'
-                    : 'bg-transparent text-gray-400 border border-transparent hover:bg-gray-50 dark:hover:bg-white/5 opacity-60'
-                }`}
-              >
-                <Waves size={14} className={filters.current ? 'animate-pulse' : ''} /> Current
-              </button>
-
-              <button 
-                onClick={() => toggleFilter('power')}
-                className={`whitespace-nowrap px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all duration-300 ${
-                  filters.power 
-                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30 shadow-sm border'
-                    : 'bg-transparent text-gray-400 border border-transparent hover:bg-gray-50 dark:hover:bg-white/5 opacity-60'
-                }`}
-              >
-                <Gauge size={14} className={filters.power ? 'animate-pulse' : ''} /> Freq & Energy
-              </button>
-
-              <button 
-                onClick={() => toggleFilter('frequency')}
-                className={`whitespace-nowrap px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all duration-300 ${
-                  filters.frequency 
-                    ? 'bg-purple-50 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300 border-purple-200 dark:border-purple-500/30 shadow-sm border'
-                    : 'bg-transparent text-gray-400 border border-transparent hover:bg-gray-50 dark:hover:bg-white/5 opacity-60'
-                }`}
-              >
-                <Activity size={14} className={filters.frequency ? 'animate-pulse' : ''} /> Frequency Chart
-              </button>
+              
+              {showResetConfirm && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-[#151521] border border-[#dfe1e6] dark:border-white/10 shadow-xl rounded-xl p-3 z-50 animate-[slideUpFade_0.2s_ease-out]">
+                  <p className="text-sm font-semibold text-[#172b4d] dark:text-white mb-3">Reset layout to default?</p>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => { resetLayout(); setShowResetConfirm(false); }}
+                      className="flex-1 px-2 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      Yes
+                    </button>
+                    <button 
+                      onClick={() => setShowResetConfirm(false)}
+                      className="flex-1 px-2 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-[#172b4d] dark:text-white text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+            <input type="checkbox" checked={filters.status} onChange={() => toggleFilter('status')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+            <span className="text-sm font-medium text-[#172b4d] dark:text-white">System Status</span>
+          </label>
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+            <input type="checkbox" checked={filters.uPhase} onChange={() => toggleFilter('uPhase')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Phase Voltage</span>
+          </label>
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+            <input type="checkbox" checked={filters.uLine} onChange={() => toggleFilter('uLine')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Line Voltage</span>
+          </label>
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+            <input type="checkbox" checked={filters.current} onChange={() => toggleFilter('current')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Current</span>
+          </label>
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+            <input type="checkbox" checked={filters.power} onChange={() => toggleFilter('power')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Power</span>
+          </label>
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+            <input type="checkbox" checked={filters.energy} onChange={() => toggleFilter('energy')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Energy</span>
+          </label>
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+            <input type="checkbox" checked={filters.frequency} onChange={() => toggleFilter('frequency')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Frequency</span>
+          </label>
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+            <input type="checkbox" checked={filters.efficiency} onChange={() => toggleFilter('efficiency')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Efficiency Chart</span>
+          </label>
         </div>
         {filterError && (
-          <span className="text-red-500 dark:text-red-400 text-sm font-medium mb-4 block animate-[fadeIn_0.3s_ease-out]">
+          <span className="text-red-500 dark:text-red-400 text-sm font-medium mt-3 block animate-[fadeIn_0.3s_ease-out]">
             {filterError}
           </span>
         )}
@@ -462,22 +525,38 @@ const Dashboard = () => {
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2 border-t sm:border-t-0 sm:border-l border-[#dfe1e6] dark:border-white/10 pt-2.5 sm:pt-0 sm:pl-3 w-full md:w-auto mt-1 sm:mt-0">
-              <button 
-                onClick={handleApplyFilter}
-                className={`flex-1 sm:flex-none whitespace-nowrap px-4 py-1.5 rounded-lg text-sm font-semibold shadow-sm transition-colors ${
-                  isFiltering ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-[#0052cc] text-white hover:bg-[#0047b3]'
-                }`}
-              >
-                {isFiltering ? 'Filter Aktif' : 'Filter Chart'}
-              </button>
-              <button 
-                onClick={() => fetchTrends(false)}
-                disabled={loading}
-                className="px-3 py-1.5 bg-gray-50 dark:bg-white/5 border border-[#dfe1e6] dark:border-white/10 rounded-lg text-[#172b4d] dark:text-white hover:bg-[#ebecf0] dark:hover:bg-white/10 transition-all flex items-center justify-center shadow-sm"
-              >
-                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-              </button>
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2 border-t sm:border-t-0 sm:border-l border-[#dfe1e6] dark:border-white/10 pt-2.5 sm:pt-0 sm:pl-3 w-full md:w-auto mt-1 sm:mt-0">
+              <div className="flex items-center gap-2 w-full lg:w-auto lg:mr-2">
+                <span className="text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8] w-12 sm:w-10 lg:w-auto">Interval:</span>
+                <select
+                  value={dataInterval}
+                  onChange={(e) => setDataInterval(Number(e.target.value))}
+                  className="flex-1 lg:flex-none px-3 py-1.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white text-sm outline-none focus:border-[#0052cc] shadow-sm cursor-pointer"
+                >
+                  <option className="bg-white dark:bg-[#151521] text-[#172b4d] dark:text-white" value={1}>1 Detik (Live)</option>
+                  <option className="bg-white dark:bg-[#151521] text-[#172b4d] dark:text-white" value={5}>5 Detik</option>
+                  <option className="bg-white dark:bg-[#151521] text-[#172b4d] dark:text-white" value={10}>10 Detik</option>
+                  <option className="bg-white dark:bg-[#151521] text-[#172b4d] dark:text-white" value={30}>30 Detik</option>
+                  <option className="bg-white dark:bg-[#151521] text-[#172b4d] dark:text-white" value={60}>1 Menit</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2 w-full lg:w-auto">
+                <button 
+                  onClick={handleApplyFilter}
+                  className={`flex-1 lg:flex-none whitespace-nowrap px-4 py-1.5 rounded-lg text-sm font-semibold shadow-sm transition-colors ${
+                    isFiltering ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-[#0052cc] text-white hover:bg-[#0047b3]'
+                  }`}
+                >
+                  {isFiltering ? 'Filter Aktif' : 'Filter Chart'}
+                </button>
+                <button 
+                  onClick={() => fetchTrends(false)}
+                  disabled={loading}
+                  className="px-3 py-1.5 bg-gray-50 dark:bg-white/5 border border-[#dfe1e6] dark:border-white/10 rounded-lg text-[#172b4d] dark:text-white hover:bg-[#ebecf0] dark:hover:bg-white/10 transition-all flex items-center justify-center shadow-sm"
+                >
+                  <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -490,9 +569,9 @@ const Dashboard = () => {
       )}
 
       {/* DASHBOARD DRAGGABLE GRID */}
-      <div ref={containerRef}>
+      <div ref={containerRef} className={isEditingLayout ? 'ring-2 ring-[#0052cc] ring-opacity-50 rounded-xl p-1 bg-[#0052cc]/5 dark:bg-[#0052cc]/10 transition-all' : 'transition-all'}>
       <ResponsiveGridLayout
-        key={filterKey}
+        key={`${filterKey}-${isEditingLayout}`}
         className="layout -mx-2 mt-4"
         width={width}
         layouts={layouts}
@@ -502,20 +581,62 @@ const Dashboard = () => {
         compactType="horizontal"
         preventCollision={false}
         onLayoutChange={handleLayoutChange}
-        draggableHandle=".drag-handle"
+        draggableHandle={isEditingLayout ? ".drag-handle" : ""}
         margin={[16, 16]}
+        isDraggable={isEditingLayout}
+        isResizable={isEditingLayout}
       >
         
+        {filters.status && (
+          <div key="statusCard" className="flex">
+            <div className={`bg-white dark:bg-[#151521] rounded-2xl p-4 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex items-center justify-between group relative overflow-hidden bg-opacity-95 backdrop-blur select-none ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+              <div className="flex items-center gap-2 sm:gap-6 w-full justify-around">
+                <div className="flex flex-col items-center">
+                  <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">System</span>
+                  <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 ${data.status.OnOff === 1 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                    <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.OnOff === 1 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'}`}></div>
+                    {data.status.OnOff === 1 ? 'ON' : 'OFF'}
+                  </div>
+                </div>
+                <div className="w-px h-6 sm:h-8 bg-gray-200 dark:bg-gray-800"></div>
+                <div className="flex flex-col items-center">
+                  <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Relay</span>
+                  <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 ${data.status.Relay === 1 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+                    <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.Relay === 1 ? 'bg-emerald-500' : 'bg-gray-400'}`}></div>
+                    {data.status.Relay === 1 ? 'ACTIVE' : 'IDLE'}
+                  </div>
+                </div>
+                <div className="w-px h-6 sm:h-8 bg-gray-200 dark:bg-gray-800"></div>
+                <div className="flex flex-col items-center">
+                  <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Alarm</span>
+                  <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 ${data.status.Alarm === 1 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+                    <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.Alarm === 1 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse' : 'bg-emerald-500'}`}></div>
+                    {data.status.Alarm === 1 ? 'TRIGGERED' : 'CLEAR'}
+                  </div>
+                </div>
+                <div className="w-px h-6 sm:h-8 bg-gray-200 dark:bg-gray-800 hidden sm:block"></div>
+                <div className="hidden sm:flex flex-col items-center">
+                  <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Sync</span>
+                  <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 ${data.status.Synced === 1 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
+                    <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.Synced === 1 ? 'bg-blue-500' : 'bg-amber-500'}`}></div>
+                    {data.status.Synced === 1 ? 'SYNCED' : 'PENDING'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {filters.uPhase && (
           <div key="uPhaseCard" className="flex">
             <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
               <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 dark:bg-blue-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-              <div className="flex items-center gap-3 mb-5 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+              <div className={`flex items-center gap-3 mb-5 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0052cc] to-[#4c9aff] flex items-center justify-center text-white shadow-lg shadow-blue-500/20 pointer-events-none">
                   <Zap size={20} />
                 </div>
                 <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Phase Voltage (U Phase)</h3>
-                <GripHorizontal size={20} className="text-gray-400 mr-2" />
+                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
               </div>
               <div className="space-y-3 flex-1 flex flex-col justify-center">
                 {["A", "B", "C"].map((phase) => (
@@ -536,12 +657,12 @@ const Dashboard = () => {
           <div key="uLineCard" className="flex">
             <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
               <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 dark:bg-cyan-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-              <div className="flex items-center gap-3 mb-5 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+              <div className={`flex items-center gap-3 mb-5 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00b8d9] to-[#36c9e5] flex items-center justify-center text-white shadow-lg shadow-cyan-500/20 pointer-events-none">
                   <Activity size={20} />
                 </div>
                 <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Line Voltage (U Line)</h3>
-                <GripHorizontal size={20} className="text-gray-400 mr-2" />
+                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
               </div>
               <div className="space-y-3 flex-1 flex flex-col justify-center">
                 {["AB", "BC", "CA"].map((line) => (
@@ -562,38 +683,123 @@ const Dashboard = () => {
           <div key="currentCard" className="flex">
             <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
               <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 dark:bg-amber-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-              <div className="flex items-center gap-3 mb-5 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+              <div className={`flex items-center gap-3 mb-5 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ffab00] to-[#ffc400] flex items-center justify-center text-white shadow-lg shadow-amber-500/20 pointer-events-none">
                   <Waves size={20} />
                 </div>
                 <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Current (I)</h3>
-                <GripHorizontal size={20} className="text-gray-400 mr-2" />
+                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
               </div>
-              <div className="space-y-3 flex-1 flex flex-col justify-center">
+              <div className="flex-1 grid grid-cols-2 gap-2 content-center">
                 {["A", "B", "C"].map((phase) => (
-                  <div key={phase} className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
-                    <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Phase {phase}</span>
+                  <div key={phase} className="flex justify-between items-center p-2 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
+                    <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-xs">Ph {phase}</span>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">{data.current[phase].toFixed(3)}</span>
-                      <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">A</span>
+                      <span className="text-sm font-bold text-[#172b4d] dark:text-white font-mono">{data.current[phase].toFixed(2)}</span>
+                      <span className="text-[10px] font-semibold text-[#8993a4] dark:text-[#64748b]">A</span>
                     </div>
                   </div>
                 ))}
+                <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
+                  <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-xs">Neutral</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-sm font-bold text-[#172b4d] dark:text-white font-mono">{data.current.N.toFixed(2)}</span>
+                    <span className="text-[10px] font-semibold text-[#8993a4] dark:text-[#64748b]">A</span>
+                  </div>
+                </div>
+                <div className="col-span-2 flex justify-between items-center p-2 rounded-xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 transition-colors">
+                  <span className="text-amber-700 dark:text-amber-400 font-semibold text-xs">Current Unbalance</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-sm font-bold text-amber-700 dark:text-amber-400 font-mono">{data.current.Unbalance.toFixed(2)}</span>
+                    <span className="text-[10px] font-semibold text-amber-600/70 dark:text-amber-400/70">%</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         )}
 
         {filters.power && (
+          <div key="powerCard" className="flex">
+            <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 dark:bg-purple-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+              <div className={`flex items-center gap-3 mb-5 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8777d9] to-[#6554c0] flex items-center justify-center text-white shadow-lg shadow-purple-500/20 pointer-events-none">
+                  <Activity size={20} />
+                </div>
+                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Power</h3>
+                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
+              </div>
+              <div className="flex-1 grid grid-cols-2 gap-2 content-center">
+                <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors">
+                  <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-xs">Active</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-sm font-bold text-[#172b4d] dark:text-white font-mono">{data.power.ActiveTotal.toFixed(1)}</span>
+                    <span className="text-[10px] font-semibold text-[#8993a4]">kW</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors">
+                  <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-xs">Reactive</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-sm font-bold text-[#172b4d] dark:text-white font-mono">{data.power.ReactiveTotal.toFixed(1)}</span>
+                    <span className="text-[10px] font-semibold text-[#8993a4]">kVAR</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors">
+                  <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-xs">Apparent</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-sm font-bold text-[#172b4d] dark:text-white font-mono">{data.power.ApparentTotal.toFixed(1)}</span>
+                    <span className="text-[10px] font-semibold text-[#8993a4]">kVA</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center p-2 rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 transition-colors">
+                  <span className="text-indigo-700 dark:text-indigo-400 font-semibold text-xs">PF Total</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-sm font-bold text-indigo-700 dark:text-indigo-400 font-mono">{data.power.PFTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {filters.frequency && (
           <div key="freqCard" className="flex">
             <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full group relative overflow-hidden flex flex-col bg-opacity-95 backdrop-blur">
               <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 dark:bg-indigo-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
-              <div className="flex items-center gap-3 mb-4 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+              <div className={`flex items-center gap-3 mb-4 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6554c0] to-[#8777d9] flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 pointer-events-none">
                   <Gauge size={20} />
                 </div>
                 <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Frequency</h3>
-                <GripHorizontal size={20} className="text-gray-400 mr-2" />
+                
+                {waNotif.message && (
+                  <div className={`mr-2 text-[10px] font-medium px-2 py-1 rounded-md ${
+                    waNotif.type === 'success' 
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  }`}>
+                    {waNotif.message}
+                  </div>
+                )}
+
+                <div className="flex gap-1 mr-2 pointer-events-auto">
+                  <button
+                    onClick={handleTestWA}
+                    title="Test WA Notification"
+                    className="p-1.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800/80 transition-colors"
+                  >
+                    <Send size={14} />
+                  </button>
+                  <button
+                    onClick={handleLogoutWA}
+                    title="Logout WA Session"
+                    className="p-1.5 rounded-full bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800/80 transition-colors"
+                  >
+                    <LogOut size={14} />
+                  </button>
+                </div>
+                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
               </div>
               <div className="mt-auto flex items-baseline gap-1">
                 <span className="text-3xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">{data.frequency.toFixed(2)}</span>
@@ -603,20 +809,32 @@ const Dashboard = () => {
           </div>
         )}
 
-        {filters.power && (
+        {filters.energy && (
           <div key="energyCard" className="flex">
             <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full group relative overflow-hidden flex flex-col bg-opacity-95 backdrop-blur">
               <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 dark:bg-emerald-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
-              <div className="flex items-center gap-3 mb-4 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+              <div className={`flex items-center gap-3 mb-4 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#36b37e] to-[#57d9a3] flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 pointer-events-none">
                   <Activity size={20} />
                 </div>
-                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Total Active Energy</h3>
-                <GripHorizontal size={20} className="text-gray-400 mr-2" />
+                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Energy</h3>
+                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
               </div>
-              <div className="mt-auto flex items-baseline gap-1">
-                <span className="text-3xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">{data.energy.toFixed(1)}</span>
-                <span className="text-sm font-semibold text-[#8993a4] dark:text-[#64748b]">kWh</span>
+              <div className="flex-1 flex flex-col justify-center gap-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Active Energy</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">{data.energy.ActiveTotal.toFixed(1)}</span>
+                    <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">kWh</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Reactive Energy</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">{data.energy.ReactiveTotal.toFixed(1)}</span>
+                    <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">kVARh</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -626,12 +844,12 @@ const Dashboard = () => {
         {filters.uPhase && (
           <div key="uPhaseChart" className="flex">
             <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-full w-full bg-opacity-95 backdrop-blur">
-              <div className="flex items-center gap-3 mb-6 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+              <div className={`flex items-center gap-3 mb-6 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#0052cc] to-[#4c9aff] pointer-events-none">
                   <Activity size={20} />
                 </div>
                 <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Phase Voltage Trend</h3>
-                <GripHorizontal size={20} className="text-gray-400 mr-2" />
+                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
               </div>
               <div className="flex-1 w-full h-full min-h-[100px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -654,12 +872,12 @@ const Dashboard = () => {
         {filters.uLine && (
           <div key="uLineChart" className="flex">
             <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-full w-full bg-opacity-95 backdrop-blur">
-              <div className="flex items-center gap-3 mb-6 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+              <div className={`flex items-center gap-3 mb-6 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#00b8d9] to-[#79f2ff] pointer-events-none">
                   <Activity size={20} />
                 </div>
                 <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Line Voltage Trend (U Line)</h3>
-                <GripHorizontal size={20} className="text-gray-400 mr-2" />
+                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
               </div>
               <div className="flex-1 w-full h-full min-h-[100px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -682,12 +900,12 @@ const Dashboard = () => {
         {filters.current && (
           <div key="currentChart" className="flex">
             <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-full w-full bg-opacity-95 backdrop-blur">
-              <div className="flex items-center gap-3 mb-6 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+              <div className={`flex items-center gap-3 mb-6 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#ff5630] to-[#ff9873] pointer-events-none">
                   <Activity size={20} />
                 </div>
                 <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Current Trend</h3>
-                <GripHorizontal size={20} className="text-gray-400 mr-2" />
+                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
               </div>
               <div className="flex-1 w-full h-full min-h-[100px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -707,44 +925,90 @@ const Dashboard = () => {
           </div>
         )}
 
-        {filters.frequency && (
-          <div key="freqChart" className="flex">
-            <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-full w-full bg-opacity-95 backdrop-blur">
-              <div className="flex items-center justify-between mb-6 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#6554c0] to-[#998dd9] pointer-events-none">
+          {/* Power Chart */}
+          {filters.power && (
+            <div key="powerChart" className="w-full h-full">
+              <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out_0.4s] h-full w-full">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#8777d9] to-[#6554c0]">
                     <Activity size={20} />
                   </div>
-                  <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading">Frequency Trend</h3>
+                  <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Power Trend</h3>
+                  {isEditingLayout && <GripHorizontal size={20} className={`text-gray-400  transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`} />}
                 </div>
-                <div className="flex items-center gap-2 mr-4">
-                  <span className={`text-sm font-bold ${isFreqSafe ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {isFreqSafe ? 'Safe' : 'Danger'}
-                  </span>
-                  <div className="relative w-4 h-4">
-                    <div className={`absolute inset-0 rounded-full blur-sm opacity-80 animate-pulse ${isFreqSafe ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                    <div className={`relative w-4 h-4 rounded-full ${isFreqSafe ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                  </div>
+                <div className="flex-1 w-full h-full min-h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                      <XAxis dataKey="timestampMs" type="number" scale="time" domain={['dataMin', 'dataMax']} tickCount={8} tickFormatter={(time) => new Date(time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <RechartsTooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                      <Line type="monotone" dataKey="powerActiveTotal" name="Active (kW)" stroke="#6554c0" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                      <Line type="monotone" dataKey="powerReactiveTotal" name="Reactive (kVAR)" stroke="#00b8d9" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                      <Line type="monotone" dataKey="powerApparentTotal" name="Apparent (kVA)" stroke="#ffab00" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
-                <GripHorizontal size={20} className="text-gray-400 mr-2" />
-              </div>
-              <div className="flex-1 w-full h-full min-h-[100px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                    <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
-                    <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
-                    <RechartsTooltip content={<CustomTooltip />} />
-                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                    <ReferenceLine y={52.5} stroke="red" strokeDasharray="3 3" label={{ position: 'top', value: 'Limit (52.5)', fill: 'red', fontSize: 12 }} />
-                    <Line type="monotone" dataKey="frequency" name="Frequency (Hz)" stroke="#6554c0" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                  </LineChart>
-                </ResponsiveContainer>
               </div>
             </div>
-          </div>
-        )}
-      </ResponsiveGridLayout>
+          )}
+
+          {/* Frequency Chart */}
+          {filters.frequency && (
+            <div key="freqChart" className="w-full h-full">
+              <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out_0.4s] h-full w-full">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#8950fc] to-[#a274fd]">
+                    <Activity size={20} />
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Frequency Trend</h3>
+                  {isEditingLayout && <GripHorizontal size={20} className={`text-gray-400  transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`} />}
+                </div>
+                <div className="flex-1 w-full h-full min-h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                      <XAxis dataKey="timestampMs" type="number" scale="time" domain={['dataMin', 'dataMax']} tickCount={8} tickFormatter={(time) => new Date(time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <RechartsTooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                      <Line type="monotone" dataKey="frequency" name="Frequency (Hz)" stroke="#8950fc" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                      <ReferenceLine y={50} stroke="#cbd5e1" strokeDasharray="3 3" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Efficiency Chart */}
+          {filters.efficiency && (
+            <div key="efficiencyChart" className="w-full h-full">
+              <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out_0.4s] h-full w-full">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#e83e8c] to-[#f06292]">
+                    <Activity size={20} />
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Transformer Efficiency (%)</h3>
+                  {isEditingLayout && <GripHorizontal size={20} className={`text-gray-400  transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`} />}
+                </div>
+                <div className="flex-1 w-full h-full min-h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} minTickGap={60} />
+                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <RechartsTooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                      <Line type="monotone" dataKey="efficiency" name="Efficiency (%)" stroke="#e83e8c" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
+        </ResponsiveGridLayout>
       </div>
 
     </div>
