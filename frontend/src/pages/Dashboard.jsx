@@ -238,6 +238,7 @@ const Dashboard = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportStart, setExportStart] = useState('');
   const [exportEnd, setExportEnd] = useState('');
+  const [exportInterval, setExportInterval] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState(null);
 
@@ -311,76 +312,24 @@ const Dashboard = () => {
       setIsExporting(true);
       const startISO = new Date(exportStart).toISOString();
       const endISO = new Date(exportEnd).toISOString();
-      const url = `${apiUrl}/api/trends?start=${startISO}&end=${endISO}`;
+      const url = `${apiUrl}/api/trends/export?start=${startISO}&end=${endISO}`;
 
-      const response = await axios.get(url);
-      const dataToExport = response.data;
+      const response = await axios.get(url, { responseType: 'blob' });
 
-      if (!dataToExport || dataToExport.length === 0) {
-        setExportError("Tidak ada data pada rentang waktu tersebut.");
-        setIsExporting(false);
-        return;
-      }
+      // Get row count from header
+      const rowCount = response.headers['x-row-count'];
 
-      const workbook = new ExcelJS.Workbook();
-      const sheet = workbook.addWorksheet('Trend Data');
-
-      sheet.columns = [
-        { header: 'Waktu (Time)', key: 'time', width: 25 },
-        { header: 'Phase A (V)', key: 'phaseA', width: 15 },
-        { header: 'Phase B (V)', key: 'phaseB', width: 15 },
-        { header: 'Phase C (V)', key: 'phaseC', width: 15 },
-        { header: 'Line AB (V)', key: 'lineAB', width: 15 },
-        { header: 'Line BC (V)', key: 'lineBC', width: 15 },
-        { header: 'Line CA (V)', key: 'lineCA', width: 15 },
-        { header: 'Current A (A)', key: 'currentA', width: 15 },
-        { header: 'Current B (A)', key: 'currentB', width: 15 },
-        { header: 'Current C (A)', key: 'currentC', width: 15 },
-        { header: 'Power Active Total (kW)', key: 'powerActiveTotal', width: 25 },
-        { header: 'Power Reactive Total (kVAR)', key: 'powerReactiveTotal', width: 28 },
-        { header: 'Power Apparent Total (kVA)', key: 'powerApparentTotal', width: 28 },
-        { header: 'PF Total', key: 'pfTotal', width: 15 },
-        { header: 'Frequency (Hz)', key: 'frequency', width: 18 },
-        { header: 'Energy Active (kWh)', key: 'energyActiveTotal', width: 20 },
-        { header: 'Energy Reactive (kVARh)', key: 'energyReactiveTotal', width: 22 },
-        { header: 'Efficiency (%)', key: 'efficiency', width: 18 }
-      ];
-
-      sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0052CC' } };
-      sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
-
-      dataToExport.forEach(row => {
-        sheet.addRow({
-          time: new Date(row.timestamp).toLocaleString('id-ID'),
-          phaseA: parseFloat(row.phase_a_v) || 0,
-          phaseB: parseFloat(row.phase_b_v) || 0,
-          phaseC: parseFloat(row.phase_c_v) || 0,
-          lineAB: parseFloat(row.line_ab_v) || 0,
-          lineBC: parseFloat(row.line_bc_v) || 0,
-          lineCA: parseFloat(row.line_ca_v) || 0,
-          currentA: parseFloat(row.current_a) || 0,
-          currentB: parseFloat(row.current_b) || 0,
-          currentC: parseFloat(row.current_c) || 0,
-          powerActiveTotal: parseFloat(row.power_active_total) || 0,
-          powerReactiveTotal: parseFloat(row.power_reactive_total) || 0,
-          powerApparentTotal: parseFloat(row.power_apparent_total) || 0,
-          pfTotal: parseFloat(row.pf_total) || 0,
-          frequency: parseFloat(row.frequency) || 0,
-          energyActiveTotal: parseFloat(row.energy_active_total) || 0,
-          energyReactiveTotal: parseFloat(row.energy_reactive_total) || 0,
-          efficiency: parseFloat(row.efficiency) || 0
-        });
-      });
-
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const filename = `Export_${exportStart}_to_${exportEnd}.xlsx`;
       saveAs(blob, filename);
       setShowExportModal(false);
     } catch (err) {
       console.error(err);
-      setExportError("Gagal mengunduh Excel.");
+      if (err.response && err.response.status === 404) {
+        setExportError("Tidak ada data pada rentang waktu tersebut.");
+      } else {
+        setExportError("Gagal mengunduh Excel.");
+      }
     } finally {
       setIsExporting(false);
     }
