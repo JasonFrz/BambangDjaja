@@ -240,6 +240,7 @@ const Dashboard = () => {
   const [exportEnd, setExportEnd] = useState('');
   const [exportInterval, setExportInterval] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+  const [downloadMB, setDownloadMB] = useState("0.0");
   const [exportError, setExportError] = useState(null);
 
   const fetchTrends = async (forceFilter = false) => {
@@ -310,11 +311,21 @@ const Dashboard = () => {
 
     try {
       setIsExporting(true);
-      const startISO = new Date(exportStart).toISOString();
-      const endISO = new Date(exportEnd).toISOString();
-      const url = `${apiUrl}/api/trends/export?start=${startISO}&end=${endISO}`;
+      setDownloadMB("0.0");
+      // Kirim waktu lokal langsung (tanpa konversi UTC) karena DB menyimpan waktu lokal
+      const startParam = exportStart.replace('T', ' ') + ':00';
+      const endParam = exportEnd.replace('T', ' ') + ':00';
+      const url = `${apiUrl}/api/trends/export?start=${encodeURIComponent(startParam)}&end=${encodeURIComponent(endParam)}`;
 
-      const response = await axios.get(url, { responseType: 'blob' });
+      const response = await axios.get(url, { 
+        responseType: 'blob',
+        onDownloadProgress: (progressEvent) => {
+          if (progressEvent.loaded) {
+            const mb = (progressEvent.loaded / (1024 * 1024)).toFixed(1);
+            setDownloadMB(mb);
+          }
+        }
+      });
 
       // Get row count from header
       const rowCount = response.headers['x-row-count'];
@@ -1115,33 +1126,46 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="p-5 border-t border-gray-100 dark:border-white/10 flex justify-end gap-3 bg-gray-50 dark:bg-white/5">
-              <button
-                onClick={() => {
-                  setShowExportModal(false);
-                  setExportError(null);
-                }}
-                className="px-4 py-2 rounded-lg font-semibold text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleDownloadExcel}
-                disabled={isExporting}
-                className="px-5 py-2 rounded-lg font-semibold text-sm bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isExporting ? (
-                  <>
-                    <RefreshCw size={16} className="animate-spin" />
-                    Memproses...
-                  </>
-                ) : (
-                  <>
-                    <Download size={16} />
+            <div className="p-5 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5">
+              {isExporting ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between items-center text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8]">
+                    <span className="flex items-center gap-2">
+                      <span className="animate-spin inline-block w-3 h-3 border-2 border-green-500 border-t-transparent rounded-full"></span>
+                      Memproses & Mengunduh Data...
+                    </span>
+                    <span className="text-green-600 dark:text-green-400">{downloadMB} MB</span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
+                    <div className="absolute top-0 left-0 h-full bg-green-500 rounded-full animate-[progress_1.5s_ease-in-out_infinite] w-[30%]"></div>
+                  </div>
+                  <style>{`
+                    @keyframes progress {
+                      0% { left: -30%; }
+                      100% { left: 100%; }
+                    }
+                  `}</style>
+                </div>
+              ) : (
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => {
+                      setShowExportModal(false);
+                      setExportError(null);
+                    }}
+                    className="px-4 py-2 rounded-lg font-semibold text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={handleDownloadExcel}
+                    disabled={isExporting}
+                    className="px-5 py-2 rounded-lg font-semibold text-sm bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-2"
+                  >
                     Download Excel
-                  </>
-                )}
-              </button>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

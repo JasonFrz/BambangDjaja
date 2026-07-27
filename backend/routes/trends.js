@@ -157,16 +157,18 @@ router.get("/export", extractDb, async (req, res) => {
       WHERE timestamp >= ? AND timestamp <= ?
       ORDER BY timestamp ASC
     `;
-    const [rows] = await db.execute(query, [start, end]);
+    // Use ExcelJS streaming writer for maximum performance & low memory
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: res,
+      useStyles: true,
+      useSharedStrings: false // shared strings consume high memory
+    });
 
-    if (!rows || rows.length === 0) {
-      return res.status(404).json({ error: "Tidak ada data pada rentang waktu tersebut." });
-    }
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=Export_${start}_to_${end}.xlsx`);
 
-    // Generate Excel di server
-    const workbook = new ExcelJS.Workbook();
+    // ========== Sheet 1: Electrical Data ==========
     const sheet = workbook.addWorksheet('Trend Data');
-
     sheet.columns = [
       { header: 'Waktu (Time)', key: 'time', width: 25 },
       { header: 'Phase A (V)', key: 'phaseA', width: 15 },
@@ -188,13 +190,24 @@ router.get("/export", extractDb, async (req, res) => {
       { header: 'Efficiency (%)', key: 'efficiency', width: 18 }
     ];
 
-    // Style header
     sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0052CC' } };
     sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
 
-    // Add data rows
-    rows.forEach(row => {
+    // Stream electrical data directly from DB
+    const elecQuery = `
+      SELECT 
+        *, 
+        power_active_total_kw as power_active_total,
+        power_reactive_total_kvar as power_reactive_total,
+        power_apparent_total_kva as power_apparent_total
+      FROM electrical_readings
+      WHERE timestamp >= ? AND timestamp <= ?
+      ORDER BY timestamp ASC
+    `;
+    const elecStream = db.pool.query(elecQuery, [start, end]).stream();
+
+    for await (const row of elecStream) {
       sheet.addRow({
         time: new Date(row.timestamp).toLocaleString('id-ID'),
         phaseA: parseFloat(row.phase_a_v) || 0,
@@ -214,16 +227,42 @@ router.get("/export", extractDb, async (req, res) => {
         energyActiveTotal: parseFloat(row.energy_active_total) || 0,
         energyReactiveTotal: parseFloat(row.energy_reactive_total) || 0,
         efficiency: calculateEfficiency(row.current_a, row.current_b, row.current_c)
-      });
-    });
+      }).commit();
+    }
+    sheet.commit();
 
-    // Send as file download
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=Export_${start}_to_${end}.xlsx`);
-    res.setHeader('X-Row-Count', rows.length.toString());
+    // ========== Sheet 2: Oil Readings ==========
+    const oilSheet = workbook.addWorksheet('Oil Data');
+    oilSheet.columns = [
+      { header: 'Waktu (Time)', key: 'time', width: 25 },
+      { header: 'Oil Temperature (°C)', key: 'oilTemp', width: 22 },
+      { header: 'Oil Pressure (Bar)', key: 'oilPressure', width: 20 },
+    ];
 
-    await workbook.xlsx.write(res);
-    res.end();
+    oilSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    oilSheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF6600' } };
+    oilSheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+    const oilQuery = `
+      SELECT * FROM oil_readings
+      WHERE timestamp >= ? AND timestamp <= ?
+      ORDER BY timestamp ASC
+    `;
+    const oilStream = db.pool.query(oilQuery, [start, end]).stream();
+
+    for await (const row of oilStream) {
+      oilSheet.addRow({
+        time: new Date(row.timestamp).toLocaleString('id-ID'),
+        oilTemp: parseFloat(row.oil_temperature) || 0,
+        oilPressure: parseFloat(row.oil_pressure) || 0,
+      }).commit();
+    }
+    oilSheet.commit();
+
+
+
+    await workbook.commit();
+    // Note: res.end() is automatically called by the stream when workbook is committed
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Server error saat export Excel" });

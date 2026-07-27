@@ -124,7 +124,7 @@ const startRealtimePoller = (io, activeSubscriptions) => {
     } catch (error) {
       console.error("Realtime poller error:", error);
     }
-  }, 2000); // Poll every 2 seconds
+  }, 5000); // Poll every 5 seconds
 };
 
 module.exports = startRealtimePoller;
