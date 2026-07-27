@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import axios from 'axios';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine 
+import {
+  AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine
 } from 'recharts';
 import { Link, useLocation } from "react-router-dom";
-import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Filter, ChevronDown, RefreshCw, Settings, GripHorizontal, Edit3, Send, LogOut } from "lucide-react";
+import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Filter, ChevronDown, RefreshCw, Settings, GripHorizontal, Edit3, Send, LogOut, Download } from "lucide-react";
 import { useTrendData } from "../contexts/TrendDataContext";
+import * as ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { useApi } from '../contexts/ApiContext';
 
 import { ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout';
@@ -78,14 +80,14 @@ const Dashboard = () => {
     frequency: true,
     efficiency: true
   });
-  
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [warning, setWarning] = useState("");
   const { width, containerRef } = useContainerWidth();
 
   const STORAGE_KEY = 'dashboardLayouts_v8';
   const ALL_KEYS = useMemo(() => [
-    'statusCard', 'uPhaseCard', 'uLineCard', 'currentCard', 'powerCard', 'freqCard', 'energyCard', 
+    'statusCard', 'uPhaseCard', 'uLineCard', 'currentCard', 'powerCard', 'freqCard', 'energyCard',
     'uPhaseChart', 'uLineChart', 'currentChart', 'powerChart', 'freqChart', 'efficiencyChart'
   ], []);
 
@@ -103,7 +105,7 @@ const Dashboard = () => {
       Object.keys(DEFAULT_LAYOUTS).forEach(bp => {
         const rglItems = allLayouts[bp] || [];
         const rglMap = new Map(rglItems.map(item => [item.i, { ...item }]));
-        
+
         merged[bp] = ALL_KEYS.map(key => {
           if (rglMap.has(key)) {
             return rglMap.get(key);
@@ -112,11 +114,11 @@ const Dashboard = () => {
           return saved ? { ...saved } : DEFAULT_LAYOUTS[bp].find(i => i.i === key);
         });
       });
-      
+
       const newStr = JSON.stringify(merged);
       const prevStr = JSON.stringify(prev);
       if (newStr === prevStr) return prev;
-      
+
       localStorage.setItem('dashboardLayouts_v7', newStr);
       return merged;
     });
@@ -146,7 +148,7 @@ const Dashboard = () => {
   };
 
   const [waNotif, setWaNotif] = useState({ message: '', type: '' });
-  
+
   const showWaNotif = (message, type) => {
     setWaNotif({ message, type });
     setTimeout(() => {
@@ -173,18 +175,18 @@ const Dashboard = () => {
         vLine: { AB: wsData.lineAB || 0, BC: wsData.lineBC || 0, CA: wsData.lineCA || 0, Avg: wsData.avgLineV || 0 },
         current: { A: wsData.currentA || 0, B: wsData.currentB || 0, C: wsData.currentC || 0, N: wsData.currentN || 0, Avg: wsData.avgCurrent || 0, Unbalance: wsData.currentUnbalance || 0 },
         frequency: wsData.frequency || 0,
-        power: { 
-          ActiveTotal: wsData.powerActiveTotal || 0, 
-          ReactiveTotal: wsData.powerReactiveTotal || 0, 
-          ApparentTotal: wsData.powerApparentTotal || 0, 
+        power: {
+          ActiveTotal: wsData.powerActiveTotal || 0,
+          ReactiveTotal: wsData.powerReactiveTotal || 0,
+          ApparentTotal: wsData.powerApparentTotal || 0,
           PFTotal: wsData.pfTotal || 0,
           ActiveA: wsData.powerActiveA || 0,
           ActiveB: wsData.powerActiveB || 0,
           ActiveC: wsData.powerActiveC || 0
         },
-        energy: { 
-          ActiveTotal: wsData.energyActiveTotal || 0, 
-          ReactiveTotal: wsData.energyReactiveTotal || 0 
+        energy: {
+          ActiveTotal: wsData.energyActiveTotal || 0,
+          ReactiveTotal: wsData.energyReactiveTotal || 0
         },
         efficiency: wsData.efficiency || 0,
         status: { OnOff: wsData.onOffStatus || 0, Relay: wsData.relayStatus || 0, Alarm: wsData.alarmStatus || 0, Synced: wsData.synced || 0 }
@@ -197,18 +199,18 @@ const Dashboard = () => {
         vLine: { AB: latest.lineAB || 0, BC: latest.lineBC || 0, CA: latest.lineCA || 0, Avg: latest.avgLineV || 0 },
         current: { A: latest.currentA || 0, B: latest.currentB || 0, C: latest.currentC || 0, N: latest.currentN || 0, Avg: latest.avgCurrent || 0, Unbalance: latest.currentUnbalance || 0 },
         frequency: latest.frequency || 0,
-        power: { 
-          ActiveTotal: latest.powerActiveTotal || 0, 
-          ReactiveTotal: latest.powerReactiveTotal || 0, 
-          ApparentTotal: latest.powerApparentTotal || 0, 
+        power: {
+          ActiveTotal: latest.powerActiveTotal || 0,
+          ReactiveTotal: latest.powerReactiveTotal || 0,
+          ApparentTotal: latest.powerApparentTotal || 0,
           PFTotal: latest.pfTotal || 0,
           ActiveA: latest.powerActiveA || 0,
           ActiveB: latest.powerActiveB || 0,
           ActiveC: latest.powerActiveC || 0
         },
-        energy: { 
-          ActiveTotal: latest.energyActiveTotal || 0, 
-          ReactiveTotal: latest.energyReactiveTotal || 0 
+        energy: {
+          ActiveTotal: latest.energyActiveTotal || 0,
+          ReactiveTotal: latest.energyReactiveTotal || 0
         },
         efficiency: latest.efficiency || 0,
         status: { OnOff: latest.onOffStatus || 0, Relay: latest.relayStatus || 0, Alarm: latest.alarmStatus || 0, Synced: latest.synced || 0 }
@@ -221,32 +223,39 @@ const Dashboard = () => {
   const [dataInterval, setDataInterval] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Date/Time Filter for Charts
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [isFiltering, setIsFiltering] = useState(false);
   const [filterError, setFilterError] = useState(null);
-  
+
   // Layout Management State
   const [isEditingLayout, setIsEditingLayout] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // Export Modal State
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportStart, setExportStart] = useState('');
+  const [exportEnd, setExportEnd] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState(null);
 
   const fetchTrends = async (forceFilter = false) => {
     try {
       setLoading(true);
       let url = `${apiUrl}/api/trends`;
-      
+
       const useFilter = forceFilter || isFiltering;
-      
+
       if (useFilter && startTime && endTime) {
         const startISO = new Date(startTime).toISOString();
         const endISO = new Date(endTime).toISOString();
         url += `?start=${startISO}&end=${endISO}`;
       }
-      
+
       const response = await axios.get(url);
-      
+
       const formattedData = response.data.map(item => {
         const date = new Date(item.timestamp);
         return {
@@ -254,7 +263,7 @@ const Dashboard = () => {
           time: date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' })
         };
       });
-      
+
       if (useFilter && formattedData.length === 0) {
         setFilterError('Tidak ada data yang ditemukan pada rentang waktu tersebut.');
       } else {
@@ -287,6 +296,96 @@ const Dashboard = () => {
     }
   };
 
+  const handleDownloadExcel = async () => {
+    setExportError(null);
+    if (!exportStart || !exportEnd) {
+      setExportError("Silakan isi rentang waktu untuk export Excel.");
+      return;
+    }
+    if (new Date(exportStart) >= new Date(exportEnd)) {
+      setExportError("Waktu mulai harus lebih awal dari waktu akhir.");
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      const startISO = new Date(exportStart).toISOString();
+      const endISO = new Date(exportEnd).toISOString();
+      const url = `${apiUrl}/api/trends?start=${startISO}&end=${endISO}`;
+
+      const response = await axios.get(url);
+      const dataToExport = response.data;
+
+      if (!dataToExport || dataToExport.length === 0) {
+        setExportError("Tidak ada data pada rentang waktu tersebut.");
+        setIsExporting(false);
+        return;
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('Trend Data');
+
+      sheet.columns = [
+        { header: 'Waktu (Time)', key: 'time', width: 25 },
+        { header: 'Phase A (V)', key: 'phaseA', width: 15 },
+        { header: 'Phase B (V)', key: 'phaseB', width: 15 },
+        { header: 'Phase C (V)', key: 'phaseC', width: 15 },
+        { header: 'Line AB (V)', key: 'lineAB', width: 15 },
+        { header: 'Line BC (V)', key: 'lineBC', width: 15 },
+        { header: 'Line CA (V)', key: 'lineCA', width: 15 },
+        { header: 'Current A (A)', key: 'currentA', width: 15 },
+        { header: 'Current B (A)', key: 'currentB', width: 15 },
+        { header: 'Current C (A)', key: 'currentC', width: 15 },
+        { header: 'Power Active Total (kW)', key: 'powerActiveTotal', width: 25 },
+        { header: 'Power Reactive Total (kVAR)', key: 'powerReactiveTotal', width: 28 },
+        { header: 'Power Apparent Total (kVA)', key: 'powerApparentTotal', width: 28 },
+        { header: 'PF Total', key: 'pfTotal', width: 15 },
+        { header: 'Frequency (Hz)', key: 'frequency', width: 18 },
+        { header: 'Energy Active (kWh)', key: 'energyActiveTotal', width: 20 },
+        { header: 'Energy Reactive (kVARh)', key: 'energyReactiveTotal', width: 22 },
+        { header: 'Efficiency (%)', key: 'efficiency', width: 18 }
+      ];
+
+      sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0052CC' } };
+      sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+      dataToExport.forEach(row => {
+        sheet.addRow({
+          time: new Date(row.timestamp).toLocaleString('id-ID'),
+          phaseA: parseFloat(row.phase_a_v) || 0,
+          phaseB: parseFloat(row.phase_b_v) || 0,
+          phaseC: parseFloat(row.phase_c_v) || 0,
+          lineAB: parseFloat(row.line_ab_v) || 0,
+          lineBC: parseFloat(row.line_bc_v) || 0,
+          lineCA: parseFloat(row.line_ca_v) || 0,
+          currentA: parseFloat(row.current_a) || 0,
+          currentB: parseFloat(row.current_b) || 0,
+          currentC: parseFloat(row.current_c) || 0,
+          powerActiveTotal: parseFloat(row.power_active_total) || 0,
+          powerReactiveTotal: parseFloat(row.power_reactive_total) || 0,
+          powerApparentTotal: parseFloat(row.power_apparent_total) || 0,
+          pfTotal: parseFloat(row.pf_total) || 0,
+          frequency: parseFloat(row.frequency) || 0,
+          energyActiveTotal: parseFloat(row.energy_active_total) || 0,
+          energyReactiveTotal: parseFloat(row.energy_reactive_total) || 0,
+          efficiency: parseFloat(row.efficiency) || 0
+        });
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const filename = `Export_${exportStart}_to_${exportEnd}.xlsx`;
+      saveAs(blob, filename);
+      setShowExportModal(false);
+    } catch (err) {
+      console.error(err);
+      setExportError("Gagal mengunduh Excel.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   useEffect(() => {
     if (isFiltering) {
       fetchTrends();
@@ -315,8 +414,8 @@ const Dashboard = () => {
       }
     }
     return processData.map(d => ({
-        ...d,
-        timestampMs: new Date(d.timestamp || new Date()).getTime()
+      ...d,
+      timestampMs: new Date(d.timestamp || new Date()).getTime()
     }));
   }, [rawChartData, dataInterval, isFiltering]);
 
@@ -349,7 +448,7 @@ const Dashboard = () => {
         showWaNotif("Session expired, please login again.", "error");
         return;
       }
-      
+
       const res = await axios.post(`${apiUrl}/api/whatsapp/test`, {
         frequency: data.frequency,
         dbName,
@@ -376,7 +475,7 @@ const Dashboard = () => {
 
   return (
     <div className="flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out] w-full max-w-7xl mx-auto">
-      
+
       {/* Header Section */}
       <div className="mb-2 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
@@ -422,32 +521,32 @@ const Dashboard = () => {
             <button onClick={showAll} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
               Show All
             </button>
-            <button 
-              onClick={() => setIsEditingLayout(!isEditingLayout)} 
+            <button
+              onClick={() => setIsEditingLayout(!isEditingLayout)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 ${isEditingLayout ? 'bg-[#0052cc] text-white' : 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20'}`}
             >
               <Edit3 size={12} /> {isEditingLayout ? 'Done Editing' : 'Edit Layout'}
             </button>
-            
+
             <div className="relative">
-              <button 
-                onClick={() => setShowResetConfirm(true)} 
+              <button
+                onClick={() => setShowResetConfirm(true)}
                 className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors flex items-center gap-1"
               >
                 <RefreshCw size={12} /> Reset Layout
               </button>
-              
+
               {showResetConfirm && (
                 <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-[#151521] border border-[#dfe1e6] dark:border-white/10 shadow-xl rounded-xl p-3 z-50 animate-[slideUpFade_0.2s_ease-out]">
                   <p className="text-sm font-semibold text-[#172b4d] dark:text-white mb-3">Reset layout to default?</p>
                   <div className="flex gap-2">
-                    <button 
+                    <button
                       onClick={() => { resetLayout(); setShowResetConfirm(false); }}
                       className="flex-1 px-2 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-lg transition-colors"
                     >
                       Yes
                     </button>
-                    <button 
+                    <button
                       onClick={() => setShowResetConfirm(false)}
                       className="flex-1 px-2 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-[#172b4d] dark:text-white text-xs font-semibold rounded-lg transition-colors"
                     >
@@ -507,8 +606,8 @@ const Dashboard = () => {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
               <div className="flex items-center gap-2 w-full md:w-auto">
                 <span className="sm:hidden text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8] w-10">Start:</span>
-                <input 
-                  type="datetime-local" 
+                <input
+                  type="datetime-local"
                   value={startTime}
                   onChange={(e) => { setStartTime(e.target.value); setFilterError(null); }}
                   className="flex-1 min-w-[140px] text-sm px-3 py-1.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none focus:border-[#0052cc]"
@@ -517,8 +616,8 @@ const Dashboard = () => {
               <span className="hidden sm:inline text-[#5e6c84] dark:text-[#94a3b8] text-sm font-medium">to</span>
               <div className="flex items-center gap-2 w-full md:w-auto mt-1 sm:mt-0">
                 <span className="sm:hidden text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8] w-10">End:</span>
-                <input 
-                  type="datetime-local" 
+                <input
+                  type="datetime-local"
                   value={endTime}
                   onChange={(e) => { setEndTime(e.target.value); setFilterError(null); }}
                   className="flex-1 min-w-[140px] text-sm px-3 py-1.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none focus:border-[#0052cc]"
@@ -541,15 +640,20 @@ const Dashboard = () => {
                 </select>
               </div>
               <div className="flex items-center gap-2 w-full lg:w-auto">
-                <button 
+                <button
                   onClick={handleApplyFilter}
-                  className={`flex-1 lg:flex-none whitespace-nowrap px-4 py-1.5 rounded-lg text-sm font-semibold shadow-sm transition-colors ${
-                    isFiltering ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-[#0052cc] text-white hover:bg-[#0047b3]'
-                  }`}
+                  className={`flex-1 lg:flex-none whitespace-nowrap px-4 py-1.5 rounded-lg text-sm font-semibold shadow-sm transition-colors ${isFiltering ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-[#0052cc] text-white hover:bg-[#0047b3]'
+                    }`}
                 >
                   {isFiltering ? 'Filter Aktif' : 'Filter Chart'}
                 </button>
-                <button 
+                <button
+                  onClick={() => setShowExportModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-semibold shadow-sm transition-colors whitespace-nowrap"
+                >
+                  <Download size={16} /> Export Data
+                </button>
+                <button
                   onClick={() => fetchTrends(false)}
                   disabled={loading}
                   className="px-3 py-1.5 bg-gray-50 dark:bg-white/5 border border-[#dfe1e6] dark:border-white/10 rounded-lg text-[#172b4d] dark:text-white hover:bg-[#ebecf0] dark:hover:bg-white/10 transition-all flex items-center justify-center shadow-sm"
@@ -570,360 +674,359 @@ const Dashboard = () => {
 
       {/* DASHBOARD DRAGGABLE GRID */}
       <div ref={containerRef} className={isEditingLayout ? 'ring-2 ring-[#0052cc] ring-opacity-50 rounded-xl p-1 bg-[#0052cc]/5 dark:bg-[#0052cc]/10 transition-all' : 'transition-all'}>
-      <ResponsiveGridLayout
-        key={`${filterKey}-${isEditingLayout}`}
-        className="layout -mx-2 mt-4"
-        width={width}
-        layouts={layouts}
-        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-        cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
-        rowHeight={140}
-        compactType="horizontal"
-        preventCollision={false}
-        onLayoutChange={handleLayoutChange}
-        draggableHandle={isEditingLayout ? ".drag-handle" : ""}
-        margin={[16, 16]}
-        isDraggable={isEditingLayout}
-        isResizable={isEditingLayout}
-      >
-        
-        {filters.status && (
-          <div key="statusCard" className="flex">
-            <div className={`bg-white dark:bg-[#151521] rounded-2xl p-4 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex items-center justify-between group relative overflow-hidden bg-opacity-95 backdrop-blur select-none ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
-              <div className="flex items-center gap-2 sm:gap-6 w-full justify-around">
-                <div className="flex flex-col items-center">
-                  <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">System</span>
-                  <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 ${data.status.OnOff === 1 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-                    <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.OnOff === 1 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'}`}></div>
-                    {data.status.OnOff === 1 ? 'ON' : 'OFF'}
-                  </div>
-                </div>
-                <div className="w-px h-6 sm:h-8 bg-gray-200 dark:bg-gray-800"></div>
-                <div className="flex flex-col items-center">
-                  <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Relay</span>
-                  <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 ${data.status.Relay === 1 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
-                    <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.Relay === 1 ? 'bg-emerald-500' : 'bg-gray-400'}`}></div>
-                    {data.status.Relay === 1 ? 'ACTIVE' : 'IDLE'}
-                  </div>
-                </div>
-                <div className="w-px h-6 sm:h-8 bg-gray-200 dark:bg-gray-800"></div>
-                <div className="flex flex-col items-center">
-                  <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Alarm</span>
-                  <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 ${data.status.Alarm === 1 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
-                    <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.Alarm === 1 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse' : 'bg-emerald-500'}`}></div>
-                    {data.status.Alarm === 1 ? 'TRIGGERED' : 'CLEAR'}
-                  </div>
-                </div>
-                <div className="w-px h-6 sm:h-8 bg-gray-200 dark:bg-gray-800 hidden sm:block"></div>
-                <div className="hidden sm:flex flex-col items-center">
-                  <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Sync</span>
-                  <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 ${data.status.Synced === 1 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
-                    <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.Synced === 1 ? 'bg-blue-500' : 'bg-amber-500'}`}></div>
-                    {data.status.Synced === 1 ? 'SYNCED' : 'PENDING'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <ResponsiveGridLayout
+          key={`${filterKey}-${isEditingLayout}`}
+          className="layout -mx-2 mt-4"
+          width={width}
+          layouts={layouts}
+          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+          cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+          rowHeight={140}
+          compactType="horizontal"
+          preventCollision={false}
+          onLayoutChange={handleLayoutChange}
+          draggableHandle={isEditingLayout ? ".drag-handle" : ""}
+          margin={[16, 16]}
+          isDraggable={isEditingLayout}
+          isResizable={isEditingLayout}
+        >
 
-        {filters.uPhase && (
-          <div key="uPhaseCard" className="flex">
-            <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 dark:bg-blue-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-              <div className={`flex items-center gap-3 mb-5 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0052cc] to-[#4c9aff] flex items-center justify-center text-white shadow-lg shadow-blue-500/20 pointer-events-none">
-                  <Zap size={20} />
-                </div>
-                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Phase Voltage (U Phase)</h3>
-                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
-              </div>
-              <div className="space-y-3 flex-1 flex flex-col justify-center">
-                {["A", "B", "C"].map((phase) => (
-                  <div key={phase} className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
-                    <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Phase {phase}</span>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">{data.vPhase[phase].toFixed(1)}</span>
-                      <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">V</span>
+          {filters.status && (
+            <div key="statusCard" className="flex">
+              <div className={`bg-white dark:bg-[#151521] rounded-2xl p-4 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex items-center justify-between group relative overflow-hidden bg-opacity-95 backdrop-blur select-none ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+                <div className="flex items-center gap-2 sm:gap-6 w-full justify-around">
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">System</span>
+                    <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 ${data.status.OnOff === 1 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                      <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.OnOff === 1 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'}`}></div>
+                      {data.status.OnOff === 1 ? 'ON' : 'OFF'}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {filters.uLine && (
-          <div key="uLineCard" className="flex">
-            <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 dark:bg-cyan-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-              <div className={`flex items-center gap-3 mb-5 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00b8d9] to-[#36c9e5] flex items-center justify-center text-white shadow-lg shadow-cyan-500/20 pointer-events-none">
-                  <Activity size={20} />
-                </div>
-                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Line Voltage (U Line)</h3>
-                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
-              </div>
-              <div className="space-y-3 flex-1 flex flex-col justify-center">
-                {["AB", "BC", "CA"].map((line) => (
-                  <div key={line} className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
-                    <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Line {line}</span>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">{data.vLine[line].toFixed(1)}</span>
-                      <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">V</span>
+                  <div className="w-px h-6 sm:h-8 bg-gray-200 dark:bg-gray-800"></div>
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Relay</span>
+                    <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 ${data.status.Relay === 1 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+                      <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.Relay === 1 ? 'bg-emerald-500' : 'bg-gray-400'}`}></div>
+                      {data.status.Relay === 1 ? 'ACTIVE' : 'IDLE'}
                     </div>
                   </div>
-                ))}
+                  <div className="w-px h-6 sm:h-8 bg-gray-200 dark:bg-gray-800"></div>
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Alarm</span>
+                    <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 ${data.status.Alarm === 1 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+                      <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.Alarm === 1 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse' : 'bg-emerald-500'}`}></div>
+                      {data.status.Alarm === 1 ? 'TRIGGERED' : 'CLEAR'}
+                    </div>
+                  </div>
+                  <div className="w-px h-6 sm:h-8 bg-gray-200 dark:bg-gray-800 hidden sm:block"></div>
+                  <div className="hidden sm:flex flex-col items-center">
+                    <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Sync</span>
+                    <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 ${data.status.Synced === 1 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
+                      <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.Synced === 1 ? 'bg-blue-500' : 'bg-amber-500'}`}></div>
+                      {data.status.Synced === 1 ? 'SYNCED' : 'PENDING'}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {filters.current && (
-          <div key="currentCard" className="flex">
-            <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 dark:bg-amber-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-              <div className={`flex items-center gap-3 mb-5 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ffab00] to-[#ffc400] flex items-center justify-center text-white shadow-lg shadow-amber-500/20 pointer-events-none">
-                  <Waves size={20} />
+          {filters.uPhase && (
+            <div key="uPhaseCard" className="flex">
+              <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 dark:bg-blue-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                <div className={`flex items-center gap-3 mb-5 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0052cc] to-[#4c9aff] flex items-center justify-center text-white shadow-lg shadow-blue-500/20 pointer-events-none">
+                    <Zap size={20} />
+                  </div>
+                  <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Phase Voltage (U Phase)</h3>
+                  {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
                 </div>
-                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Current (I)</h3>
-                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
+                <div className="space-y-3 flex-1 flex flex-col justify-center">
+                  {["A", "B", "C"].map((phase) => (
+                    <div key={phase} className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
+                      <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Phase {phase}</span>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">{data.vPhase[phase].toFixed(1)}</span>
+                        <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">V</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="flex-1 grid grid-cols-2 gap-2 content-center">
-                {["A", "B", "C"].map((phase) => (
-                  <div key={phase} className="flex justify-between items-center p-2 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
-                    <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-xs">Ph {phase}</span>
+            </div>
+          )}
+
+          {filters.uLine && (
+            <div key="uLineCard" className="flex">
+              <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 dark:bg-cyan-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                <div className={`flex items-center gap-3 mb-5 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00b8d9] to-[#36c9e5] flex items-center justify-center text-white shadow-lg shadow-cyan-500/20 pointer-events-none">
+                    <Activity size={20} />
+                  </div>
+                  <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Line Voltage (U Line)</h3>
+                  {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
+                </div>
+                <div className="space-y-3 flex-1 flex flex-col justify-center">
+                  {["AB", "BC", "CA"].map((line) => (
+                    <div key={line} className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
+                      <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Line {line}</span>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono">{data.vLine[line].toFixed(1)}</span>
+                        <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">V</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {filters.current && (
+            <div key="currentCard" className="flex">
+              <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 dark:bg-amber-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                <div className={`flex items-center gap-3 mb-5 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ffab00] to-[#ffc400] flex items-center justify-center text-white shadow-lg shadow-amber-500/20 pointer-events-none">
+                    <Waves size={20} />
+                  </div>
+                  <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Current (I)</h3>
+                  {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
+                </div>
+                <div className="flex-1 grid grid-cols-2 gap-2 content-center">
+                  {["A", "B", "C"].map((phase) => (
+                    <div key={phase} className="flex justify-between items-center p-2 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
+                      <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-xs">Ph {phase}</span>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-sm font-bold text-[#172b4d] dark:text-white font-mono">{data.current[phase].toFixed(2)}</span>
+                        <span className="text-[10px] font-semibold text-[#8993a4] dark:text-[#64748b]">A</span>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
+                    <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-xs">Neutral</span>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-sm font-bold text-[#172b4d] dark:text-white font-mono">{data.current[phase].toFixed(2)}</span>
+                      <span className="text-sm font-bold text-[#172b4d] dark:text-white font-mono">{data.current.N.toFixed(2)}</span>
                       <span className="text-[10px] font-semibold text-[#8993a4] dark:text-[#64748b]">A</span>
                     </div>
                   </div>
-                ))}
-                <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
-                  <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-xs">Neutral</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-sm font-bold text-[#172b4d] dark:text-white font-mono">{data.current.N.toFixed(2)}</span>
-                    <span className="text-[10px] font-semibold text-[#8993a4] dark:text-[#64748b]">A</span>
-                  </div>
-                </div>
-                <div className="col-span-2 flex justify-between items-center p-2 rounded-xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 transition-colors">
-                  <span className="text-amber-700 dark:text-amber-400 font-semibold text-xs">Current Unbalance</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-sm font-bold text-amber-700 dark:text-amber-400 font-mono">{data.current.Unbalance.toFixed(2)}</span>
-                    <span className="text-[10px] font-semibold text-amber-600/70 dark:text-amber-400/70">%</span>
+                  <div className="col-span-2 flex justify-between items-center p-2 rounded-xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 transition-colors">
+                    <span className="text-amber-700 dark:text-amber-400 font-semibold text-xs">Current Unbalance</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-sm font-bold text-amber-700 dark:text-amber-400 font-mono">{data.current.Unbalance.toFixed(2)}</span>
+                      <span className="text-[10px] font-semibold text-amber-600/70 dark:text-amber-400/70">%</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {filters.power && (
-          <div key="powerCard" className="flex">
-            <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 dark:bg-purple-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-              <div className={`flex items-center gap-3 mb-5 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8777d9] to-[#6554c0] flex items-center justify-center text-white shadow-lg shadow-purple-500/20 pointer-events-none">
-                  <Activity size={20} />
-                </div>
-                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Power</h3>
-                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
-              </div>
-              <div className="flex-1 grid grid-cols-2 gap-2 content-center">
-                <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors">
-                  <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-xs">Active</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-sm font-bold text-[#172b4d] dark:text-white font-mono">{data.power.ActiveTotal.toFixed(1)}</span>
-                    <span className="text-[10px] font-semibold text-[#8993a4]">kW</span>
+          {filters.power && (
+            <div key="powerCard" className="flex">
+              <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 dark:bg-purple-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                <div className={`flex items-center gap-3 mb-5 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8777d9] to-[#6554c0] flex items-center justify-center text-white shadow-lg shadow-purple-500/20 pointer-events-none">
+                    <Activity size={20} />
                   </div>
+                  <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Power</h3>
+                  {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
                 </div>
-                <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors">
-                  <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-xs">Reactive</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-sm font-bold text-[#172b4d] dark:text-white font-mono">{data.power.ReactiveTotal.toFixed(1)}</span>
-                    <span className="text-[10px] font-semibold text-[#8993a4]">kVAR</span>
+                <div className="flex-1 grid grid-cols-2 gap-2 content-center">
+                  <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors">
+                    <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-xs">Active</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-sm font-bold text-[#172b4d] dark:text-white font-mono">{data.power.ActiveTotal.toFixed(1)}</span>
+                      <span className="text-[10px] font-semibold text-[#8993a4]">kW</span>
+                    </div>
                   </div>
-                </div>
-                <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors">
-                  <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-xs">Apparent</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-sm font-bold text-[#172b4d] dark:text-white font-mono">{data.power.ApparentTotal.toFixed(1)}</span>
-                    <span className="text-[10px] font-semibold text-[#8993a4]">kVA</span>
+                  <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors">
+                    <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-xs">Reactive</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-sm font-bold text-[#172b4d] dark:text-white font-mono">{data.power.ReactiveTotal.toFixed(1)}</span>
+                      <span className="text-[10px] font-semibold text-[#8993a4]">kVAR</span>
+                    </div>
                   </div>
-                </div>
-                <div className="flex justify-between items-center p-2 rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 transition-colors">
-                  <span className="text-indigo-700 dark:text-indigo-400 font-semibold text-xs">PF Total</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-sm font-bold text-indigo-700 dark:text-indigo-400 font-mono">{data.power.PFTotal.toFixed(2)}</span>
+                  <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent dark:border-white/5 transition-colors">
+                    <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-xs">Apparent</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-sm font-bold text-[#172b4d] dark:text-white font-mono">{data.power.ApparentTotal.toFixed(1)}</span>
+                      <span className="text-[10px] font-semibold text-[#8993a4]">kVA</span>
+                    </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {filters.frequency && (
-          <div key="freqCard" className="flex">
-            <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full group relative overflow-hidden flex flex-col bg-opacity-95 backdrop-blur">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 dark:bg-indigo-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
-              <div className={`flex items-center gap-3 mb-4 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6554c0] to-[#8777d9] flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 pointer-events-none">
-                  <Gauge size={20} />
-                </div>
-                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Frequency</h3>
-                
-                {waNotif.message && (
-                  <div className={`mr-2 text-[10px] font-medium px-2 py-1 rounded-md ${
-                    waNotif.type === 'success' 
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
-                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                  }`}>
-                    {waNotif.message}
-                  </div>
-                )}
-
-                <div className="flex gap-1 mr-2 pointer-events-auto">
-                  <button
-                    onClick={handleTestWA}
-                    title="Test WA Notification"
-                    className="p-1.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800/80 transition-colors"
-                  >
-                    <Send size={14} />
-                  </button>
-                  <button
-                    onClick={handleLogoutWA}
-                    title="Logout WA Session"
-                    className="p-1.5 rounded-full bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800/80 transition-colors"
-                  >
-                    <LogOut size={14} />
-                  </button>
-                </div>
-                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
-              </div>
-              <div className="mt-auto flex items-baseline gap-1">
-                <span className="text-3xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">{data.frequency.toFixed(2)}</span>
-                <span className="text-sm font-semibold text-[#8993a4] dark:text-[#64748b]">Hz</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {filters.energy && (
-          <div key="energyCard" className="flex">
-            <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full group relative overflow-hidden flex flex-col bg-opacity-95 backdrop-blur">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 dark:bg-emerald-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
-              <div className={`flex items-center gap-3 mb-4 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#36b37e] to-[#57d9a3] flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 pointer-events-none">
-                  <Activity size={20} />
-                </div>
-                <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Energy</h3>
-                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
-              </div>
-              <div className="flex-1 flex flex-col justify-center gap-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Active Energy</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">{data.energy.ActiveTotal.toFixed(1)}</span>
-                    <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">kWh</span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Reactive Energy</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">{data.energy.ReactiveTotal.toFixed(1)}</span>
-                    <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">kVARh</span>
+                  <div className="flex justify-between items-center p-2 rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 transition-colors">
+                    <span className="text-indigo-700 dark:text-indigo-400 font-semibold text-xs">PF Total</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-sm font-bold text-indigo-700 dark:text-indigo-400 font-mono">{data.power.PFTotal.toFixed(2)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* CHARTS */}
-        {filters.uPhase && (
-          <div key="uPhaseChart" className="flex">
-            <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-full w-full bg-opacity-95 backdrop-blur">
-              <div className={`flex items-center gap-3 mb-6 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#0052cc] to-[#4c9aff] pointer-events-none">
-                  <Activity size={20} />
+          {filters.frequency && (
+            <div key="freqCard" className="flex">
+              <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full group relative overflow-hidden flex flex-col bg-opacity-95 backdrop-blur">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 dark:bg-indigo-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
+                <div className={`flex items-center gap-3 mb-4 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6554c0] to-[#8777d9] flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 pointer-events-none">
+                    <Gauge size={20} />
+                  </div>
+                  <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Frequency</h3>
+
+                  {waNotif.message && (
+                    <div className={`mr-2 text-[10px] font-medium px-2 py-1 rounded-md ${waNotif.type === 'success'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                      }`}>
+                      {waNotif.message}
+                    </div>
+                  )}
+
+                  <div className="flex gap-1 mr-2 pointer-events-auto">
+                    <button
+                      onClick={handleTestWA}
+                      title="Test WA Notification"
+                      className="p-1.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800/80 transition-colors"
+                    >
+                      <Send size={14} />
+                    </button>
+                    <button
+                      onClick={handleLogoutWA}
+                      title="Logout WA Session"
+                      className="p-1.5 rounded-full bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800/80 transition-colors"
+                    >
+                      <LogOut size={14} />
+                    </button>
+                  </div>
+                  {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
                 </div>
-                <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Phase Voltage Trend</h3>
-                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
-              </div>
-              <div className="flex-1 w-full h-full min-h-[100px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                    <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
-                    <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
-                    <RechartsTooltip content={<CustomTooltip />} />
-                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                    <Line type="monotone" dataKey="phaseA" name="Phase A" stroke="#0052cc" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                    <Line type="monotone" dataKey="phaseB" name="Phase B" stroke="#00e676" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                    <Line type="monotone" dataKey="phaseC" name="Phase C" stroke="#ff8b00" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <div className="mt-auto flex items-baseline gap-1">
+                  <span className="text-3xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">{data.frequency.toFixed(2)}</span>
+                  <span className="text-sm font-semibold text-[#8993a4] dark:text-[#64748b]">Hz</span>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {filters.uLine && (
-          <div key="uLineChart" className="flex">
-            <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-full w-full bg-opacity-95 backdrop-blur">
-              <div className={`flex items-center gap-3 mb-6 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#00b8d9] to-[#79f2ff] pointer-events-none">
-                  <Activity size={20} />
+          {filters.energy && (
+            <div key="energyCard" className="flex">
+              <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full group relative overflow-hidden flex flex-col bg-opacity-95 backdrop-blur">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 dark:bg-emerald-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
+                <div className={`flex items-center gap-3 mb-4 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#36b37e] to-[#57d9a3] flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 pointer-events-none">
+                    <Activity size={20} />
+                  </div>
+                  <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Energy</h3>
+                  {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
                 </div>
-                <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Line Voltage Trend (U Line)</h3>
-                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
-              </div>
-              <div className="flex-1 w-full h-full min-h-[100px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                    <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
-                    <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
-                    <RechartsTooltip content={<CustomTooltip />} />
-                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                    <Line type="monotone" dataKey="lineAB" name="Line AB" stroke="#00b8d9" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                    <Line type="monotone" dataKey="lineBC" name="Line BC" stroke="#6554c0" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                    <Line type="monotone" dataKey="lineCA" name="Line CA" stroke="#ff5630" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <div className="flex-1 flex flex-col justify-center gap-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Active Energy</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">{data.energy.ActiveTotal.toFixed(1)}</span>
+                      <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">kWh</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-sm">Reactive Energy</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">{data.energy.ReactiveTotal.toFixed(1)}</span>
+                      <span className="text-xs font-semibold text-[#8993a4] dark:text-[#64748b]">kVARh</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {filters.current && (
-          <div key="currentChart" className="flex">
-            <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-full w-full bg-opacity-95 backdrop-blur">
-              <div className={`flex items-center gap-3 mb-6 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#ff5630] to-[#ff9873] pointer-events-none">
-                  <Activity size={20} />
+          {/* CHARTS */}
+          {filters.uPhase && (
+            <div key="uPhaseChart" className="flex">
+              <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-full w-full bg-opacity-95 backdrop-blur">
+                <div className={`flex items-center gap-3 mb-6 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#0052cc] to-[#4c9aff] pointer-events-none">
+                    <Activity size={20} />
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Phase Voltage Trend</h3>
+                  {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
                 </div>
-                <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Current Trend</h3>
-                {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
-              </div>
-              <div className="flex-1 w-full h-full min-h-[100px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                    <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
-                    <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
-                    <RechartsTooltip content={<CustomTooltip />} />
-                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                    <Line type="monotone" dataKey="currentA" name="Current A" stroke="#ff5630" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                    <Line type="monotone" dataKey="currentB" name="Current B" stroke="#6554c0" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                    <Line type="monotone" dataKey="currentC" name="Current C" stroke="#00b8d9" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <div className="flex-1 w-full h-full min-h-[100px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
+                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <RechartsTooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                      <Area fillOpacity={0.15} fill="#0052cc" type="monotone" dataKey="phaseA" name="Phase A" stroke="#0052cc" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
+                      <Area fillOpacity={0.15} fill="#00e676" type="monotone" dataKey="phaseB" name="Phase B" stroke="#00e676" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
+                      <Area fillOpacity={0.15} fill="#ff8b00" type="monotone" dataKey="phaseC" name="Phase C" stroke="#ff8b00" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {filters.uLine && (
+            <div key="uLineChart" className="flex">
+              <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-full w-full bg-opacity-95 backdrop-blur">
+                <div className={`flex items-center gap-3 mb-6 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#00b8d9] to-[#79f2ff] pointer-events-none">
+                    <Activity size={20} />
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Line Voltage Trend (U Line)</h3>
+                  {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
+                </div>
+                <div className="flex-1 w-full h-full min-h-[100px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
+                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <RechartsTooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                      <Area fillOpacity={0.15} fill="#00b8d9" type="monotone" dataKey="lineAB" name="Line AB" stroke="#00b8d9" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
+                      <Area fillOpacity={0.15} fill="#6554c0" type="monotone" dataKey="lineBC" name="Line BC" stroke="#6554c0" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
+                      <Area fillOpacity={0.15} fill="#ff5630" type="monotone" dataKey="lineCA" name="Line CA" stroke="#ff5630" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {filters.current && (
+            <div key="currentChart" className="flex">
+              <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-full w-full bg-opacity-95 backdrop-blur">
+                <div className={`flex items-center gap-3 mb-6 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#ff5630] to-[#ff9873] pointer-events-none">
+                    <Activity size={20} />
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Current Trend</h3>
+                  {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
+                </div>
+                <div className="flex-1 w-full h-full min-h-[100px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
+                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <RechartsTooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                      <Area fillOpacity={0.15} fill="#ff5630" type="monotone" dataKey="currentA" name="Current A" stroke="#ff5630" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
+                      <Area fillOpacity={0.15} fill="#6554c0" type="monotone" dataKey="currentB" name="Current B" stroke="#6554c0" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
+                      <Area fillOpacity={0.15} fill="#00b8d9" type="monotone" dataKey="currentC" name="Current C" stroke="#00b8d9" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Power Chart */}
           {filters.power && (
@@ -938,16 +1041,16 @@ const Dashboard = () => {
                 </div>
                 <div className="flex-1 w-full h-full min-h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
                       <XAxis dataKey="timestampMs" type="number" scale="time" domain={['dataMin', 'dataMax']} tickCount={8} tickFormatter={(time) => new Date(time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                      <Line type="monotone" dataKey="powerActiveTotal" name="Active (kW)" stroke="#6554c0" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                      <Line type="monotone" dataKey="powerReactiveTotal" name="Reactive (kVAR)" stroke="#00b8d9" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                      <Line type="monotone" dataKey="powerApparentTotal" name="Apparent (kVA)" stroke="#ffab00" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                    </LineChart>
+                      <Area fillOpacity={0.15} fill="#6554c0" type="monotone" dataKey="powerActiveTotal" name="Active (kW)" stroke="#6554c0" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
+                      <Area fillOpacity={0.15} fill="#00b8d9" type="monotone" dataKey="powerReactiveTotal" name="Reactive (kVAR)" stroke="#00b8d9" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
+                      <Area fillOpacity={0.15} fill="#ffab00" type="monotone" dataKey="powerApparentTotal" name="Apparent (kVA)" stroke="#ffab00" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
@@ -967,15 +1070,15 @@ const Dashboard = () => {
                 </div>
                 <div className="flex-1 w-full h-full min-h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
                       <XAxis dataKey="timestampMs" type="number" scale="time" domain={['dataMin', 'dataMax']} tickCount={8} tickFormatter={(time) => new Date(time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                      <Line type="monotone" dataKey="frequency" name="Frequency (Hz)" stroke="#8950fc" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                      <Area fillOpacity={0.15} fill="#8950fc" type="monotone" dataKey="frequency" name="Frequency (Hz)" stroke="#8950fc" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
                       <ReferenceLine y={50} stroke="#cbd5e1" strokeDasharray="3 3" />
-                    </LineChart>
+                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
@@ -995,14 +1098,14 @@ const Dashboard = () => {
                 </div>
                 <div className="flex-1 w-full h-full min-h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
                       <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} minTickGap={60} />
                       <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                      <Line type="monotone" dataKey="efficiency" name="Efficiency (%)" stroke="#e83e8c" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                    </LineChart>
+                      <Area fillOpacity={0.15} fill="#e83e8c" type="monotone" dataKey="efficiency" name="Efficiency (%)" stroke="#e83e8c" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
@@ -1011,9 +1114,91 @@ const Dashboard = () => {
         </ResponsiveGridLayout>
       </div>
 
+      {/* EXPORT EXCEL MODAL */}
+      {showExportModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-white dark:bg-[#151521] rounded-2xl max-w-md w-full shadow-2xl border border-gray-100 dark:border-white/10 overflow-hidden flex flex-col">
+            <div className="p-5 border-b border-gray-100 dark:border-white/10 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-[#172b4d] dark:text-white flex items-center gap-2">
+                <Download size={20} className="text-green-500" />
+                Export Excel
+              </h3>
+              <button
+                onClick={() => {
+                  setShowExportModal(false);
+                  setExportError(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-5 flex flex-col gap-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400 -mt-1 mb-2">
+                Pilih rentang waktu untuk mengunduh seluruh data riwayat Electrical (tegangan, arus, daya, dsb.) ke dalam format Excel (.xlsx).
+              </p>
+
+              {exportError && (
+                <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-lg border border-red-200 dark:border-red-800/30 text-sm font-semibold animate-[fadeIn_0.2s_ease-out]">
+                  {exportError}
+                </div>
+              )}
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8] uppercase tracking-wider">Mulai (Start)</label>
+                <input
+                  type="datetime-local"
+                  value={exportStart}
+                  onChange={(e) => setExportStart(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none focus:border-green-500 transition-colors"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8] uppercase tracking-wider">Akhir (End)</label>
+                <input
+                  type="datetime-local"
+                  value={exportEnd}
+                  onChange={(e) => setExportEnd(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none focus:border-green-500 transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="p-5 border-t border-gray-100 dark:border-white/10 flex justify-end gap-3 bg-gray-50 dark:bg-white/5">
+              <button
+                onClick={() => {
+                  setShowExportModal(false);
+                  setExportError(null);
+                }}
+                className="px-4 py-2 rounded-lg font-semibold text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDownloadExcel}
+                disabled={isExporting}
+                className="px-5 py-2 rounded-lg font-semibold text-sm bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isExporting ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    Memproses...
+                  </>
+                ) : (
+                  <>
+                    <Download size={16} />
+                    Download Excel
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default Dashboard;
-

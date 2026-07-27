@@ -75,38 +75,19 @@ export const TrendDataProvider = ({ children }) => {
     const timeStr = dataDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' });
 
     const newPoint = {
+      ...wsData,
       time: timeStr,
       timestamp: dataDate.toISOString(),
-      phaseA: wsData.vPhase?.A || 0,
-      phaseB: wsData.vPhase?.B || 0,
-      phaseC: wsData.vPhase?.C || 0,
-      lineAB: wsData.vLine?.AB || 0,
-      lineBC: wsData.vLine?.BC || 0,
-      lineCA: wsData.vLine?.CA || 0,
-      currentA: wsData.current?.A || 0,
-      currentB: wsData.current?.B || 0,
-      currentC: wsData.current?.C || 0,
-      frequency: wsData.frequency || 0,
-      efficiency: wsData.efficiency || 0,
     };
 
     // Only add point if data actually changed
     if (lastDataRef.current) {
       const last = lastDataRef.current;
-      const hasChanged =
-        newPoint.phaseA !== last.phaseA ||
-        newPoint.phaseB !== last.phaseB ||
-        newPoint.phaseC !== last.phaseC ||
-        newPoint.lineAB !== last.lineAB ||
-        newPoint.lineBC !== last.lineBC ||
-        newPoint.lineCA !== last.lineCA ||
-        newPoint.currentA !== last.currentA ||
-        newPoint.currentB !== last.currentB ||
-        newPoint.currentC !== last.currentC ||
-        newPoint.frequency !== last.frequency ||
-        newPoint.efficiency !== last.efficiency;
-
-      if (!hasChanged) return;
+      // Since backend already filters by DB row ID, we can just check if timestamp is newer or the same but with different data.
+      // But to be 100% safe, we can just check if timestamp is different.
+      if (newPoint.timestamp === last.timestamp) {
+        return;
+      }
     }
 
     lastDataRef.current = newPoint;

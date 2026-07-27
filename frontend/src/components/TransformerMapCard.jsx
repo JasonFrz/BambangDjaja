@@ -3,8 +3,6 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { MapPin, Navigation, CheckCircle2 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
-
-// Fix for default marker icon in react-leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
@@ -19,7 +17,6 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// Component to dynamically change map view when coordinates update
 function ChangeView({ center }) {
   const map = useMap();
   useEffect(() => {
@@ -29,7 +26,6 @@ function ChangeView({ center }) {
 }
 
 const TransformerMapCard = () => {
-  // Default coordinates (e.g. Sidoarjo area, similar to screenshot)
   const defaultLat = -7.336432504428765;
   const defaultLng = 112.76284930220689;
 
@@ -75,7 +71,6 @@ const TransformerMapCard = () => {
     <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-full w-full relative overflow-hidden group">
       <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 dark:bg-indigo-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
 
-      {/* Header */}
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6366f1] to-[#8b5cf6] flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
           <MapPin size={20} />
@@ -85,7 +80,6 @@ const TransformerMapCard = () => {
         </h3>
       </div>
 
-      {/* Map Container */}
       <div className="flex-1 min-h-[300px] w-full rounded-xl overflow-hidden border border-[#dfe1e6] dark:border-white/10 relative z-10 mb-4">
         <MapContainer center={position} zoom={13} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
           <TileLayer
@@ -101,7 +95,6 @@ const TransformerMapCard = () => {
         </MapContainer>
       </div>
 
-      {/* Controls */}
       <div className="flex flex-col sm:flex-row gap-4 items-end relative z-10">
         <div className="flex-1 w-full">
           <label className="flex items-center gap-2 text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8] mb-1.5 uppercase tracking-wider">
