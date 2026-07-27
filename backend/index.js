@@ -48,10 +48,12 @@ app.get("/api/health", (req, res) => {
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
 const trendRoutes = require("./routes/trends");
+const superadminRoutes = require("./routes/superadmin");
 
 app.use("/api", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/trends", trendRoutes);
+app.use("/api/superadmin", superadminRoutes);
 
 const startRealtimePoller = require("./utils/realtimePoller");
 const { initWhatsApp } = require("./utils/whatsappClient");

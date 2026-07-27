@@ -26,8 +26,8 @@ const ManageTransformers = () => {
   const { apiUrl } = useApi();
   const navigate = useNavigate();
   const currentRole = sessionStorage.getItem('role');
-  const token = sessionStorage.getItem('token');
-  
+  const usernameHeader = sessionStorage.getItem('username');
+  const companyNameHeader = sessionStorage.getItem('company_name');
   useEffect(() => {
     if (currentRole !== 'admin') {
       navigate('/');
@@ -40,7 +40,11 @@ const ManageTransformers = () => {
   const fetchUsers = async () => {
     try {
       const response = await fetch(`${apiUrl}/api/users`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: {
+          'X-Username': usernameHeader,
+          'X-Role': currentRole,
+          'X-Company-Name': companyNameHeader
+        }
       });
       const data = await response.json();
       if (response.ok) {
@@ -55,7 +59,11 @@ const ManageTransformers = () => {
     setIsLoadingTransformers(true);
     try {
       const response = await fetch(`${apiUrl}/api/transformers`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: {
+          'X-Username': usernameHeader,
+          'X-Role': currentRole,
+          'X-Company-Name': companyNameHeader
+        }
       });
       const data = await response.json();
       if (response.ok) {
@@ -96,7 +104,9 @@ const ManageTransformers = () => {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'X-Username': usernameHeader,
+          'X-Role': currentRole,
+          'X-Company-Name': companyNameHeader
         },
         body
       });

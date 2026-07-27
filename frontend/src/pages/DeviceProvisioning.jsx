@@ -28,7 +28,8 @@ const DeviceProvisioning = () => {
   const { apiUrl } = useApi();
   const navigate = useNavigate();
   const currentRole = sessionStorage.getItem('role');
-  const token = sessionStorage.getItem('token');
+  const usernameHeader = sessionStorage.getItem('username');
+  const companyNameHeader = sessionStorage.getItem('company_name');
   
   useEffect(() => {
     if (currentRole !== 'admin') {
@@ -50,7 +51,11 @@ const DeviceProvisioning = () => {
   const fetchTokens = async () => {
     try {
       const response = await fetch(`${apiUrl}/api/provision/tokens`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'X-Username': usernameHeader,
+          'X-Role': currentRole,
+          'X-Company-Name': companyNameHeader
+        }
       });
       if (response.ok) {
         const data = await response.json();
@@ -64,7 +69,11 @@ const DeviceProvisioning = () => {
   const fetchDevices = async () => {
     try {
       const response = await fetch(`${apiUrl}/api/provision/devices`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'X-Username': usernameHeader,
+          'X-Role': currentRole,
+          'X-Company-Name': companyNameHeader
+        }
       });
       if (response.ok) {
         const data = await response.json();
@@ -85,7 +94,11 @@ const DeviceProvisioning = () => {
     
     try {
       const response = await fetch(`${apiUrl}/api/provision/generate-company-code?name=${encodeURIComponent(companyName)}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'X-Username': usernameHeader,
+          'X-Role': currentRole,
+          'X-Company-Name': companyNameHeader
+        }
       });
       const data = await response.json();
       if (response.ok) {
@@ -137,7 +150,9 @@ const DeviceProvisioning = () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'X-Username': usernameHeader,
+            'X-Role': currentRole,
+            'X-Company-Name': companyNameHeader
           },
           body: JSON.stringify(payload)
         });
@@ -157,7 +172,9 @@ const DeviceProvisioning = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'X-Username': usernameHeader,
+            'X-Role': currentRole,
+            'X-Company-Name': companyNameHeader
           },
           body: JSON.stringify(payload)
         });
@@ -186,7 +203,11 @@ const DeviceProvisioning = () => {
     try {
       const response = await fetch(`${apiUrl}/api/provision/tokens/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'X-Username': usernameHeader,
+          'X-Role': currentRole,
+          'X-Company-Name': companyNameHeader
+        }
       });
       if (response.ok) {
         if (editingTokenId === id) clearForm();

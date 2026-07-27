@@ -13,6 +13,25 @@ const extractDb = (req, res, next) => {
   next();
 };
 
+// Helper to find closest available data when range is empty
+async function checkClosestData(db, table, start, end) {
+  const [before] = await db.execute(`SELECT timestamp FROM ${table} WHERE timestamp < ? ORDER BY timestamp DESC LIMIT 1`, [start]);
+  const [after] = await db.execute(`SELECT timestamp FROM ${table} WHERE timestamp > ? ORDER BY timestamp ASC LIMIT 1`, [end]);
+  
+  let msg = "Tidak ada data pada rentang waktu tersebut.";
+  if (before.length > 0 || after.length > 0) {
+    msg += " Data terdekat ada pada: ";
+    if (before.length > 0) {
+      msg += `sebelumnya (${new Date(before[0].timestamp).toLocaleString('id-ID')})`;
+    }
+    if (after.length > 0) {
+      if (before.length > 0) msg += ' dan ';
+      msg += `sesudahnya (${new Date(after[0].timestamp).toLocaleString('id-ID')})`;
+    }
+  }
+  return msg;
+}
+
 router.get("/", extractDb, async (req, res) => {
   const { start, end, interval } = req.query;
   try {
@@ -71,6 +90,11 @@ router.get("/", extractDb, async (req, res) => {
     
     const [rows] = await db.execute(query, params);
     
+    if (rows.length === 0 && start && end) {
+      const msg = await checkClosestData(db, 'electrical_readings', start, end);
+      return res.status(404).json({ error: msg });
+    }
+
     const rowsWithEfficiency = rows.map(row => ({
       ...row,
       efficiency: calculateEfficiency(row.current_a, row.current_b, row.current_c)
@@ -146,6 +170,13 @@ router.get("/export", extractDb, async (req, res) => {
   try {
     const db = await getDbConnection(req.dbName);
     const ExcelJS = require('exceljs');
+
+    // Pre-check if data exists to prevent empty stream & provide smart feedback
+    const [countRows] = await db.execute('SELECT COUNT(*) as total FROM electrical_readings WHERE timestamp >= ? AND timestamp <= ?', [start, end]);
+    if (countRows[0].total === 0) {
+      const msg = await checkClosestData(db, 'electrical_readings', start, end);
+      return res.status(404).json({ error: msg });
+    }
 
     const query = `
       SELECT 

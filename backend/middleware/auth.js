@@ -5,26 +5,22 @@ const { generateApiKey, hashApiKey } = require("../utils/apiKey");
 const JWT_SECRET = process.env.JWT_SECRET || "super-secret-key-for-dev";
 
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
+  const username = req.headers["x-username"];
+  const role = req.headers["x-role"];
+  const companyName = req.headers["x-company-name"];
 
-  if (!token) return res.status(401).json({ error: "Token is missing" });
+  if (!username) {
+    return res.status(401).json({ error: "Missing Authentication Headers (x-username)" });
+  }
 
-  jwt.verify(token, JWT_SECRET, async (err, decoded) => {
-    if (err)
-      return res.status(401).json({ error: "Token is invalid or expired" });
-
-    try {
-      const user = await prisma.user.findUnique({
-        where: { username: decoded.username },
-      });
-      if (!user) return res.status(401).json({ error: "User not found" });
-      req.user = user;
-      next();
-    } catch (dbErr) {
-      return res.status(500).json({ error: "Database error" });
-    }
-  });
+  // Populate req.user to match legacy JWT behavior
+  req.user = {
+    username,
+    role: role || "user",
+    company_name: companyName || ""
+  };
+  
+  next();
 };
 
 const authenticateDevice = async (req, res, next) => {

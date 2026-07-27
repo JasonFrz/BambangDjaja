@@ -12,6 +12,8 @@ import { TemperatureDataProvider } from './contexts/TemperatureDataContext';
 import { ApiProvider } from './contexts/ApiContext';
 import NetworkBadge from './components/NetworkBadge';
 
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
+
 const ProtectedRoute = ({ children }) => {
   const username = sessionStorage.getItem('username');
   const companyName = sessionStorage.getItem('company_name');
@@ -35,6 +37,7 @@ function App() {
             <BrowserRouter>
               <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/superadmin" element={<SuperAdminDashboard />} />
                 <Route path="/" element={
                   <ProtectedRoute>
                     <MainLayout />

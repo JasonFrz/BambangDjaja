@@ -23,9 +23,16 @@ const TransformerSelection = () => {
   useEffect(() => {
     const fetchTransformers = async () => {
       try {
-        const token = sessionStorage.getItem('token');
+        const username = sessionStorage.getItem('username');
+        const role = sessionStorage.getItem('role');
+        const companyName = sessionStorage.getItem('company_name');
+        
         const response = await axios.get(`${apiUrl}/api/transformers`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 
+            'X-Username': username,
+            'X-Role': role,
+            'X-Company-Name': companyName
+          }
         });
         setTransformers(response.data);
         setError(null);
@@ -58,12 +65,17 @@ const TransformerSelection = () => {
     setWaStatus(prev => ({ ...prev, [trafo.id]: null }));
 
     try {
-      const token = sessionStorage.getItem('token');
+      const username = sessionStorage.getItem('username');
+      const role = sessionStorage.getItem('role');
+      const companyName = sessionStorage.getItem('company_name');
+
       const response = await fetch(`${apiUrl}/api/whatsapp/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'X-Username': username,
+          'X-Role': role,
+          'X-Company-Name': companyName
         },
         body: JSON.stringify({
           transformer_id: trafo.id,

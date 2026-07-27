@@ -504,8 +504,8 @@ const Temperature = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                      <XAxis dataKey="timestampMs" type="number" scale="time" domain={['dataMin', 'dataMax']} tickCount={8} tickFormatter={(time) => new Date(time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <XAxis dataKey="timestampMs" type="number" scale="time" domain={['dataMin', 'dataMax']} tickCount={20} tickFormatter={(time) => new Date(time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <YAxis domain={[0, 150]} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
                       <Line type="monotone" dataKey="oil_temperature" name="Oil Temperature (°C)" stroke="#ff5630" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
@@ -542,8 +542,8 @@ const Temperature = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} minTickGap={60} />
-                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} interval={5} />
+                      <YAxis domain={[0, 1]} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
                       <ReferenceLine y={0.50} stroke="red" strokeDasharray="3 3" label={{ position: 'top', value: 'Limit (0.50)', fill: 'red', fontSize: 12 }} />

@@ -47,7 +47,6 @@ const Login = () => {
         } else {
           localStorage.removeItem('savedUsername');
         }
-        // sessionStorage.setItem('token', data.token); // No longer needed
         sessionStorage.setItem('username', data.username);
         sessionStorage.setItem('role', data.role);
         sessionStorage.setItem('phone', data.phone || '');

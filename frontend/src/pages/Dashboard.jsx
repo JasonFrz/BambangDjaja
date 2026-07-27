@@ -242,6 +242,7 @@ const Dashboard = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [downloadMB, setDownloadMB] = useState("0.0");
   const [exportError, setExportError] = useState(null);
+  const [showFilterOptions, setShowFilterOptions] = useState(false);
 
   const fetchTrends = async (forceFilter = false) => {
     try {
@@ -275,7 +276,13 @@ const Dashboard = () => {
       setError(null);
     } catch (err) {
       console.error("Error fetching trends:", err);
-      setError("Failed to load trend data.");
+      if (err.response && err.response.status === 404) {
+        setFilterError(err.response.data.error || 'Tidak ada data yang ditemukan pada rentang waktu tersebut.');
+        setTrendData([]);
+        setError(null);
+      } else {
+        setError("Failed to load trend data.");
+      }
     } finally {
       setLoading(false);
     }
@@ -337,7 +344,17 @@ const Dashboard = () => {
     } catch (err) {
       console.error(err);
       if (err.response && err.response.status === 404) {
-        setExportError("Tidak ada data pada rentang waktu tersebut.");
+        try {
+          let errorMsg = "Tidak ada data pada rentang waktu tersebut.";
+          if (err.response.data instanceof Blob) {
+            const errorText = await err.response.data.text();
+            const errorObj = JSON.parse(errorText);
+            if (errorObj.error) errorMsg = errorObj.error;
+          }
+          setExportError(errorMsg);
+        } catch (e) {
+          setExportError("Tidak ada data pada rentang waktu tersebut.");
+        }
       } else {
         setExportError("Gagal mengunduh Excel.");
       }
@@ -482,6 +499,12 @@ const Dashboard = () => {
               Show All
             </button>
             <button
+              onClick={() => setShowFilterOptions(!showFilterOptions)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 ${showFilterOptions ? 'bg-[#0052cc] text-white' : 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20'}`}
+            >
+              <Settings size={12} /> {showFilterOptions ? 'Hide Options' : 'Show Options'}
+            </button>
+            <button
               onClick={() => setIsEditingLayout(!isEditingLayout)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 ${isEditingLayout ? 'bg-[#0052cc] text-white' : 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20'}`}
             >
@@ -518,44 +541,48 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
-            <input type="checkbox" checked={filters.status} onChange={() => toggleFilter('status')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
-            <span className="text-sm font-medium text-[#172b4d] dark:text-white">System Status</span>
-          </label>
-          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
-            <input type="checkbox" checked={filters.uPhase} onChange={() => toggleFilter('uPhase')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
-            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Phase Voltage</span>
-          </label>
-          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
-            <input type="checkbox" checked={filters.uLine} onChange={() => toggleFilter('uLine')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
-            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Line Voltage</span>
-          </label>
-          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
-            <input type="checkbox" checked={filters.current} onChange={() => toggleFilter('current')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
-            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Current</span>
-          </label>
-          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
-            <input type="checkbox" checked={filters.power} onChange={() => toggleFilter('power')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
-            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Power</span>
-          </label>
-          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
-            <input type="checkbox" checked={filters.energy} onChange={() => toggleFilter('energy')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
-            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Energy</span>
-          </label>
-          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
-            <input type="checkbox" checked={filters.frequency} onChange={() => toggleFilter('frequency')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
-            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Frequency</span>
-          </label>
-          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
-            <input type="checkbox" checked={filters.efficiency} onChange={() => toggleFilter('efficiency')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
-            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Efficiency Chart</span>
-          </label>
-        </div>
-        {filterError && (
-          <span className="text-red-500 dark:text-red-400 text-sm font-medium mt-3 block animate-[fadeIn_0.3s_ease-out]">
-            {filterError}
-          </span>
+        {showFilterOptions && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+                <input type="checkbox" checked={filters.status} onChange={() => toggleFilter('status')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+                <span className="text-sm font-medium text-[#172b4d] dark:text-white">System Status</span>
+              </label>
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+                <input type="checkbox" checked={filters.uPhase} onChange={() => toggleFilter('uPhase')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+                <span className="text-sm font-medium text-[#172b4d] dark:text-white">Phase Voltage</span>
+              </label>
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+                <input type="checkbox" checked={filters.uLine} onChange={() => toggleFilter('uLine')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+                <span className="text-sm font-medium text-[#172b4d] dark:text-white">Line Voltage</span>
+              </label>
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+                <input type="checkbox" checked={filters.current} onChange={() => toggleFilter('current')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+                <span className="text-sm font-medium text-[#172b4d] dark:text-white">Current</span>
+              </label>
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+                <input type="checkbox" checked={filters.power} onChange={() => toggleFilter('power')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+                <span className="text-sm font-medium text-[#172b4d] dark:text-white">Power</span>
+              </label>
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+                <input type="checkbox" checked={filters.energy} onChange={() => toggleFilter('energy')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+                <span className="text-sm font-medium text-[#172b4d] dark:text-white">Energy</span>
+              </label>
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+                <input type="checkbox" checked={filters.frequency} onChange={() => toggleFilter('frequency')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+                <span className="text-sm font-medium text-[#172b4d] dark:text-white">Frequency</span>
+              </label>
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+                <input type="checkbox" checked={filters.efficiency} onChange={() => toggleFilter('efficiency')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+                <span className="text-sm font-medium text-[#172b4d] dark:text-white">Efficiency Chart</span>
+              </label>
+            </div>
+            {filterError && (
+              <span className="text-red-500 dark:text-red-400 text-sm font-medium mt-3 block animate-[fadeIn_0.3s_ease-out]">
+                {filterError}
+              </span>
+            )}
+          </>
         )}
       </div>
 
@@ -653,35 +680,35 @@ const Dashboard = () => {
 
           {filters.status && (
             <div key="statusCard" className="flex">
-              <div className={`bg-white dark:bg-[#151521] rounded-2xl p-4 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex items-center justify-between group relative overflow-hidden bg-opacity-95 backdrop-blur select-none ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
-                <div className="flex items-center gap-2 sm:gap-6 w-full justify-around">
-                  <div className="flex flex-col items-center">
+              <div className={`bg-white dark:bg-[#151521] rounded-2xl p-3 sm:p-4 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex items-center justify-center group relative overflow-hidden bg-opacity-95 backdrop-blur select-none ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+                <div className="grid grid-cols-2 sm:flex sm:flex-row items-center gap-3 sm:gap-4 lg:gap-6 w-full justify-around sm:divide-x divide-gray-200 dark:divide-gray-800">
+                  <div className="flex flex-col items-center sm:w-1/4">
                     <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">System</span>
-                    <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 ${data.status.OnOff === 1 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                    <div className={`px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-sm font-bold flex items-center gap-1 sm:gap-2 ${data.status.OnOff === 1 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
                       <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.OnOff === 1 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'}`}></div>
                       {data.status.OnOff === 1 ? 'ON' : 'OFF'}
                     </div>
                   </div>
-                  <div className="w-px h-6 sm:h-8 bg-gray-200 dark:bg-gray-800"></div>
-                  <div className="flex flex-col items-center">
+                  
+                  <div className="flex flex-col items-center sm:w-1/4">
                     <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Relay</span>
-                    <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 ${data.status.Relay === 1 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+                    <div className={`px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-sm font-bold flex items-center gap-1 sm:gap-2 ${data.status.Relay === 1 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
                       <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.Relay === 1 ? 'bg-emerald-500' : 'bg-gray-400'}`}></div>
                       {data.status.Relay === 1 ? 'ACTIVE' : 'IDLE'}
                     </div>
                   </div>
-                  <div className="w-px h-6 sm:h-8 bg-gray-200 dark:bg-gray-800"></div>
-                  <div className="flex flex-col items-center">
+                  
+                  <div className="flex flex-col items-center sm:w-1/4">
                     <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Alarm</span>
-                    <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 ${data.status.Alarm === 1 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+                    <div className={`px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-sm font-bold flex items-center gap-1 sm:gap-2 ${data.status.Alarm === 1 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
                       <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.Alarm === 1 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse' : 'bg-emerald-500'}`}></div>
                       {data.status.Alarm === 1 ? 'TRIGGERED' : 'CLEAR'}
                     </div>
                   </div>
-                  <div className="w-px h-6 sm:h-8 bg-gray-200 dark:bg-gray-800 hidden sm:block"></div>
-                  <div className="hidden sm:flex flex-col items-center">
+                  
+                  <div className="flex flex-col items-center sm:w-1/4">
                     <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Sync</span>
-                    <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 ${data.status.Synced === 1 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
+                    <div className={`px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-sm font-bold flex items-center gap-1 sm:gap-2 ${data.status.Synced === 1 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
                       <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.Synced === 1 ? 'bg-blue-500' : 'bg-amber-500'}`}></div>
                       {data.status.Synced === 1 ? 'SYNCED' : 'PENDING'}
                     </div>
@@ -918,8 +945,8 @@ const Dashboard = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
-                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} interval={5} />
+                      <YAxis domain={[0, 300]} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
                       <Area fillOpacity={0.15} fill="#0052cc" type="monotone" dataKey="phaseA" name="Phase A" stroke="#0052cc" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
@@ -946,8 +973,8 @@ const Dashboard = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
-                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} interval={5} />
+                      <YAxis domain={[0, 500]} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
                       <Area fillOpacity={0.15} fill="#00b8d9" type="monotone" dataKey="lineAB" name="Line AB" stroke="#00b8d9" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
@@ -974,8 +1001,8 @@ const Dashboard = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
-                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} interval={5} />
+                      <YAxis domain={[0, dataMax => Math.max(Math.ceil(dataMax * 1.2), 100)]} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
                       <Area fillOpacity={0.15} fill="#ff5630" type="monotone" dataKey="currentA" name="Current A" stroke="#ff5630" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
@@ -1003,8 +1030,8 @@ const Dashboard = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
-                      <XAxis dataKey="timestampMs" type="number" scale="time" domain={['dataMin', 'dataMax']} tickCount={8} tickFormatter={(time) => new Date(time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <XAxis dataKey="timestampMs" type="number" scale="time" domain={['dataMin', 'dataMax']} tickCount={20} tickFormatter={(time) => new Date(time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <YAxis domain={[0, dataMax => Math.max(Math.ceil(dataMax * 1.2), 100)]} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
                       <Area fillOpacity={0.15} fill="#6554c0" type="monotone" dataKey="powerActiveTotal" name="Active (kW)" stroke="#6554c0" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
@@ -1032,12 +1059,13 @@ const Dashboard = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
-                      <XAxis dataKey="timestampMs" type="number" scale="time" domain={['dataMin', 'dataMax']} tickCount={8} tickFormatter={(time) => new Date(time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <XAxis dataKey="timestampMs" type="number" scale="time" domain={['dataMin', 'dataMax']} tickCount={20} tickFormatter={(time) => new Date(time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <YAxis domain={[0, 60]} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
                       <Area fillOpacity={0.15} fill="#8950fc" type="monotone" dataKey="frequency" name="Frequency (Hz)" stroke="#8950fc" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
                       <ReferenceLine y={50} stroke="#cbd5e1" strokeDasharray="3 3" />
+                      <ReferenceLine y={52.5} stroke="red" strokeDasharray="3 3" label={{ position: 'top', value: 'Limit (52.5)', fill: 'red', fontSize: 12 }} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -1060,8 +1088,8 @@ const Dashboard = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
-                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} minTickGap={60} />
-                      <YAxis domain={['auto', 'auto']} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} interval={5} />
+                      <YAxis domain={[0, 100]} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
                       <Area fillOpacity={0.15} fill="#e83e8c" type="monotone" dataKey="efficiency" name="Efficiency (%)" stroke="#e83e8c" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
