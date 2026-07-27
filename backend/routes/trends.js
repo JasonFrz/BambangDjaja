@@ -188,11 +188,15 @@ router.get("/export", extractDb, async (req, res) => {
       WHERE timestamp >= ? AND timestamp <= ?
       ORDER BY timestamp ASC
     `;
-    // Use ExcelJS streaming writer for maximum performance & low memory
+    // Helper to round float values to 2 decimal places to save file size
+    const r2 = (val) => val !== null && val !== undefined ? Math.round((parseFloat(val) || 0) * 100) / 100 : 0;
+
+    // Use ExcelJS streaming writer with maximum ZIP compression level (level 9)
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
       stream: res,
       useStyles: true,
-      useSharedStrings: false // shared strings consume high memory
+      useSharedStrings: false,
+      zip: { zlib: { level: 9 } }
     });
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -241,23 +245,23 @@ router.get("/export", extractDb, async (req, res) => {
     for await (const row of elecStream) {
       sheet.addRow({
         time: new Date(row.timestamp).toLocaleString('id-ID'),
-        phaseA: parseFloat(row.phase_a_v) || 0,
-        phaseB: parseFloat(row.phase_b_v) || 0,
-        phaseC: parseFloat(row.phase_c_v) || 0,
-        lineAB: parseFloat(row.line_ab_v) || 0,
-        lineBC: parseFloat(row.line_bc_v) || 0,
-        lineCA: parseFloat(row.line_ca_v) || 0,
-        currentA: parseFloat(row.current_a) || 0,
-        currentB: parseFloat(row.current_b) || 0,
-        currentC: parseFloat(row.current_c) || 0,
-        powerActiveTotal: parseFloat(row.power_active_total) || 0,
-        powerReactiveTotal: parseFloat(row.power_reactive_total) || 0,
-        powerApparentTotal: parseFloat(row.power_apparent_total) || 0,
-        pfTotal: parseFloat(row.pf_total) || 0,
-        frequency: parseFloat(row.frequency) || 0,
-        energyActiveTotal: parseFloat(row.energy_active_total) || 0,
-        energyReactiveTotal: parseFloat(row.energy_reactive_total) || 0,
-        efficiency: calculateEfficiency(row.current_a, row.current_b, row.current_c)
+        phaseA: r2(row.phase_a_v),
+        phaseB: r2(row.phase_b_v),
+        phaseC: r2(row.phase_c_v),
+        lineAB: r2(row.line_ab_v),
+        lineBC: r2(row.line_bc_v),
+        lineCA: r2(row.line_ca_v),
+        currentA: r2(row.current_a),
+        currentB: r2(row.current_b),
+        currentC: r2(row.current_c),
+        powerActiveTotal: r2(row.power_active_total),
+        powerReactiveTotal: r2(row.power_reactive_total),
+        powerApparentTotal: r2(row.power_apparent_total),
+        pfTotal: r2(row.pf_total),
+        frequency: r2(row.frequency),
+        energyActiveTotal: r2(row.energy_active_total),
+        energyReactiveTotal: r2(row.energy_reactive_total),
+        efficiency: r2(calculateEfficiency(row.current_a, row.current_b, row.current_c))
       }).commit();
     }
     sheet.commit();
@@ -284,8 +288,8 @@ router.get("/export", extractDb, async (req, res) => {
     for await (const row of oilStream) {
       oilSheet.addRow({
         time: new Date(row.timestamp).toLocaleString('id-ID'),
-        oilTemp: parseFloat(row.oil_temperature) || 0,
-        oilPressure: parseFloat(row.oil_pressure) || 0,
+        oilTemp: r2(row.oil_temperature),
+        oilPressure: r2(row.oil_pressure),
       }).commit();
     }
     oilSheet.commit();
