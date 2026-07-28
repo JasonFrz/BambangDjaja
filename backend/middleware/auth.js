@@ -13,7 +13,6 @@ const authenticateToken = (req, res, next) => {
     return res.status(401).json({ error: "Missing Authentication Headers (x-username)" });
   }
 
-  // Populate req.user to match legacy JWT behavior
   req.user = {
     username,
     role: role || "user",

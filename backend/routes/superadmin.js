@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { getAllDatabases, getDbConnection } = require('../utils/db');
 
-// Simple middleware to check if x-super-admin header is set to 'true'
-// Since login is just hardcoded array in frontend/backend, we keep it simple.
 const authenticateSuperAdmin = (req, res, next) => {
   const isSuper = req.headers['x-super-admin'];
   if (isSuper === 'true') {
@@ -13,7 +11,6 @@ const authenticateSuperAdmin = (req, res, next) => {
   }
 };
 
-// 1a. POST /login
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
   if (username === 'admin' && password === 'admin') {
@@ -22,10 +19,8 @@ router.post('/login', (req, res) => {
   return res.status(401).json({ error: 'Invalid username or password' });
 });
 
-// Apply middleware for subsequent routes
 router.use(authenticateSuperAdmin);
 
-// 1b. GET /databases
 router.get('/databases', async (req, res) => {
   try {
     const databases = await getAllDatabases();
@@ -36,15 +31,12 @@ router.get('/databases', async (req, res) => {
   }
 });
 
-// 1c. GET /databases/:dbName/tables
 router.get('/databases/:dbName/tables', async (req, res) => {
   const { dbName } = req.params;
   try {
     const pool = await getDbConnection(dbName);
     const [rows] = await pool.execute('SHOW TABLES');
-    
-    // In SHOW TABLES, the key is dynamically named based on the DB name like `Tables_in_dbname`
-    // We just take the first value from the object.
+
     const tables = rows.map(row => Object.values(row)[0]);
     res.json({ success: true, tables });
   } catch (error) {
@@ -53,14 +45,12 @@ router.get('/databases/:dbName/tables', async (req, res) => {
   }
 });
 
-// 1d. GET /databases/:dbName/tables/:tableName
 router.get('/databases/:dbName/tables/:tableName', async (req, res) => {
   const { dbName, tableName } = req.params;
   const { limit, sort } = req.query;
   try {
     const pool = await getDbConnection(dbName);
-    
-    // Check columns to intelligently determine sort key
+
     const [cols] = await pool.execute(`SHOW COLUMNS FROM \`${tableName}\``);
     const colNames = cols.map(c => c.Field);
     
@@ -77,7 +67,7 @@ router.get('/databases/:dbName/tables/:tableName', async (req, res) => {
 
     let limitClause = 'LIMIT 100';
     if (limit === 'all') {
-      limitClause = ''; // No limit
+      limitClause = '';
     } else if (limit) {
       const parsed = parseInt(limit);
       if (!isNaN(parsed) && parsed > 0) {
@@ -94,19 +84,16 @@ router.get('/databases/:dbName/tables/:tableName', async (req, res) => {
   }
 });
 
-// 1e. DELETE /databases/:dbName
 router.delete('/databases/:dbName', async (req, res) => {
   const { dbName } = req.params;
-  
-  // Extra protection to ensure we never drop system dbs
+
   const systemDbs = ['information_schema', 'mysql', 'performance_schema', 'sys', 'defaultdb'];
   if (systemDbs.includes(dbName)) {
     return res.status(403).json({ error: 'Cannot delete system database' });
   }
 
   try {
-    // We need a root-like connection to drop databases. 
-    // We can use any existing pool but run DROP DATABASE, or create a new general connection.
+
     const mysql = require('mysql2/promise');
     const connection = await mysql.createConnection({
       host: process.env.AIVEN_DB_HOST,

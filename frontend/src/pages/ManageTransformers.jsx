@@ -7,8 +7,7 @@ const ManageTransformers = () => {
   const [transformers, setTransformers] = useState([]);
   const [isLoadingTransformers, setIsLoadingTransformers] = useState(true);
   const [users, setUsers] = useState([]);
-  
-  // Create/Edit Form State
+
   const [showForm, setShowForm] = useState(false);
   const [editingTrafoId, setEditingTrafoId] = useState(null);
   
@@ -130,7 +129,7 @@ const ManageTransformers = () => {
   const handleEditClick = (t) => {
     setEditingTrafoId(t.id);
     setName(t.name);
-    // Remove "kVA" for the number input
+    
     setPowerCapacity(t.power_capacity.replace('kVA', ''));
     setType(t.type);
     setStatus(t.status);
@@ -156,8 +155,7 @@ const ManageTransformers = () => {
 
   return (
     <div className="max-w-6xl mx-auto w-full mt-8 space-y-6">
-      
-      {/* Header section */}
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-[#151521] p-6 rounded-2xl shadow-sm border border-[#dfe1e6] dark:border-white/10">
         <div>
           <h1 className="text-2xl font-bold text-[#172b4d] dark:text-white flex items-center gap-2">
@@ -185,7 +183,6 @@ const ManageTransformers = () => {
         </div>
       )}
 
-      {/* CREATE/EDIT FORM */}
       {showForm && (
         <div className="bg-white dark:bg-[#151521] rounded-2xl shadow-sm border border-[#dfe1e6] dark:border-white/10 overflow-hidden mb-6 animate-slide-up-fade">
           <div className="p-4 border-b border-[#dfe1e6] dark:border-white/10 flex justify-between items-center bg-[#f4f5f7]/50 dark:bg-white/5">
@@ -287,7 +284,6 @@ const ManageTransformers = () => {
         </div>
       )}
 
-      {/* TABLE */}
       <div className="bg-white dark:bg-[#151521] rounded-2xl shadow-sm border border-[#dfe1e6] dark:border-white/10 overflow-hidden">
         <div className="overflow-auto max-h-[600px]">
           <table className="w-full text-left border-collapse relative">

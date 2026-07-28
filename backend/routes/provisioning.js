@@ -62,7 +62,7 @@ router.post("/generate-token", authenticateToken, async (req, res) => {
       if (!existingToken) isUnique = true;
     }
 
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
 
     await prisma.provisionToken.create({
       data: {
@@ -353,7 +353,7 @@ router.post("/activate", async (req, res) => {
         provision_token,
         provisioned_at: new Date(),
         status: "provisioned",
-        ...(trafoRecord ? { transformer_id: trafoRecord.id } : {}),
+        ...(trafoRecord ? { transformer_id: trafoRecord.id } : ),
       },
       create: {
         serial_number,
@@ -362,7 +362,7 @@ router.post("/activate", async (req, res) => {
         provision_token,
         api_key: hashApiKey(apiKey),
         status: "provisioned",
-        ...(trafoRecord ? { transformer_id: trafoRecord.id } : {}),
+        ...(trafoRecord ? { transformer_id: trafoRecord.id } : ),
       },
     });
 

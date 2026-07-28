@@ -6,9 +6,9 @@ export const useWebSocket = (url) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    // Force websocket to avoid HTTP 400 Bad Request / session dropping issues
+    
     const socket = io(url, {
-      transports: ["websocket"], // STRICTLY websocket only
+      transports: ["websocket"], 
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
     });
@@ -27,7 +27,6 @@ export const useWebSocket = (url) => {
     socket.on("meter", (msg) => {
       if (!msg) return;
 
-      // If backend only sends offline status, zero out the data
       if (msg.modbus_connected === false && msg.phaseA === undefined) {
         setData({
           vPhase: { A: 0, B: 0, C: 0 },
@@ -39,7 +38,6 @@ export const useWebSocket = (url) => {
         return;
       }
 
-      // Pass the backend's flat structure directly so we don't lose any fields like onOffStatus, power, etc.
       setData(msg);
     });
 
@@ -49,11 +47,10 @@ export const useWebSocket = (url) => {
     });
 
     socket.on("connect_error", (error) => {
-      // console.error('Socket.IO connection error:', error);
+      
       setIsConnected(false);
     });
 
-    // Clean up on unmount
     return () => {
       socket.disconnect();
     };

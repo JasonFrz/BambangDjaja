@@ -38,8 +38,7 @@ const DeviceProvisioning = () => {
     }
     fetchTokens();
     fetchDevices();
-    
-    // Auto refresh tokens and devices every 3 seconds
+
     const interval = setInterval(() => {
       fetchTokens();
       fetchDevices();
@@ -145,7 +144,6 @@ const DeviceProvisioning = () => {
 
     try {
       if (editingTokenId) {
-        // Edit Mode
         const response = await fetch(`${apiUrl}/api/provision/tokens/${editingTokenId}`, {
           method: 'PUT',
           headers: {
@@ -167,7 +165,7 @@ const DeviceProvisioning = () => {
           setError(data.error || 'Gagal update token');
         }
       } else {
-        // Create Mode
+        
         const response = await fetch(`${apiUrl}/api/provision/generate-token`, {
           method: 'POST',
           headers: {
@@ -236,7 +234,6 @@ const DeviceProvisioning = () => {
     setSuccess('');
     setGeneratedToken(null);
     
-    // Scroll to top smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -249,7 +246,7 @@ const DeviceProvisioning = () => {
 
   return (
     <div className="max-w-6xl mx-auto w-full mt-8 space-y-8 relative">
-      {/* Generate / Edit Token Section */}
+      
       <div className="bg-white dark:bg-[#151521] rounded-2xl shadow-sm border border-[#dfe1e6] dark:border-white/10 overflow-hidden">
         <div className="p-6 border-b border-[#dfe1e6] dark:border-white/10 flex items-center justify-between bg-[#f4f5f7]/50 dark:bg-white/5">
           <div className="flex items-center gap-4">
@@ -440,8 +437,7 @@ const DeviceProvisioning = () => {
               </button>
             </form>
           </div>
-          
-          {/* Result Panel */}
+
           <div>
             {generatedToken ? (
               <div className="h-full bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800/30 p-6 flex flex-col justify-center items-center text-center">
@@ -492,7 +488,7 @@ const DeviceProvisioning = () => {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-        {/* Token History */}
+        
         <div className="bg-white dark:bg-[#151521] rounded-2xl shadow-sm border border-[#dfe1e6] dark:border-white/10 overflow-hidden">
           <div className="p-4 border-b border-[#dfe1e6] dark:border-white/10 flex items-center gap-3 bg-[#f4f5f7]/50 dark:bg-white/5">
             <Clock size={20} className="text-[#0052cc]" />
@@ -556,7 +552,6 @@ const DeviceProvisioning = () => {
           </div>
         </div>
 
-        {/* Registered Devices */}
         <div className="bg-white dark:bg-[#151521] rounded-2xl shadow-sm border border-[#dfe1e6] dark:border-white/10 overflow-hidden">
           <div className="p-4 border-b border-[#dfe1e6] dark:border-white/10 flex items-center gap-3 bg-[#f4f5f7]/50 dark:bg-white/5">
             <Server size={20} className="text-[#0052cc]" />

@@ -14,7 +14,6 @@ export const TrendDataProvider = ({ children }) => {
   const isLive = isConnected && (!wsData || wsData.modbus_connected !== false);
   const lastDataRef = useRef(null);
 
-  // Fetch initial history from MySQL
   useEffect(() => {
     const dbName = sessionStorage.getItem('company_name');
     if (!dbName) return;
@@ -70,7 +69,6 @@ export const TrendDataProvider = ({ children }) => {
   useEffect(() => {
     if (!wsData || !wsData.modbus_connected) return;
 
-    // Use backend timestamp if provided, else current time
     const dataDate = wsData.timestamp ? new Date(wsData.timestamp) : new Date();
     const timeStr = dataDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' });
 
@@ -80,11 +78,9 @@ export const TrendDataProvider = ({ children }) => {
       timestamp: dataDate.toISOString(),
     };
 
-    // Only add point if data actually changed
     if (lastDataRef.current) {
       const last = lastDataRef.current;
-      // Since backend already filters by DB row ID, we can just check if timestamp is newer or the same but with different data.
-      // But to be 100% safe, we can just check if timestamp is different.
+
       if (newPoint.timestamp === last.timestamp) {
         return;
       }
@@ -94,7 +90,7 @@ export const TrendDataProvider = ({ children }) => {
 
     setLiveData((prev) => {
       const updated = [...prev, newPoint];
-      // Keep last 120 points
+      
       if (updated.length > 120) {
         return updated.slice(updated.length - 120);
       }

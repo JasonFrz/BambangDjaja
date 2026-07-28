@@ -3,7 +3,6 @@ const router = express.Router();
 const { getDbConnection } = require('../utils/db');
 const { calculateEfficiency } = require('../utils/efficiency');
 
-// Middleware to extract db_name from headers
 const extractDb = (req, res, next) => {
   const dbName = req.headers['x-db-name'];
   if (!dbName) {
@@ -13,7 +12,6 @@ const extractDb = (req, res, next) => {
   next();
 };
 
-// Helper to find closest available data when range is empty
 async function checkClosestData(db, table, start, end) {
   const [before] = await db.execute(`SELECT timestamp FROM ${table} WHERE timestamp < ? ORDER BY timestamp DESC LIMIT 1`, [start]);
   const [after] = await db.execute(`SELECT timestamp FROM ${table} WHERE timestamp > ? ORDER BY timestamp ASC LIMIT 1`, [end]);
@@ -159,8 +157,6 @@ router.get("/oil", extractDb, async (req, res) => {
   }
 });
 
-
-// Export Excel - server-side generation for fast large downloads
 router.get("/export", extractDb, async (req, res) => {
   const { start, end } = req.query;
   if (!start || !end) {
@@ -171,7 +167,6 @@ router.get("/export", extractDb, async (req, res) => {
     const db = await getDbConnection(req.dbName);
     const ExcelJS = require('exceljs');
 
-    // Pre-check if data exists to prevent empty stream & provide smart feedback
     const [countRows] = await db.execute('SELECT COUNT(*) as total FROM electrical_readings WHERE timestamp >= ? AND timestamp <= ?', [start, end]);
     if (countRows[0].total === 0) {
       const msg = await checkClosestData(db, 'electrical_readings', start, end);
@@ -188,10 +183,9 @@ router.get("/export", extractDb, async (req, res) => {
       WHERE timestamp >= ? AND timestamp <= ?
       ORDER BY timestamp ASC
     `;
-    // Helper to round float values to 2 decimal places to save file size
+    
     const r2 = (val) => val !== null && val !== undefined ? Math.round((parseFloat(val) || 0) * 100) / 100 : 0;
 
-    // Use ExcelJS streaming writer with maximum ZIP compression level (level 9)
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
       stream: res,
       useStyles: true,
@@ -202,7 +196,6 @@ router.get("/export", extractDb, async (req, res) => {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=Export_${start}_to_${end}.xlsx`);
 
-    // ========== Sheet 1: Electrical Data ==========
     const sheet = workbook.addWorksheet('Trend Data');
     sheet.columns = [
       { header: 'Waktu (Time)', key: 'time', width: 25 },
@@ -229,7 +222,6 @@ router.get("/export", extractDb, async (req, res) => {
     sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0052CC' } };
     sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
 
-    // Stream electrical data directly from DB
     const elecQuery = `
       SELECT 
         *, 
@@ -266,7 +258,6 @@ router.get("/export", extractDb, async (req, res) => {
     }
     sheet.commit();
 
-    // ========== Sheet 2: Oil Readings ==========
     const oilSheet = workbook.addWorksheet('Oil Data');
     oilSheet.columns = [
       { header: 'Waktu (Time)', key: 'time', width: 25 },
@@ -294,10 +285,8 @@ router.get("/export", extractDb, async (req, res) => {
     }
     oilSheet.commit();
 
-
-
     await workbook.commit();
-    // Note: res.end() is automatically called by the stream when workbook is committed
+    
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Server error saat export Excel" });

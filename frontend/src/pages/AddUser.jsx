@@ -6,8 +6,7 @@ import { Users, UserPlus, Key, ShieldAlert, X, CheckCircle2, Edit, Trash2, Phone
 const AddUser = () => {
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-  
-  // Create User Form State
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -16,8 +15,7 @@ const AddUser = () => {
   const [dbName, setDbName] = useState('');
   const [phone, setPhone] = useState('+62');
   const [editingUser, setEditingUser] = useState(null);
-  
-  // Change Password State
+
   const [changingPasswordUser, setChangingPasswordUser] = useState(null);
   const [newPassword, setNewPassword] = useState('');
 
@@ -211,7 +209,6 @@ const AddUser = () => {
         </div>
       )}
 
-      {/* CREATE USER FORM */}
       {showCreateForm && (
         <div className="bg-white dark:bg-[#151521] rounded-2xl shadow-sm border border-[#dfe1e6] dark:border-white/10 overflow-hidden mb-6 animate-slide-up-fade">
           <div className="p-4 border-b border-[#dfe1e6] dark:border-white/10 flex justify-between items-center bg-[#f4f5f7]/50 dark:bg-white/5">
@@ -318,7 +315,6 @@ const AddUser = () => {
         </div>
       )}
 
-      {/* CHANGE PASSWORD FORM */}
       {changingPasswordUser && (
         <div className="bg-white dark:bg-[#151521] rounded-2xl shadow-sm border border-orange-200 dark:border-orange-800/50 overflow-hidden mb-6 animate-slide-up-fade">
           <div className="p-4 border-b border-orange-200 dark:border-orange-800/50 flex justify-between items-center bg-orange-50 dark:bg-orange-900/10">
@@ -355,7 +351,6 @@ const AddUser = () => {
         </div>
       )}
 
-      {/* USERS TABLE */}
       <div className="bg-white dark:bg-[#151521] rounded-2xl shadow-sm border border-[#dfe1e6] dark:border-white/10 overflow-hidden">
         <div className="overflow-auto max-h-[600px]">
           <table className="w-full text-left border-collapse relative">

@@ -5,11 +5,9 @@ import { Wifi, Globe, X } from 'lucide-react';
 const NetworkBadge = () => {
   const { apiUrl } = useApi();
   const [isVisible, setIsVisible] = useState(true);
-  
-  // Deteksi apakah menggunakan IP lokal
+
   const isLocal = apiUrl.includes('192.168.') || apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
 
-  // Auto-hide setelah 5 detik
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false);

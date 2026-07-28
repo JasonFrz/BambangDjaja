@@ -25,8 +25,7 @@ const TransformerData = () => {
 
   return (
     <div className="flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out] w-full max-w-7xl mx-auto pb-10">
-      
-      {/* Header Section */}
+
       <div className="mb-2 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h2 className="text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1 transition-colors flex items-center gap-4">
@@ -44,15 +43,12 @@ const TransformerData = () => {
         </div>
       </div>
 
-      {/* Map Section */}
       <div className="w-full">
         <TransformerMapCard />
       </div>
 
-      {/* Specs Cards Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* General Specs */}
+
         <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 flex flex-col">
           <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[#dfe1e6] dark:border-white/10">
             <div className="text-teal-500">
@@ -67,7 +63,6 @@ const TransformerData = () => {
           </div>
         </div>
 
-        {/* Energy Loss & Temperature */}
         <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 flex flex-col">
           <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[#dfe1e6] dark:border-white/10">
             <div className="text-indigo-500">
@@ -83,7 +78,6 @@ const TransformerData = () => {
           </div>
         </div>
 
-        {/* Voltage & Current */}
         <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 flex flex-col lg:col-span-2">
           <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[#dfe1e6] dark:border-white/10">
             <div className="text-amber-500">

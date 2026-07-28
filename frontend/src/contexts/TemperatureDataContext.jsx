@@ -23,7 +23,6 @@ export const TemperatureDataProvider = ({ children }) => {
 
   const lastDataRef = useRef(null);
 
-  // Fetch initial history (last 50)
   useEffect(() => {
     const trafoId = sessionStorage.getItem('selectedTrafoId');
     const dbName = sessionStorage.getItem('company_name');
@@ -40,14 +39,13 @@ export const TemperatureDataProvider = ({ children }) => {
           timestamp: date.toISOString(),
           oil_temperature: parseFloat(reading.oil_temperature) || 0,
           oil_pressure: parseFloat(reading.oil_pressure) || 0,
-          oil_level: 1 // Hardcoded per user request
+          oil_level: 1 
         };
       });
       if (historical.length > 0) {
         lastDataRef.current = historical[historical.length - 1];
         setLiveData(historical);
-        
-        // Update current `data` state with latest
+
         const latest = historical[historical.length - 1];
         setData(prev => ({
           ...prev,
@@ -81,7 +79,7 @@ export const TemperatureDataProvider = ({ children }) => {
       
       const newTemp = msg.oil_temperature !== undefined ? msg.oil_temperature : 0;
       const newPress = msg.oil_pressure !== undefined ? msg.oil_pressure : 0;
-      const newLevel = msg.oil_level === true; // Default false if missing
+      const newLevel = msg.oil_level === true; 
       const connected = msg.adc_connected !== false;
       
       setData({
@@ -104,7 +102,6 @@ export const TemperatureDataProvider = ({ children }) => {
           oil_level: newLevel
         };
 
-        // Only add if changed
         if (lastDataRef.current) {
           const last = lastDataRef.current;
           if (last.oil_temperature === newPoint.oil_temperature && 

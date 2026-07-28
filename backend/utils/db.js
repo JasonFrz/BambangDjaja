@@ -3,22 +3,15 @@ require('dotenv').config();
 
 const connectionPools = new Map();
 
-/**
- * Gets or creates a connection pool for a specific database.
- * @param {string} dbName - The name of the database (e.g., PT Name).
- * @returns {Promise<mysql.Pool>}
- */
 async function getDbConnection(dbName) {
   if (!dbName) {
     throw new Error('Database name is required to get a connection');
   }
 
-  // Check if a pool already exists for this db
   if (connectionPools.has(dbName)) {
     return connectionPools.get(dbName);
   }
 
-  // Create a new pool
   const pool = mysql.createPool({
     host: process.env.AIVEN_DB_HOST,
     port: process.env.AIVEN_DB_PORT,
@@ -32,7 +25,6 @@ async function getDbConnection(dbName) {
 
   connectionPools.set(dbName, pool);
 
-  // Optional: test the connection once
   try {
     const connection = await pool.getConnection();
     connection.release();
@@ -46,10 +38,6 @@ async function getDbConnection(dbName) {
   return pool;
 }
 
-/**
- * Gets a list of all databases on the MySQL server.
- * @returns {Promise<string[]>}
- */
 async function getAllDatabases() {
   const connection = await mysql.createConnection({
     host: process.env.AIVEN_DB_HOST,
@@ -60,7 +48,7 @@ async function getAllDatabases() {
 
   try {
     const [rows] = await connection.execute('SHOW DATABASES');
-    // Map to array of strings and filter out system databases
+    
     const systemDbs = ['information_schema', 'mysql', 'performance_schema', 'sys', 'defaultdb'];
     const databases = rows
       .map(row => row.Database)

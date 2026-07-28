@@ -40,10 +40,9 @@ const initWhatsApp = () => {
   waClient.on('disconnected', (reason) => {
     waReady = false;
     console.log('⚠️ WhatsApp Disconnected:', reason);
-    
-    // Destroy client to free resources
+
     if (waClient) {
-      waClient.destroy().catch(() => {});
+      waClient.destroy().catch(() => );
     }
     
     waClient = null;
@@ -61,9 +60,7 @@ const sendWhatsAppMessage = async (phone, text) => {
     throw new Error('WhatsApp client is not ready');
   }
 
-  // Format phone number for WhatsApp (must end with @c.us)
   let phoneNumber = phone.replace(/\+/g, '').replace(/\s/g, '').replace(/-/g, '');
-  // Ensure it starts with country code, assuming 62 for Indonesia if starting with 0
   if (phoneNumber.startsWith('0')) {
     phoneNumber = '62' + phoneNumber.substring(1);
   }
@@ -84,35 +81,28 @@ const sendWhatsAppMessage = async (phone, text) => {
 };
 
 const logoutWhatsApp = async () => {
-  if (waClient) {
-    try {
-      if (waReady) {
-        await waClient.logout();
-      }
-      await waClient.destroy();
-    } catch (err) {
-      console.error('Error logging out WA:', err);
+  try {
+    if (waClient) {
+      
+      await waClient.destroy().catch(() => );
+      waClient = null;
     }
-    waClient = null;
     waReady = false;
-    
-    // Optionally remove the wa_session directory so it restarts clean
-    try {
-      const fs = require('fs');
-      if (fs.existsSync('./wa_session')) {
-        fs.rmSync('./wa_session', { recursive: true, force: true });
-      }
-    } catch (fsErr) {
-      console.error('Failed to remove wa_session directory:', fsErr.message);
+
+    const fs = require('fs');
+    if (fs.existsSync('./wa_session')) {
+      fs.rmSync('./wa_session', { recursive: true, force: true });
     }
-    
-    // Re-initialize to show QR code again
+
     setTimeout(() => {
       initWhatsApp();
     }, 2000);
+    
     return true;
+  } catch (err) {
+    console.error('Error logging out WA:', err);
+    return false;
   }
-  return false;
 };
 
 module.exports = {

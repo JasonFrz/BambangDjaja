@@ -3,7 +3,6 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { getDbConnection } = require('../utils/db');
 
-// Middleware to extract db_name and verify admin role (optional, based on headers for now since tokens are removed)
 const checkAdmin = async (req, res, next) => {
   const dbName = req.headers['x-db-name'];
   const username = req.headers['x-username'];

@@ -43,8 +43,7 @@ router.post("/", authenticateDevice, async (req, res) => {
 
     if (electricalData.length) {
       await prisma.electricalReading.createMany({ data: electricalData });
-      
-      // Emit websocket for realtime monitoring
+
       const latestE = electricalData[electricalData.length - 1];
       const io = req.app.get("io");
       if (io) {
@@ -68,8 +67,7 @@ router.post("/", authenticateDevice, async (req, res) => {
 
     if (oilData.length) {
       await prisma.oilReading.createMany({ data: oilData });
-      
-      // Emit websocket for realtime monitoring
+
       const latestO = oilData[oilData.length - 1];
       const io = req.app.get("io");
       if (io) {

@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const prisma = new PrismaClient();
 
 async function main() {
-  // Seed admin user
+  
   const adminExists = await prisma.user.findUnique({
     where: { username: "admin" },
   });
@@ -20,7 +20,6 @@ async function main() {
     console.log("Seeded admin user");
   }
 
-  // Seed normal user
   const userExists = await prisma.user.findUnique({
     where: { username: "user" },
   });
@@ -38,7 +37,6 @@ async function main() {
     console.log('Seeded user "user"');
   }
 
-  // Seed transformers
   const transformersCount = await prisma.transformer.count();
   if (transformersCount === 0) {
     await prisma.transformer.createMany({

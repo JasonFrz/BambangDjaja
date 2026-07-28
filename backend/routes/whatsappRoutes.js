@@ -3,7 +3,6 @@ const router = express.Router();
 const whatsappClient = require('../utils/whatsappClient');
 const { getDbConnection } = require('../utils/db');
 
-// POST /api/whatsapp/test - Send test WhatsApp message
 router.post('/test', async (req, res) => {
   const { frequency, dbName, username } = req.body;
 
@@ -31,13 +30,20 @@ router.post('/test', async (req, res) => {
     const message = `🔔 *[TEST NOTIFIKASI TMU]*\n\nNotifikasi uji coba berhasil.\nFrekuensi saat ini: *${frequency.toFixed(2)} Hz*\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
     
     await whatsappClient.sendWhatsAppMessage(phone, message);
+    
+    console.log(`\n========================================`);
+    console.log(`✅ BERHASIL MENGIRIM PESAN WHATSAPP`);
+    console.log(`Username : ${username}`);
+    console.log(`No. HP   : ${phone}`);
+    console.log(`========================================\n`);
+    
     return res.json({ success: true, message: `Pesan berhasil dikirim ke ${phone}` });
   } catch (error) {
     console.error('Test WA Error:', error);
     return res.status(500).json({ error: error.message || 'Gagal mengirim pesan WhatsApp' });
   }
 });
-// POST /api/whatsapp/logout - Logout WhatsApp
+
 router.post('/logout', async (req, res) => {
   try {
     const success = await whatsappClient.logoutWhatsApp();

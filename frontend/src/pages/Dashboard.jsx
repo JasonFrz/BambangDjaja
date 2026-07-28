@@ -14,8 +14,6 @@ import { ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
-
-
 const DEFAULT_LAYOUTS = {
   lg: [
     { i: 'statusCard', x: 0, y: 0, w: 12, h: 1, minW: 3, minH: 1 },
@@ -65,11 +63,10 @@ const DEFAULT_LAYOUTS = {
 };
 
 const Dashboard = () => {
-  // Shared context
+  
   const { liveData, wsData, isConnected, isLive } = useTrendData();
   const { apiUrl } = useApi();
 
-  // Unified Filter State for both Monitoring and Charts
   const [filters, setFilters] = useState({
     status: true,
     uPhase: true,
@@ -95,7 +92,6 @@ const Dashboard = () => {
     const savedLayouts = localStorage.getItem('dashboardLayouts_v7');
     if (savedLayouts) {
       const parsed = JSON.parse(savedLayouts);
-      // Strip any stale static property from saved layouts
       Object.keys(parsed).forEach(bp => {
         if (parsed[bp]) {
           parsed[bp] = parsed[bp].map(({ static: _s, ...rest }) => rest);
@@ -110,7 +106,7 @@ const Dashboard = () => {
 
   const handleLayoutChange = useCallback((currentLayout, allLayouts) => {
     setLayouts(prev => {
-      const merged = {};
+      const merged = ;
       Object.keys(DEFAULT_LAYOUTS).forEach(bp => {
         const rglItems = allLayouts[bp] || [];
         const rglMap = new Map(rglItems.map(item => {
@@ -159,16 +155,6 @@ const Dashboard = () => {
     setFilters({ status: true, uPhase: true, uLine: true, current: true, power: true, energy: true, frequency: true, efficiency: true });
   };
 
-  const [waNotif, setWaNotif] = useState({ message: '', type: '' });
-
-  const showWaNotif = (message, type) => {
-    setWaNotif({ message, type });
-    setTimeout(() => {
-      setWaNotif({ message: '', type: '' });
-    }, 5000);
-  };
-
-  // Monitoring Data State
   const [data, setData] = useState({
     vPhase: { A: 0.0, B: 0.0, C: 0.0, Avg: 0.0 },
     vLine: { AB: 0.0, BC: 0.0, CA: 0.0, Avg: 0.0 },
@@ -204,7 +190,6 @@ const Dashboard = () => {
         status: { OnOff: wsData.onOffStatus || 0, Relay: wsData.relayStatus || 0, Alarm: wsData.alarmStatus || 0, Synced: wsData.synced || 0 }
       });
     } else if (liveData && liveData.length > 0) {
-      // Gunakan data historis terakhir jika wsData belum ada
       const latest = liveData[liveData.length - 1];
       setData({
         vPhase: { A: latest.phaseA || 0, B: latest.phaseB || 0, C: latest.phaseC || 0, Avg: latest.avgPhaseV || 0 },
@@ -230,13 +215,11 @@ const Dashboard = () => {
     }
   }, [wsData, liveData]);
 
-  // Trends Data State
   const [trendData, setTrendData] = useState([]);
   const [dataInterval, setDataInterval] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Date/Time Filter for Charts
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [isFiltering, setIsFiltering] = useState(false);
@@ -245,9 +228,8 @@ const Dashboard = () => {
   const [isEditingLayout, setIsEditingLayout] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  // Lock all items as static when not editing to completely prevent drag/resize
   const effectiveLayouts = useMemo(() => {
-    const result = {};
+    const result = ;
     Object.keys(layouts).forEach(bp => {
       result[bp] = (layouts[bp] || []).map(item => ({
         ...item,
@@ -257,7 +239,6 @@ const Dashboard = () => {
     return result;
   }, [layouts, isEditingLayout]);
 
-  // Export Modal State
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportStart, setExportStart] = useState('');
   const [exportEnd, setExportEnd] = useState('');
@@ -342,7 +323,7 @@ const Dashboard = () => {
     try {
       setIsExporting(true);
       setDownloadMB("0.0");
-      // Kirim waktu lokal langsung (tanpa konversi UTC) karena DB menyimpan waktu lokal
+      
       const startParam = exportStart.replace('T', ' ') + ':00';
       const endParam = exportEnd.replace('T', ' ') + ':00';
       const url = `${apiUrl}/api/trends/export?start=${encodeURIComponent(startParam)}&end=${encodeURIComponent(endParam)}`;
@@ -357,7 +338,6 @@ const Dashboard = () => {
         }
       });
 
-      // Get row count from header
       const rowCount = response.headers['x-row-count'];
 
       const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -439,44 +419,39 @@ const Dashboard = () => {
 
   const activeCount = Object.values(filters).filter(Boolean).length;
 
-
   const handleTestWA = async () => {
     try {
       const dbName = sessionStorage.getItem('company_name');
       const username = sessionStorage.getItem('username');
       if (!dbName || !username) {
-        showWaNotif("Session expired, please login again.", "error");
+        console.error("Session expired, please login again.");
         return;
       }
 
-      const res = await axios.post(`${apiUrl}/api/whatsapp/test`, {
+      await axios.post(`${apiUrl}/api/whatsapp/test`, {
         frequency: data.frequency,
         dbName,
         username
       });
-      showWaNotif("✅ " + res.data.message, "success");
     } catch (error) {
-      showWaNotif("❌ Gagal uji WA: " + (error.response?.data?.error || error.message), "error");
+      console.error("Gagal uji WA:", error);
     }
   };
 
   const handleLogoutWA = async () => {
     if (!window.confirm("Apakah Anda yakin ingin menghapus sesi WhatsApp (Logout)? Anda harus scan ulang QR code di server terminal.")) return;
     try {
-      const res = await axios.post(`${apiUrl}/api/whatsapp/logout`);
-      showWaNotif("✅ " + res.data.message, "success");
+      await axios.post(`${apiUrl}/api/whatsapp/logout`);
     } catch (error) {
-      showWaNotif("❌ Gagal logout WA: " + (error.response?.data?.error || error.message), "error");
+      console.error("Gagal logout WA:", error);
     }
   };
 
-  // Calculate Overall Status based on Frequency
   const isFreqSafe = data.frequency <= 52.5;
 
   return (
     <div className="flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out] w-full max-w-7xl mx-auto">
 
-      {/* Header Section */}
       <div className="mb-2 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h2 className="text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1 transition-colors flex items-center gap-4">
@@ -510,7 +485,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Show Options Card */}
       <div className="bg-white dark:bg-[#151521] p-5 rounded-2xl border border-[#dfe1e6] dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-4 animate-[slideUpFade_0.3s_ease-out]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 pb-3 border-b border-[#dfe1e6] dark:border-white/10 gap-3">
           <div className="flex items-center gap-2">
@@ -609,7 +583,6 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Filter Waktu Historis (Tetap statis di atas) */}
       {(filters.uPhase || filters.uLine || filters.current || filters.frequency) && (
         <div className="flex flex-col gap-4 mt-2 mb-4 animate-[slideUpFade_0.4s_ease-out]">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 bg-white dark:bg-[#151521] p-2.5 sm:p-2 rounded-xl border border-[#dfe1e6] dark:border-white/10 shadow-sm self-start w-full sm:w-auto">
@@ -682,7 +655,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* DASHBOARD DRAGGABLE GRID */}
       <div ref={containerRef} className={isEditingLayout ? 'ring-2 ring-[#0052cc] ring-opacity-50 rounded-xl p-1 bg-[#0052cc]/5 dark:bg-[#0052cc]/10 transition-all' : 'transition-all'}>
         <ResponsiveGridLayout
           key={`${filterKey}-${isEditingLayout}`}
@@ -744,7 +716,7 @@ const Dashboard = () => {
           {filters.uPhase && (
             <div key="uPhaseCard" className="flex">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 dark:bg-blue-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 dark:bg-blue-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110 pointer-events-none"></div>
                 <div className={`flex items-center gap-3 mb-5 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0052cc] to-[#4c9aff] flex items-center justify-center text-white shadow-lg shadow-blue-500/20 pointer-events-none">
                     <Zap size={20} />
@@ -770,7 +742,7 @@ const Dashboard = () => {
           {filters.uLine && (
             <div key="uLineCard" className="flex">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 dark:bg-cyan-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 dark:bg-cyan-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110 pointer-events-none"></div>
                 <div className={`flex items-center gap-3 mb-5 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00b8d9] to-[#36c9e5] flex items-center justify-center text-white shadow-lg shadow-cyan-500/20 pointer-events-none">
                     <Activity size={20} />
@@ -796,7 +768,7 @@ const Dashboard = () => {
           {filters.current && (
             <div key="currentCard" className="flex">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 dark:bg-amber-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 dark:bg-amber-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110 pointer-events-none"></div>
                 <div className={`flex items-center gap-3 mb-5 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ffab00] to-[#ffc400] flex items-center justify-center text-white shadow-lg shadow-amber-500/20 pointer-events-none">
                     <Waves size={20} />
@@ -836,7 +808,7 @@ const Dashboard = () => {
           {filters.power && (
             <div key="powerCard" className="flex">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex flex-col group relative overflow-hidden bg-opacity-95 backdrop-blur">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 dark:bg-purple-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 dark:bg-purple-400/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110 pointer-events-none"></div>
                 <div className={`flex items-center gap-3 mb-5 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8777d9] to-[#6554c0] flex items-center justify-center text-white shadow-lg shadow-purple-500/20 pointer-events-none">
                     <Activity size={20} />
@@ -880,34 +852,27 @@ const Dashboard = () => {
           {filters.frequency && (
             <div key="freqCard" className="flex">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full group relative overflow-hidden flex flex-col bg-opacity-95 backdrop-blur">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 dark:bg-indigo-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
-                <div className={`flex items-center gap-3 mb-4 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+                <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 dark:bg-indigo-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110 pointer-events-none"></div>
+                <div className={`relative z-10 flex items-center gap-3 mb-4 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6554c0] to-[#8777d9] flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 pointer-events-none">
                     <Gauge size={20} />
                   </div>
                   <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Frequency</h3>
 
-                  {waNotif.message && (
-                    <div className={`mr-2 text-[10px] font-medium px-2 py-1 rounded-md ${waNotif.type === 'success'
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                      }`}>
-                      {waNotif.message}
-                    </div>
-                  )}
-
                   <div className="flex gap-1 mr-2 pointer-events-auto">
                     <button
                       onClick={handleTestWA}
+                      onMouseDown={(e) => e.stopPropagation()}
                       title="Test WA Notification"
-                      className="p-1.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800/80 transition-colors"
+                      className="p-1.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800/80 transition-colors cursor-pointer"
                     >
                       <Send size={14} />
                     </button>
                     <button
                       onClick={handleLogoutWA}
+                      onMouseDown={(e) => e.stopPropagation()}
                       title="Logout WA Session"
-                      className="p-1.5 rounded-full bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800/80 transition-colors"
+                      className="p-1.5 rounded-full bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800/80 transition-colors cursor-pointer"
                     >
                       <LogOut size={14} />
                     </button>
@@ -925,7 +890,7 @@ const Dashboard = () => {
           {filters.energy && (
             <div key="energyCard" className="flex">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full group relative overflow-hidden flex flex-col bg-opacity-95 backdrop-blur">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 dark:bg-emerald-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
+                <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 dark:bg-emerald-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110 pointer-events-none"></div>
                 <div className={`flex items-center gap-3 mb-4 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#36b37e] to-[#57d9a3] flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 pointer-events-none">
                     <Activity size={20} />
@@ -953,7 +918,6 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* CHARTS */}
           {filters.uPhase && (
             <div key="uPhaseChart" className="flex">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col h-full w-full bg-opacity-95 backdrop-blur">
@@ -1038,7 +1002,6 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Power Chart */}
           {filters.power && (
             <div key="powerChart" className="w-full h-full">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out_0.4s] h-full w-full">
@@ -1067,7 +1030,6 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Frequency Chart */}
           {filters.frequency && (
             <div key="freqChart" className="w-full h-full">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out_0.4s] h-full w-full">
@@ -1096,7 +1058,6 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Efficiency Chart */}
           {filters.efficiency && (
             <div key="efficiencyChart" className="w-full h-full">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out_0.4s] h-full w-full">
@@ -1125,7 +1086,6 @@ const Dashboard = () => {
         </ResponsiveGridLayout>
       </div>
 
-      {/* EXPORT EXCEL MODAL */}
       {showExportModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]">
           <div className="bg-white dark:bg-[#151521] rounded-2xl max-w-md w-full shadow-2xl border border-gray-100 dark:border-white/10 overflow-hidden flex flex-col">

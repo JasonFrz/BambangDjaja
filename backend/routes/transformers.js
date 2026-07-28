@@ -11,7 +11,7 @@ router.get('/', authenticateToken, async (req, res) => {
         orderBy: { id: 'desc' }
       });
     } else {
-      // Filter by user's company_name
+      
       transformers = await prisma.transformer.findMany({
         where: { company_name: req.user.company_name },
         orderBy: { id: 'desc' }
@@ -27,8 +27,7 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id/history', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // Ambil 50 data terakhir, urutkan dari yang terbaru, lalu reverse agar ascending (lama -> baru)
+
     const electrical = await prisma.electricalReading.findMany({
       where: { transformer_id: parseInt(id) },
       orderBy: { timestamp: 'desc' },

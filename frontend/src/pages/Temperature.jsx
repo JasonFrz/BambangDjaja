@@ -8,7 +8,6 @@ import { useApi } from '../contexts/ApiContext';
 import { useTemperatureData } from '../contexts/TemperatureDataContext';
 import { ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout';
 
-
 const DEFAULT_LAYOUTS = {
   lg: [
     { i: 'oilLevelCard', x: 0, y: 0, w: 4, h: 1, minW: 1, minH: 1 },
@@ -37,8 +36,6 @@ const Temperature = () => {
   const { apiUrl } = useApi();
   const { liveData, data, isConnected, isLive } = useTemperatureData();
 
-
-  // Filters State
   const [filters, setFilters] = useState({
     temperature: true,
     pressure: true,
@@ -71,13 +68,11 @@ const Temperature = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Date/Time Filter for Charts
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [isFiltering, setIsFiltering] = useState(false);
   const [filterError, setFilterError] = useState(null);
   
-  // Layout Management State
   const [isEditingLayout, setIsEditingLayout] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -214,9 +209,8 @@ const Temperature = () => {
 
   const filterKey = useMemo(() => Object.values(filters).map(v => v ? '1' : '0').join(''), [filters]);
 
-  // Lock all items as static when not editing to completely prevent drag/resize
   const effectiveLayouts = useMemo(() => {
-    const result = {};
+    const result = ;
     Object.keys(layouts).forEach(bp => {
       result[bp] = (layouts[bp] || []).map(item => ({
         ...item,
@@ -228,7 +222,7 @@ const Temperature = () => {
 
   const handleLayoutChange = useCallback((currentLayout, allLayouts) => {
     setLayouts(prev => {
-      const merged = {};
+      const merged = ;
       Object.keys(DEFAULT_LAYOUTS).forEach(bp => {
         const rglItems = allLayouts[bp] || [];
         const rglMap = new Map(rglItems.map(item => {
@@ -262,14 +256,12 @@ const Temperature = () => {
   const chartActiveCount = [filters.temperature, filters.pressure].filter(Boolean).length;
   if (chartActiveCount > 1) chartGridColsClass = "grid-cols-1 lg:grid-cols-2";
 
-  // Calculate Status
   const isPressSafe = data.oil_pressure <= 0.50;
   const isOilLevelSafe = data.oil_level === true;
 
   return (
     <div className="flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out] w-full max-w-7xl mx-auto">
-      
-      {/* Header Section */}
+
       <div className="mb-2 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h2 className="text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1 transition-colors flex items-center gap-4">
@@ -303,7 +295,6 @@ const Temperature = () => {
         </div>
       )}
 
-      {/* Show Options Card */}
       <div className="bg-white dark:bg-[#151521] p-5 rounded-2xl border border-[#dfe1e6] dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-4 animate-[slideUpFade_0.3s_ease-out]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 pb-3 border-b border-[#dfe1e6] dark:border-white/10 gap-3">
           <div className="flex items-center gap-2">
@@ -374,7 +365,7 @@ const Temperature = () => {
 
       {(filters.temperature || filters.pressure) && (
             <div className="flex flex-col gap-4 mb-4">
-              {/* Date Time Filter for Charts - Responsive */}
+              
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 bg-white dark:bg-[#151521] p-2.5 sm:p-2 rounded-xl border border-[#dfe1e6] dark:border-white/10 shadow-sm self-start w-full sm:w-auto">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
                   <div className="flex items-center gap-2 w-full md:w-auto">
@@ -450,7 +441,7 @@ const Temperature = () => {
           isDraggable={isEditingLayout}
           isResizable={isEditingLayout}
         >
-        {/* Oil Level Card (Always visible) */}
+        
         {filters.oilLevel && (
           <div key="oilLevelCard" className="w-full h-full">
         <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden h-full w-full bg-opacity-95 backdrop-blur animate-[slideUpFade_0.4s_ease-out]">
@@ -470,7 +461,7 @@ const Temperature = () => {
         </div>
         </div>
         )}
-        {/* Temperature Card */}
+        
         {filters.temperature && (
           <div key="temperatureCard" className="w-full h-full">
           <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden h-full w-full bg-opacity-95 backdrop-blur animate-[slideUpFade_0.4s_ease-out]">
@@ -492,7 +483,6 @@ const Temperature = () => {
         </div>
         )}
 
-        {/* Pressure Card */}
         {filters.pressure && (
           <div key="pressureCard" className="w-full h-full">
           <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden h-full w-full bg-opacity-95 backdrop-blur animate-[slideUpFade_0.4s_ease-out_0.1s]">
@@ -513,7 +503,7 @@ const Temperature = () => {
           </div>
         </div>
         )}
-      {/* TREND CHARTS */}{/* Temperature Chart */}
+      
             {filters.temperature && (
               <div key="temperatureChart" className="w-full h-full">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out] h-full w-full">
@@ -540,7 +530,6 @@ const Temperature = () => {
             </div>
             )}
 
-            {/* Pressure Chart */}
             {filters.pressure && (
               <div key="pressureChart" className="w-full h-full">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out_0.1s] h-full w-full">

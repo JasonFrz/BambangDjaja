@@ -18,13 +18,13 @@ app.use(cors());
 app.use(express.json());
 app.set("io", io);
 
-const activeSubscriptions = new Map(); // map roomName -> dbName
+const activeSubscriptions = new Map(); 
 
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
 
   socket.on("subscribe_transformer", (data) => {
-    // data can be { trafoId, dbName }
+    
     const trafoId = data.trafoId || data;
     const dbName = data.dbName;
     
@@ -64,8 +64,7 @@ app.use("/api/whatsapp", whatsappRoutes);
 server.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
   startRealtimePoller(io, activeSubscriptions);
-  
-  // Initialize WhatsApp in the background
+
   setTimeout(() => {
     initWhatsApp();
   }, 2000);

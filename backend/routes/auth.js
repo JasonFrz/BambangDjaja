@@ -25,8 +25,7 @@ router.post('/login', async (req, res) => {
         if (rows.length > 0) {
           console.log(`User found in DB: ${dbName}`);
           const user = rows[0];
-          
-          // The password column could be named 'password' or 'password_hash'
+
           const storedHash = user.password_hash || user.password;
           
           if (!storedHash) {
@@ -39,18 +38,18 @@ router.post('/login', async (req, res) => {
           let isMatch = false;
           
           if (storedHash.startsWith('$2a$') || storedHash.startsWith('$2b$')) {
-            // bcrypt hash
+            
             isMatch = await bcrypt.compare(password, storedHash);
           } else if (storedHash.length === 64 && /^[a-f0-9]+$/i.test(storedHash)) {
-            // SHA-256 hex hash
+            
             const sha256 = crypto.createHash('sha256').update(password).digest('hex');
             isMatch = sha256 === storedHash;
           } else if (storedHash.length === 32 && /^[a-f0-9]+$/i.test(storedHash)) {
-            // MD5 hex hash
+            
             const md5 = crypto.createHash('md5').update(password).digest('hex');
             isMatch = md5 === storedHash;
           } else {
-            // Plain text comparison
+            
             isMatch = password === storedHash;
           }
           

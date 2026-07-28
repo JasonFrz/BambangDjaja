@@ -13,7 +13,6 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { apiUrl } = useApi();
   
-  // States for cursor glow effect
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
   
@@ -64,16 +63,13 @@ const Login = () => {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#070a13] relative overflow-hidden font-sans">
-      
-      {/* Background Animated Elements */}
+
       <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-[#0052cc]/10 blur-[120px] animate-float-soft"></div>
       <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-[#6554c0]/10 blur-[150px] animate-float-soft" style={{ animationDelay: '2s' }}></div>
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[2px] bg-gradient-to-r from-transparent via-[#4c9aff]/20 to-transparent -rotate-45 blur-sm"></div>
 
-      {/* Main Login Container */}
       <div className="w-full max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-center gap-12 p-6 relative z-10">
-        
-        {/* Left Side: Branding & Visuals (Hidden on small screens for better UX) */}
+
         <div className="hidden lg:flex flex-col flex-1 text-white/90 animate-slide-up-fade">
           <div className="flex items-center gap-4 mb-10">
             <img 
@@ -100,7 +96,6 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Right Side: The Login Glass Card */}
         <div className="w-full max-w-[420px] animate-slide-up-fade" style={{ animationDelay: '200ms' }}>
           <div 
             className="bg-[#151521]/80 backdrop-blur-2xl p-10 rounded-3xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.6)] relative overflow-hidden group"
@@ -108,8 +103,7 @@ const Login = () => {
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
           >
-            
-            {/* Dynamic Cursor Glow Effect */}
+
             <div 
               className="absolute pointer-events-none transition-opacity duration-300 ease-in-out"
               style={{
@@ -123,12 +117,11 @@ const Login = () => {
               }}
             ></div>
 
-            {/* Ambient inner glow for the card */}
             <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#0052cc]/20 rounded-full blur-[50px] transition-all duration-700 group-hover:bg-[#4c9aff]/30"></div>
 
             <div className="relative z-10">
               <div className="mb-10">
-                {/* Mobile Logo Section */}
+                
                 <div className="flex lg:hidden items-center gap-3 mb-6">
                   <img 
                     src="/logo-bnd.png" 
@@ -150,9 +143,7 @@ const Login = () => {
               </div>
 
               <form onSubmit={handleLogin} className="flex flex-col gap-5">
-                
 
-                {/* Username Input */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-[#8e9bb0] uppercase tracking-wider pl-1">
                     Username
@@ -174,7 +165,6 @@ const Login = () => {
                   </div>
                 </div>
 
-                {/* Password Input */}
                 <div className="flex flex-col gap-1.5">
                   <div className="flex justify-between items-center pl-1">
                     <label className="text-xs font-semibold text-[#8e9bb0] uppercase tracking-wider">
@@ -205,7 +195,6 @@ const Login = () => {
                   </div>
                 </div>
 
-                {/* Remember Me */}
                 <div className="flex items-center pl-1 mt-1">
                   <label className="flex items-center gap-2 cursor-pointer group">
                     <div className="relative flex items-center justify-center w-4 h-4 rounded border border-white/20 bg-[#070a13] group-hover:border-[#4c9aff] transition-colors">
@@ -225,23 +214,20 @@ const Login = () => {
                   </label>
                 </div>
 
-                {/* Submit Button */}
                 <button 
                   type="submit" 
                   className="relative group mt-6 flex items-center justify-center gap-3 w-full py-4 rounded-xl overflow-hidden bg-[#070a13] border border-[#0052cc]/50 hover:border-[#00a3ff] hover:shadow-[0_0_30px_rgba(0,163,255,0.4)] active:scale-[0.98] transition-all duration-500"
                 >
-                  {/* Sweeping background gradient on hover */}
+                  
                   <div className="absolute inset-0 bg-gradient-to-r from-[#0052cc] via-[#00a3ff] to-[#4c9aff] opacity-70 group-hover:opacity-100 transition-opacity duration-500 z-0"></div>
-                  
-                  {/* Glossy top highlight */}
+
                   <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-white/40 to-transparent z-10"></div>
-                  
-                  {/* Shimmer sweeping effect */}
+
                   <div className="absolute inset-0 -translate-x-[150%] skew-x-[45deg] bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-shimmer z-10"></div>
 
                   <span className="relative z-20 text-white font-bold text-[15px] tracking-wide flex items-center gap-2">
                     {isLoading ? 'Signing In...' : 'Sign In to Dashboard'}
-                    {/* Arrow pushing out */}
+                    
                     {!isLoading && <ArrowRight size={18} className="group-hover:translate-x-1.5 transition-transform duration-300" />}
                   </span>
                 </button>

@@ -14,12 +14,10 @@ const MainLayout = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const dropdownRef = useRef(null);
 
-  // Determine what type of dashboard we are currently showing
   const isTransformerDashboard = location.pathname === '/dashboard' || location.pathname === '/temperature' || location.pathname === '/transformer-data';
   const isAdminDashboard = role === 'admin' && (location.pathname === '/users');
   const showSidebar = isTransformerDashboard || isAdminDashboard;
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -30,7 +28,6 @@ const MainLayout = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Update time every second
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -45,8 +42,7 @@ const MainLayout = () => {
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#f4f7fe] dark:bg-[#0b1120] transition-colors duration-300 overflow-hidden">
-      
-      {/* Top Navbar */}
+
       <header className="h-[70px] px-6 md:px-8 flex justify-between items-center border-b border-[#dfe1e6] dark:border-white/10 bg-white/80 dark:bg-[#151521]/80 backdrop-blur-md z-30 shrink-0 relative">
         <Link to="/" className="flex items-center gap-3 group">
           <img src="/tmu-logo.png" alt="Logo" className="w-auto h-7 md:h-8 group-hover:opacity-80 transition-opacity" />
@@ -54,8 +50,7 @@ const MainLayout = () => {
             TMU <span className="font-light opacity-80 hidden sm:inline">{isAdminDashboard ? 'Admin' : 'Dashboard'}</span>
           </h1>
         </Link>
-        
-        {/* Live Clock (Visible on all screens for transformer dashboards) */}
+
         {isTransformerDashboard && (
           <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center justify-center w-[120px] sm:w-auto">
             <span className="text-[#172b4d] dark:text-white font-bold tracking-widest text-sm md:text-lg leading-none">
@@ -111,12 +106,11 @@ const MainLayout = () => {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
+        
         {showSidebar && (
           <aside className={`border-r border-[#dfe1e6] dark:border-white/10 bg-white/80 dark:bg-[#151521]/80 backdrop-blur-md flex flex-col transition-all duration-300 z-20 hidden md:flex shrink-0 ${isSidebarCollapsed ? 'w-20' : 'w-64'}`}>
             <nav className="flex-1 py-6 px-4 flex flex-col gap-2 overflow-y-auto overflow-x-hidden">
-              
-              {/* ADMIN SIDEBAR LINKS */}
+
               {isAdminDashboard && (
                 <>
                   <Link 
@@ -158,7 +152,6 @@ const MainLayout = () => {
                 </>
               )}
 
-              {/* USER SIDEBAR LINKS */}
               {isTransformerDashboard && (
                 <>
                   <Link 
@@ -225,7 +218,6 @@ const MainLayout = () => {
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation (User Only) */}
       {isTransformerDashboard && (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-[#151521] border-t border-[#dfe1e6] dark:border-white/10 flex items-center justify-around z-40 pb-safe">
           <Link 
@@ -264,7 +256,6 @@ const MainLayout = () => {
         </nav>
       )}
 
-      {/* Mobile Bottom Navigation (Admin Only) */}
       {isAdminDashboard && (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-[#151521] border-t border-[#dfe1e6] dark:border-white/10 flex items-center justify-around z-40 pb-safe">
           <Link 

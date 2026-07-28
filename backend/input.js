@@ -6,14 +6,13 @@ function getRandomDecimal(min, max, decimals = 2) {
   return parseFloat(rand.toFixed(decimals));
 }
 
-// Generates 1 day of dummy electrical and oil data for testing
 async function generateDummyData() {
   const connection = await mysql.createConnection({
     host: process.env.AIVEN_DB_HOST,
     port: process.env.AIVEN_DB_PORT,
     user: process.env.AIVEN_DB_USER,
     password: process.env.AIVEN_DB_PASSWORD,
-    database: 'db_halo' // or specified database
+    database: 'db_halo' 
   });
 
   console.log('Connected to MySQL. Seeding dummy data...');
@@ -22,7 +21,7 @@ async function generateDummyData() {
   const oilRecords = [];
 
   const now = new Date();
-  const startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 24 hours ago
+  const startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000); 
 
   for (let t = startTime.getTime(); t <= now.getTime(); t += 2000) {
     const ts = new Date(t).toISOString().slice(0, 19).replace('T', ' ');
@@ -57,19 +56,17 @@ async function generateDummyData() {
       cur_a, cur_b, cur_c, cur_n, pwr_act, pwr_react, pwr_app, pf,
       pwr_a, pwr_b, pwr_c, freq, energy_act, energy_react,
       avg_ph, avg_ln, avg_cur, cur_unb,
-      1, 0, 0, 1 // on_off_status, relay_status, alarm_status, synced
+      1, 0, 0, 1 
     ]);
 
-    // Oil readings (tiap 2 detik juga)
     oilRecords.push([
       ts,
-      getRandomDecimal(45, 72),  // oil_temperature
-      getRandomDecimal(1.5, 3.2), // oil_pressure
-      1 // synced
+      getRandomDecimal(45, 72),  
+      getRandomDecimal(1.5, 3.2), 
+      1 
     ]);
   }
 
-  // Bulk insert
   const elecSql = `INSERT INTO electrical_readings 
     (timestamp, phase_a_v, phase_b_v, phase_c_v, line_ab_v, line_bc_v, line_ca_v, 
      current_a, current_b, current_c, current_n, power_active_total_kw, power_reactive_total_kvar, power_apparent_total_kva, pf_total, 
@@ -79,7 +76,6 @@ async function generateDummyData() {
 
   const oilSql = `INSERT INTO oil_readings (timestamp, oil_temperature, oil_pressure, synced) VALUES ?`;
 
-  // Insert in batches of 5000
   const BATCH_SIZE = 5000;
   for (let i = 0; i < electricalRecords.length; i += BATCH_SIZE) {
     const batch = electricalRecords.slice(i, i + BATCH_SIZE);

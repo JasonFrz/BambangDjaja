@@ -2,17 +2,17 @@ const { getDbConnection } = require('./db');
 const { calculateEfficiency } = require('./efficiency');
 const whatsappClient = require('./whatsappClient');
 
-const waCooldowns = new Map(); // Store last WA sent time per transformer to avoid spam (e.g. 'trafo_dbName_trafoId' -> timestamp)
-const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+const waCooldowns = new Map(); 
+const COOLDOWN_MS = 5 * 60 * 1000; 
 
 const startRealtimePoller = (io, activeSubscriptions) => {
-  // Store the last seen IDs for each transformer so we don't send duplicates
-  const lastSeenElectrical = {};
-  const lastSeenOil = {};
+  
+  const lastSeenElectrical = ;
+  const lastSeenOil = ;
 
   setInterval(async () => {
     try {
-      // Find all rooms currently active with prefix "trafo_"
+      
       const rooms = io.sockets.adapter.rooms;
       const activeTrafos = [];
 
@@ -30,7 +30,6 @@ const startRealtimePoller = (io, activeSubscriptions) => {
         try {
           const db = await getDbConnection(dbName);
 
-          // Fetch latest electrical reading
           const [elecRows] = await db.execute(
             'SELECT * FROM electrical_readings ORDER BY timestamp DESC LIMIT 1'
           );
@@ -73,20 +72,19 @@ const startRealtimePoller = (io, activeSubscriptions) => {
                 timestamp: latestElectrical.timestamp,
                 modbus_connected: true,
               });
-              
-              // WhatsApp Alert Logic for Frequency
+
               const currentFreq = parseFloat(latestElectrical.frequency) || 0;
               if (currentFreq > 52.5 && whatsappClient.waReady) {
                 const now = Date.now();
                 const lastSent = waCooldowns.get(roomName) || 0;
                 if (now - lastSent > COOLDOWN_MS) {
-                  // We need to alert. Let's find users in this dbName.
+                  
                   try {
                     const [users] = await db.execute('SELECT nomor_telpon FROM users WHERE nomor_telpon IS NOT NULL');
                     for (const user of users) {
                       if (user.nomor_telpon) {
                         const msg = `⚠️ *[TMU ALERT - FREKUENSI TINGGI]*\n\nTrafo *${trafoId}* (DB: ${dbName}) terdeteksi memiliki frekuensi tidak normal!\nFrekuensi saat ini: *${currentFreq.toFixed(2)} Hz*\n\nSilakan segera periksa sistem Anda.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
-                        await whatsappClient.sendWhatsAppMessage(user.nomor_telpon, msg).catch(() => {});
+                        await whatsappClient.sendWhatsAppMessage(user.nomor_telpon, msg).catch(() => );
                       }
                     }
                     waCooldowns.set(roomName, now);
@@ -98,7 +96,6 @@ const startRealtimePoller = (io, activeSubscriptions) => {
             }
           }
 
-          // Fetch latest oil reading
           const [oilRows] = await db.execute(
             'SELECT * FROM oil_readings ORDER BY timestamp DESC LIMIT 1'
           );
@@ -111,7 +108,7 @@ const startRealtimePoller = (io, activeSubscriptions) => {
               io.to(roomName).emit("oil_sensor", {
                 oil_temperature: parseFloat(latestOil.oil_temperature) || 0,
                 oil_pressure: parseFloat(latestOil.oil_pressure) || 0,
-                oil_level: true, // Data terletak di backend bukan db
+                oil_level: true, 
                 timestamp: latestOil.timestamp,
                 adc_connected: true,
               });
@@ -124,7 +121,7 @@ const startRealtimePoller = (io, activeSubscriptions) => {
     } catch (error) {
       console.error("Realtime poller error:", error);
     }
-  }, 5000); // Poll every 5 seconds
+  }, 5000); 
 };
 
 module.exports = startRealtimePoller;

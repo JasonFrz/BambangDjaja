@@ -8,37 +8,31 @@ const SuperAdminDashboard = () => {
   const { apiUrl } = useApi();
   const { isDarkMode } = useTheme();
 
-  // Login State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Dashboard State
   const [databases, setDatabases] = useState([]);
   const [selectedDb, setSelectedDb] = useState(null);
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState(null);
   const [tableData, setTableData] = useState([]);
   
-  // Filter State
   const [dataLimit, setDataLimit] = useState('100');
   const [dataSort, setDataSort] = useState('latest');
-  
-  // UI State
+
   const [isLoadingDbs, setIsLoadingDbs] = useState(false);
   const [isLoadingTables, setIsLoadingTables] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Delete DB Modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [dbToDelete, setDbToDelete] = useState('');
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Auto-login if we have session flag (just simple UX, actual auth is header-based)
   useEffect(() => {
     if (sessionStorage.getItem('superadmin') === 'true') {
       setIsLoggedIn(true);
@@ -198,7 +192,7 @@ const SuperAdminDashboard = () => {
 
   return (
     <div className={`flex flex-col h-screen overflow-hidden ${isDarkMode ? 'dark' : ''} bg-gray-50 dark:bg-[#0a0a0f] text-gray-900 dark:text-white`}>
-      {/* Top Navigation */}
+      
       <header className="h-16 border-b border-gray-200 dark:border-white/10 bg-white/80 dark:bg-[#151521]/80 backdrop-blur-md flex items-center justify-between px-6 z-10 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
@@ -217,9 +211,8 @@ const SuperAdminDashboard = () => {
         </button>
       </header>
 
-      {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Databases */}
+        
         <div className="w-72 md:w-80 border-r border-gray-200 dark:border-white/10 bg-white dark:bg-[#151521] flex flex-col shrink-0">
           <div className="p-4 border-b border-gray-200 dark:border-white/10">
             <div className="relative">
@@ -261,7 +254,6 @@ const SuperAdminDashboard = () => {
           </div>
         </div>
 
-        {/* Center Panel - Tables */}
         <div className="w-64 md:w-72 border-r border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-[#1a1a24] flex flex-col shrink-0">
           {selectedDb ? (
             <>
@@ -306,7 +298,6 @@ const SuperAdminDashboard = () => {
           )}
         </div>
 
-        {/* Right Panel - Data Explorer */}
         <div className="flex-1 flex flex-col bg-white dark:bg-[#151521] overflow-hidden">
           {selectedTable ? (
             <>
@@ -403,7 +394,6 @@ const SuperAdminDashboard = () => {
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]">
           <div className="bg-white dark:bg-[#1a1a24] rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
