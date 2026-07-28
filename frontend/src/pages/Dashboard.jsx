@@ -93,7 +93,17 @@ const Dashboard = () => {
 
   const [layouts, setLayouts] = useState(() => {
     const savedLayouts = localStorage.getItem('dashboardLayouts_v7');
-    return savedLayouts ? JSON.parse(savedLayouts) : DEFAULT_LAYOUTS;
+    if (savedLayouts) {
+      const parsed = JSON.parse(savedLayouts);
+      // Strip any stale static property from saved layouts
+      Object.keys(parsed).forEach(bp => {
+        if (parsed[bp]) {
+          parsed[bp] = parsed[bp].map(({ static: _s, ...rest }) => rest);
+        }
+      });
+      return parsed;
+    }
+    return DEFAULT_LAYOUTS;
   });
 
   // Force RGL to fully remount when filters change, so it re-reads layouts prop
@@ -104,7 +114,10 @@ const Dashboard = () => {
       const merged = {};
       Object.keys(DEFAULT_LAYOUTS).forEach(bp => {
         const rglItems = allLayouts[bp] || [];
-        const rglMap = new Map(rglItems.map(item => [item.i, { ...item }]));
+        const rglMap = new Map(rglItems.map(item => {
+          const { static: _s, ...rest } = item;
+          return [item.i, rest];
+        }));
 
         merged[bp] = ALL_KEYS.map(key => {
           if (rglMap.has(key)) {
@@ -230,9 +243,20 @@ const Dashboard = () => {
   const [isFiltering, setIsFiltering] = useState(false);
   const [filterError, setFilterError] = useState(null);
 
-  // Layout Management State
   const [isEditingLayout, setIsEditingLayout] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // Lock all items as static when not editing to completely prevent drag/resize
+  const effectiveLayouts = useMemo(() => {
+    const result = {};
+    Object.keys(layouts).forEach(bp => {
+      result[bp] = (layouts[bp] || []).map(item => ({
+        ...item,
+        static: !isEditingLayout
+      }));
+    });
+    return result;
+  }, [layouts, isEditingLayout]);
 
   // Export Modal State
   const [showExportModal, setShowExportModal] = useState(false);
@@ -665,14 +689,14 @@ const Dashboard = () => {
           key={`${filterKey}-${isEditingLayout}`}
           className="layout -mx-2 mt-4"
           width={width}
-          layouts={layouts}
+          layouts={effectiveLayouts}
           breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
           cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
           rowHeight={140}
           compactType="horizontal"
           preventCollision={false}
           onLayoutChange={handleLayoutChange}
-          draggableHandle={isEditingLayout ? ".drag-handle" : ""}
+          draggableHandle=".drag-handle"
           margin={[16, 16]}
           isDraggable={isEditingLayout}
           isResizable={isEditingLayout}

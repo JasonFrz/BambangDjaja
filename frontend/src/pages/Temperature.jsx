@@ -200,17 +200,41 @@ const Temperature = () => {
 
   const [layouts, setLayouts] = useState(() => {
     const savedLayouts = localStorage.getItem('dashboardLayouts_temp_v4');
-    return savedLayouts ? JSON.parse(savedLayouts) : DEFAULT_LAYOUTS;
+    if (savedLayouts) {
+      const parsed = JSON.parse(savedLayouts);
+      Object.keys(parsed).forEach(bp => {
+        if (parsed[bp]) {
+          parsed[bp] = parsed[bp].map(({ static: _s, ...rest }) => rest);
+        }
+      });
+      return parsed;
+    }
+    return DEFAULT_LAYOUTS;
   });
 
   const filterKey = useMemo(() => Object.values(filters).map(v => v ? '1' : '0').join(''), [filters]);
+
+  // Lock all items as static when not editing to completely prevent drag/resize
+  const effectiveLayouts = useMemo(() => {
+    const result = {};
+    Object.keys(layouts).forEach(bp => {
+      result[bp] = (layouts[bp] || []).map(item => ({
+        ...item,
+        static: !isEditingLayout
+      }));
+    });
+    return result;
+  }, [layouts, isEditingLayout]);
 
   const handleLayoutChange = useCallback((currentLayout, allLayouts) => {
     setLayouts(prev => {
       const merged = {};
       Object.keys(DEFAULT_LAYOUTS).forEach(bp => {
         const rglItems = allLayouts[bp] || [];
-        const rglMap = new Map(rglItems.map(item => [item.i, { ...item }]));
+        const rglMap = new Map(rglItems.map(item => {
+          const { static: _s, ...rest } = item;
+          return [item.i, rest];
+        }));
         
         merged[bp] = ALL_KEYS_TEMP.map(key => {
           if (rglMap.has(key)) {
@@ -411,10 +435,10 @@ const Temperature = () => {
           )}
       <div ref={containerRef} className={isEditingLayout ? 'ring-2 ring-[#0052cc] ring-opacity-50 rounded-xl p-1 bg-[#0052cc]/5 dark:bg-[#0052cc]/10 transition-all' : 'transition-all'}>
         <ResponsiveGridLayout
-          key={filterKey}
+          key={`${filterKey}-${isEditingLayout}`}
           className="layout -mx-2 mt-4"
           width={width}
-          layouts={layouts}
+          layouts={effectiveLayouts}
           breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
           cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
           rowHeight={140}
@@ -431,12 +455,12 @@ const Temperature = () => {
           <div key="oilLevelCard" className="w-full h-full">
         <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden h-full w-full bg-opacity-95 backdrop-blur animate-[slideUpFade_0.4s_ease-out]">
           <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 dark:bg-emerald-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
-          <div className="flex items-center gap-3 mb-4 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+          <div className={`flex items-center gap-3 mb-4 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#36b37e] to-[#57d9a3] flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 pointer-events-none">
               <Activity size={20} />
             </div>
             <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Oil Level</h3>
-            <GripHorizontal size={20} className="text-gray-400 mr-2" />
+            {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
           </div>
           <div className="mt-auto flex items-baseline gap-1">
             <span className={`text-3xl font-bold font-mono tracking-tight ${isOilLevelSafe ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -451,12 +475,12 @@ const Temperature = () => {
           <div key="temperatureCard" className="w-full h-full">
           <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden h-full w-full bg-opacity-95 backdrop-blur animate-[slideUpFade_0.4s_ease-out]">
             <div className="absolute top-0 right-0 w-20 h-20 bg-orange-500/5 dark:bg-orange-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
-            <div className="flex items-center gap-3 mb-4 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+            <div className={`flex items-center gap-3 mb-4 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff5630] to-[#ff8b00] flex items-center justify-center text-white shadow-lg shadow-orange-500/20 pointer-events-none">
                 <Thermometer size={20} />
               </div>
               <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Oil Temp</h3>
-              <GripHorizontal size={20} className="text-gray-400 mr-2" />
+              {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
             </div>
             <div className="mt-auto flex items-baseline gap-1">
               <span className="text-3xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">
@@ -473,12 +497,12 @@ const Temperature = () => {
           <div key="pressureCard" className="w-full h-full">
           <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md flex flex-col group relative overflow-hidden h-full w-full bg-opacity-95 backdrop-blur animate-[slideUpFade_0.4s_ease-out_0.1s]">
             <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 dark:bg-indigo-400/5 rounded-bl-full -mr-2 -mt-2 transition-transform group-hover:scale-110"></div>
-            <div className="flex items-center gap-3 mb-4 cursor-move drag-handle select-none hover:opacity-80 transition-opacity">
+            <div className={`flex items-center gap-3 mb-4 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6554c0] to-[#8777d9] flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 pointer-events-none">
                 <Gauge size={20} />
               </div>
               <h3 className="font-semibold text-[#172b4d] dark:text-white font-heading tracking-tight flex-1">Oil Pressure</h3>
-              <GripHorizontal size={20} className="text-gray-400 mr-2" />
+              {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
             </div>
             <div className="mt-auto flex items-baseline gap-1">
               <span className="text-3xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">
@@ -493,12 +517,12 @@ const Temperature = () => {
             {filters.temperature && (
               <div key="temperatureChart" className="w-full h-full">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out] h-full w-full">
-                <div className="flex items-center gap-3 mb-6">
+                <div className={`flex items-center gap-3 mb-6 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#ff5630] to-[#ff8b00]">
                     <Activity size={20} />
                   </div>
                   <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Temperature Trend</h3>
-                  <GripHorizontal size={20} className="text-gray-400 drag-handle cursor-move hover:opacity-80 transition-opacity" />
+                  {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
                 </div>
                 <div className="flex-1 w-full h-full min-h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -520,13 +544,13 @@ const Temperature = () => {
             {filters.pressure && (
               <div key="pressureChart" className="w-full h-full">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out_0.1s] h-full w-full">
-                <div className="flex items-center justify-between mb-6">
+                <div className={`flex items-center justify-between mb-6 select-none transition-opacity ${isEditingLayout ? '' : ''}`}>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#6554c0] to-[#8777d9]">
                       <Activity size={20} />
                     </div>
                     <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Pressure Trend</h3>
-                  <GripHorizontal size={20} className="text-gray-400 drag-handle cursor-move hover:opacity-80 transition-opacity" />
+                  {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 cursor-move drag-handle hover:opacity-80 transition-opacity mr-2" />}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-bold ${isPressSafe ? 'text-emerald-500' : 'text-red-500'}`}>
