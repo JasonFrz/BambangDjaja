@@ -505,7 +505,7 @@ const Temperature = () => {
                     <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                       <XAxis dataKey="timestampMs" type="number" scale="time" domain={['dataMin', 'dataMax']} tickCount={20} tickFormatter={(time) => new Date(time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <YAxis domain={[0, 150]} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <YAxis domain={[25, 45]} ticks={[25, 30, 35, 40, 45]} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
                       <Line type="monotone" dataKey="oil_temperature" name="Oil Temperature (°C)" stroke="#ff5630" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
@@ -543,7 +543,7 @@ const Temperature = () => {
                     <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                       <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} interval={5} />
-                      <YAxis domain={[0, 1]} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <YAxis domain={[0, 0.55]} ticks={[0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55]} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
                       <ReferenceLine y={0.50} stroke="red" strokeDasharray="3 3" label={{ position: 'top', value: 'Limit (0.50)', fill: 'red', fontSize: 12 }} />

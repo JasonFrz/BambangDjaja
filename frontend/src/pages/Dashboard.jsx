@@ -946,7 +946,7 @@ const Dashboard = () => {
                     <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
                       <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} interval={5} />
-                      <YAxis domain={[0, 300]} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <YAxis domain={[215, 240]} ticks={[215, 220, 225, 230, 235, 240]} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
                       <Area fillOpacity={0.15} fill="#0052cc" type="monotone" dataKey="phaseA" name="Phase A" stroke="#0052cc" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
@@ -974,7 +974,7 @@ const Dashboard = () => {
                     <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
                       <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} interval={5} />
-                      <YAxis domain={[0, 500]} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <YAxis domain={[370, 410]} ticks={[370, 375, 380, 385, 390, 395, 400, 405, 410]} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
                       <Area fillOpacity={0.15} fill="#00b8d9" type="monotone" dataKey="lineAB" name="Line AB" stroke="#00b8d9" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
@@ -1002,7 +1002,7 @@ const Dashboard = () => {
                     <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
                       <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} interval={5} />
-                      <YAxis domain={[0, dataMax => Math.max(Math.ceil(dataMax * 1.2), 100)]} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <YAxis domain={[0, 2500]} ticks={[0, 500, 1000, 1500, 2000, 2500]} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
                       <Area fillOpacity={0.15} fill="#ff5630" type="monotone" dataKey="currentA" name="Current A" stroke="#ff5630" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
@@ -1031,7 +1031,7 @@ const Dashboard = () => {
                     <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
                       <XAxis dataKey="timestampMs" type="number" scale="time" domain={['dataMin', 'dataMax']} tickCount={20} tickFormatter={(time) => new Date(time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <YAxis domain={[0, dataMax => Math.max(Math.ceil(dataMax * 1.2), 100)]} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <YAxis domain={['dataMin', 'dataMax']} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
                       <Area fillOpacity={0.15} fill="#6554c0" type="monotone" dataKey="powerActiveTotal" name="Active (kW)" stroke="#6554c0" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
@@ -1060,7 +1060,7 @@ const Dashboard = () => {
                     <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
                       <XAxis dataKey="timestampMs" type="number" scale="time" domain={['dataMin', 'dataMax']} tickCount={20} tickFormatter={(time) => new Date(time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} stroke="#8898aa" fontSize={12} tickMargin={10} />
-                      <YAxis domain={[0, 60]} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <YAxis domain={[49, 55]} ticks={[49, 50, 51, 52, 53, 54, 55]} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
                       <Area fillOpacity={0.15} fill="#8950fc" type="monotone" dataKey="frequency" name="Frequency (Hz)" stroke="#8950fc" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
@@ -1089,7 +1089,7 @@ const Dashboard = () => {
                     <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={true} />
                       <XAxis dataKey="time" stroke="#8898aa" fontSize={12} tickMargin={10} interval={5} />
-                      <YAxis domain={[0, 100]} stroke="#8898aa" fontSize={12} tickMargin={10} />
+                      <YAxis domain={[95, 101]} ticks={[95, 96, 97, 98, 99, 100, 101]} stroke="#8898aa" fontSize={12} tickMargin={10} />
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ paddingTop: '20px' }} />
                       <Area fillOpacity={0.15} fill="#e83e8c" type="monotone" dataKey="efficiency" name="Efficiency (%)" stroke="#e83e8c" strokeWidth={2} dot={false} activeDot={{ r: 6 }}  />
