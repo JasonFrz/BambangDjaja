@@ -1005,12 +1005,12 @@ const Dashboard = () => {
           {filters.power && (
             <div key="powerChart" className="w-full h-full">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out_0.4s] h-full w-full">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#8777d9] to-[#6554c0]">
+                <div className={`flex items-center gap-3 mb-6 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#8777d9] to-[#6554c0] pointer-events-none">
                     <Activity size={20} />
                   </div>
                   <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Power Trend</h3>
-                  {isEditingLayout && <GripHorizontal size={20} className={`text-gray-400  transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`} />}
+                  {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
                 </div>
                 <div className="flex-1 w-full h-full min-h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -1033,12 +1033,12 @@ const Dashboard = () => {
           {filters.frequency && (
             <div key="freqChart" className="w-full h-full">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out_0.4s] h-full w-full">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#8950fc] to-[#a274fd]">
+                <div className={`flex items-center gap-3 mb-6 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#8950fc] to-[#a274fd] pointer-events-none">
                     <Activity size={20} />
                   </div>
                   <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Frequency Trend</h3>
-                  {isEditingLayout && <GripHorizontal size={20} className={`text-gray-400  transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`} />}
+                  {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
                 </div>
                 <div className="flex-1 w-full h-full min-h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -1061,12 +1061,12 @@ const Dashboard = () => {
           {filters.efficiency && (
             <div key="efficiencyChart" className="w-full h-full">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out_0.4s] h-full w-full">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#e83e8c] to-[#f06292]">
+                <div className={`flex items-center gap-3 mb-6 select-none transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#e83e8c] to-[#f06292] pointer-events-none">
                     <Activity size={20} />
                   </div>
                   <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Transformer Efficiency (%)</h3>
-                  {isEditingLayout && <GripHorizontal size={20} className={`text-gray-400  transition-opacity ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`} />}
+                  {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
                 </div>
                 <div className="flex-1 w-full h-full min-h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">

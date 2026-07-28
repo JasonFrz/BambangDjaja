@@ -533,13 +533,12 @@ const Temperature = () => {
             {filters.pressure && (
               <div key="pressureChart" className="w-full h-full">
               <div className="bg-white dark:bg-[#151521] rounded-2xl p-6 shadow-sm border border-transparent dark:border-white/5 flex flex-col animate-[slideUpFade_0.4s_ease-out_0.1s] h-full w-full">
-                <div className={`flex items-center justify-between mb-6 select-none transition-opacity ${isEditingLayout ? '' : ''}`}>
+                <div className={`flex items-center justify-between mb-6 select-none transition-opacity ${isEditingLayout ? 'drag-handle cursor-move' : ''}`}>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-[#6554c0] to-[#8777d9]">
                       <Activity size={20} />
                     </div>
                     <h3 className="text-lg font-semibold text-[#172b4d] dark:text-white font-heading flex-1">Pressure Trend</h3>
-                  {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 cursor-move drag-handle hover:opacity-80 transition-opacity mr-2" />}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-bold ${isPressSafe ? 'text-emerald-500' : 'text-red-500'}`}>
