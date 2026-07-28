@@ -106,7 +106,6 @@ const Dashboard = () => {
     return DEFAULT_LAYOUTS;
   });
 
-  // Force RGL to fully remount when filters change, so it re-reads layouts prop
   const filterKey = useMemo(() => Object.values(filters).map(v => v ? '1' : '0').join(''), [filters]);
 
   const handleLayoutChange = useCallback((currentLayout, allLayouts) => {
