@@ -106,7 +106,7 @@ const Dashboard = () => {
 
   const handleLayoutChange = useCallback((currentLayout, allLayouts) => {
     setLayouts(prev => {
-      const merged = ;
+      const merged = {};
       Object.keys(DEFAULT_LAYOUTS).forEach(bp => {
         const rglItems = allLayouts[bp] || [];
         const rglMap = new Map(rglItems.map(item => {
@@ -229,7 +229,7 @@ const Dashboard = () => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const effectiveLayouts = useMemo(() => {
-    const result = ;
+    const result = {};
     Object.keys(layouts).forEach(bp => {
       result[bp] = (layouts[bp] || []).map(item => ({
         ...item,

@@ -7,8 +7,8 @@ const COOLDOWN_MS = 5 * 60 * 1000;
 
 const startRealtimePoller = (io, activeSubscriptions) => {
   
-  const lastSeenElectrical = ;
-  const lastSeenOil = ;
+  const lastSeenElectrical = {};
+  const lastSeenOil = {};
 
   setInterval(async () => {
     try {
@@ -84,7 +84,7 @@ const startRealtimePoller = (io, activeSubscriptions) => {
                     for (const user of users) {
                       if (user.nomor_telpon) {
                         const msg = `⚠️ *[TMU ALERT - FREKUENSI TINGGI]*\n\nTrafo *${trafoId}* (DB: ${dbName}) terdeteksi memiliki frekuensi tidak normal!\nFrekuensi saat ini: *${currentFreq.toFixed(2)} Hz*\n\nSilakan segera periksa sistem Anda.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
-                        await whatsappClient.sendWhatsAppMessage(user.nomor_telpon, msg).catch(() => );
+                        await whatsappClient.sendWhatsAppMessage(user.nomor_telpon, msg).catch(() => {});
                       }
                     }
                     waCooldowns.set(roomName, now);

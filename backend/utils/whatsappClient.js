@@ -42,7 +42,7 @@ const initWhatsApp = () => {
     console.log('⚠️ WhatsApp Disconnected:', reason);
 
     if (waClient) {
-      waClient.destroy().catch(() => );
+      waClient.destroy().catch(() => {});
     }
     
     waClient = null;
@@ -84,7 +84,7 @@ const logoutWhatsApp = async () => {
   try {
     if (waClient) {
       
-      await waClient.destroy().catch(() => );
+      await waClient.destroy().catch(() => {});
       waClient = null;
     }
     waReady = false;

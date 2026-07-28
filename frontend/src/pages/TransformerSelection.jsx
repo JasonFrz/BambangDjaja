@@ -16,7 +16,7 @@ const TransformerSelection = () => {
   const [selectedTrafoName, setSelectedTrafoName] = useState("");
   
   const [waSending, setWaSending] = useState(null);
-  const [waStatus, setWaStatus] = useState();
+  const [waStatus, setWaStatus] = useState({});
 
   useEffect(() => {
     const fetchTransformers = async () => {

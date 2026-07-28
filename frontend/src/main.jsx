@@ -16,8 +16,8 @@ axios.interceptors.request.use((config) => {
 const originalFetch = window.fetch;
 window.fetch = async (...args) => {
   let [resource, config] = args;
-  if (!config) config = ;
-  if (!config.headers) config.headers = ;
+  if (!config) config = {};
+  if (!config.headers) config.headers = {};
   
   const dbName = sessionStorage.getItem('company_name');
   const username = sessionStorage.getItem('username');

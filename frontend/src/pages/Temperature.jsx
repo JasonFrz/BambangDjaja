@@ -210,7 +210,7 @@ const Temperature = () => {
   const filterKey = useMemo(() => Object.values(filters).map(v => v ? '1' : '0').join(''), [filters]);
 
   const effectiveLayouts = useMemo(() => {
-    const result = ;
+    const result = {};
     Object.keys(layouts).forEach(bp => {
       result[bp] = (layouts[bp] || []).map(item => ({
         ...item,
@@ -222,7 +222,7 @@ const Temperature = () => {
 
   const handleLayoutChange = useCallback((currentLayout, allLayouts) => {
     setLayouts(prev => {
-      const merged = ;
+      const merged = {};
       Object.keys(DEFAULT_LAYOUTS).forEach(bp => {
         const rglItems = allLayouts[bp] || [];
         const rglMap = new Map(rglItems.map(item => {
