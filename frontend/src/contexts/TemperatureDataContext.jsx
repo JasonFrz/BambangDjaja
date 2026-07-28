@@ -18,6 +18,8 @@ export const TemperatureDataProvider = ({ children }) => {
     oil_temperature: 0.0,
     oil_pressure: 0.0,
     oil_level: false,
+    oil_level_alarm: 0,
+    oil_level_trip: 0,
     adc_connected: false
   });
 
@@ -39,7 +41,9 @@ export const TemperatureDataProvider = ({ children }) => {
           timestamp: date.toISOString(),
           oil_temperature: parseFloat(reading.oil_temperature) || 0,
           oil_pressure: parseFloat(reading.oil_pressure) || 0,
-          oil_level: 1 
+          oil_level: reading.oil_level == 1,
+          oil_level_alarm: (reading.oil_level_alarm == 1 || reading.oil_level_alarm === true) ? 1 : 0,
+          oil_level_trip: (reading.oil_level_trip == 1 || reading.oil_level_trip === true) ? 1 : 0 
         };
       });
       if (historical.length > 0) {
@@ -51,7 +55,9 @@ export const TemperatureDataProvider = ({ children }) => {
           ...prev,
           oil_temperature: latest.oil_temperature,
           oil_pressure: latest.oil_pressure,
-          oil_level: latest.oil_level == 1
+          oil_level: latest.oil_level,
+          oil_level_alarm: latest.oil_level_alarm,
+          oil_level_trip: latest.oil_level_trip
         }));
       }
     })
@@ -81,12 +87,18 @@ export const TemperatureDataProvider = ({ children }) => {
       const newPress = msg.oil_pressure !== undefined ? msg.oil_pressure : 0;
       const newLevel = msg.oil_level === true; 
       const connected = msg.adc_connected !== false;
-      
-      setData({
-        oil_temperature: newTemp,
-        oil_pressure: newPress,
-        oil_level: newLevel,
-        adc_connected: connected
+      setData(prev => {
+        const newAlarm = msg.oil_level_alarm !== undefined ? (msg.oil_level_alarm == 1 ? 1 : 0) : prev.oil_level_alarm;
+        const newTrip = msg.oil_level_trip !== undefined ? (msg.oil_level_trip == 1 ? 1 : 0) : prev.oil_level_trip;
+
+        return {
+          oil_temperature: newTemp,
+          oil_pressure: newPress,
+          oil_level: newLevel,
+          oil_level_alarm: newAlarm,
+          oil_level_trip: newTrip,
+          adc_connected: connected
+        };
       });
       setIsLive(connected);
 
@@ -99,7 +111,9 @@ export const TemperatureDataProvider = ({ children }) => {
           timestamp: dataDate.toISOString(),
           oil_temperature: newTemp,
           oil_pressure: newPress,
-          oil_level: newLevel
+          oil_level: newLevel,
+          oil_level_alarm: msg.oil_level_alarm !== undefined ? (msg.oil_level_alarm == 1 ? 1 : 0) : (lastDataRef.current ? lastDataRef.current.oil_level_alarm : 0),
+          oil_level_trip: msg.oil_level_trip !== undefined ? (msg.oil_level_trip == 1 ? 1 : 0) : (lastDataRef.current ? lastDataRef.current.oil_level_trip : 0)
         };
 
         if (lastDataRef.current) {

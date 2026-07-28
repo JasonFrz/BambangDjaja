@@ -6,11 +6,13 @@ import {
 import { Link, useLocation } from "react-router-dom";
 import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Filter, ChevronDown, RefreshCw, Settings, GripHorizontal, Edit3, Send, LogOut, Download } from "lucide-react";
 import { useTrendData } from "../contexts/TrendDataContext";
+import { useTemperatureData } from "../contexts/TemperatureDataContext";
 import * as ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { useApi } from '../contexts/ApiContext';
 
 import { ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout';
+import EnergyLoader from '../components/EnergyLoader';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
@@ -66,6 +68,7 @@ const Dashboard = () => {
   
   const { liveData, wsData, isConnected, isLive } = useTrendData();
   const { apiUrl } = useApi();
+  const { data: tempData } = useTemperatureData();
 
   const [filters, setFilters] = useState({
     status: true,
@@ -216,7 +219,10 @@ const Dashboard = () => {
   }, [wsData, liveData]);
 
   const [trendData, setTrendData] = useState([]);
-  const [dataInterval, setDataInterval] = useState(1);
+  const [dataInterval, setDataInterval] = useState(() => {
+    const saved = localStorage.getItem('dashboardInterval');
+    return saved ? Number(saved) : 1;
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -487,20 +493,16 @@ const Dashboard = () => {
 
       <div className="bg-white dark:bg-[#151521] p-5 rounded-2xl border border-[#dfe1e6] dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-4 animate-[slideUpFade_0.3s_ease-out]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 pb-3 border-b border-[#dfe1e6] dark:border-white/10 gap-3">
-          <div className="flex items-center gap-2">
-            <Settings size={18} className="text-[#5e6c84] dark:text-[#94a3b8]" />
+          <button onClick={() => setShowFilterOptions(!showFilterOptions)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <Settings size={18} className="text-[#0052cc] dark:text-blue-400" />
             <h3 className="font-semibold text-[#172b4d] dark:text-white">Show Options</h3>
-          </div>
+          </button>
           <div className="flex flex-wrap items-center gap-2">
-            <button onClick={showAll} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
-              Show All
-            </button>
-            <button
-              onClick={() => setShowFilterOptions(!showFilterOptions)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 ${showFilterOptions ? 'bg-[#0052cc] text-white' : 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20'}`}
-            >
-              <Settings size={12} /> {showFilterOptions ? 'Hide Options' : 'Show Options'}
-            </button>
+            {showFilterOptions && (
+              <button onClick={showAll} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
+                Show All
+              </button>
+            )}
             <button
               onClick={() => setIsEditingLayout(!isEditingLayout)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 ${isEditingLayout ? 'bg-[#0052cc] text-white' : 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20'}`}
@@ -612,7 +614,11 @@ const Dashboard = () => {
                 <span className="text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8] w-12 sm:w-10 lg:w-auto">Interval:</span>
                 <select
                   value={dataInterval}
-                  onChange={(e) => setDataInterval(Number(e.target.value))}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setDataInterval(val);
+                    localStorage.setItem('dashboardInterval', val);
+                  }}
                   className="flex-1 lg:flex-none px-3 py-1.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white text-sm outline-none focus:border-[#0052cc] shadow-sm cursor-pointer"
                 >
                   <option className="bg-white dark:bg-[#151521] text-[#172b4d] dark:text-white" value={1}>1 Detik (Live)</option>
@@ -649,7 +655,11 @@ const Dashboard = () => {
         </div>
       )}
 
-      {error && (
+      {loading && isFiltering && (
+        <EnergyLoader fullScreen={true} text="MENGAMBIL DATA TREND..." />
+      )}
+
+      {isFiltering && error && (
         <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-xl border border-red-200 dark:border-red-800/30 mt-2 mb-4">
           {error}
         </div>
@@ -677,35 +687,19 @@ const Dashboard = () => {
             <div key="statusCard" className="flex">
               <div className={`bg-white dark:bg-[#151521] rounded-2xl p-3 sm:p-4 shadow-sm border border-transparent dark:border-white/5 transition-all hover:shadow-md h-full w-full flex items-center justify-center group relative overflow-hidden bg-opacity-95 backdrop-blur select-none ${isEditingLayout ? 'cursor-move drag-handle hover:opacity-80' : ''}`}>
                 <div className="grid grid-cols-2 sm:flex sm:flex-row items-center gap-3 sm:gap-4 lg:gap-6 w-full justify-around sm:divide-x divide-gray-200 dark:divide-gray-800">
-                  <div className="flex flex-col items-center sm:w-1/4">
-                    <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">System</span>
-                    <div className={`px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-sm font-bold flex items-center gap-1 sm:gap-2 ${data.status.OnOff === 1 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-                      <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.OnOff === 1 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'}`}></div>
-                      {data.status.OnOff === 1 ? 'ON' : 'OFF'}
+                  <div className="flex flex-col items-center sm:w-1/2">
+                    <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Oil Level Alarm</span>
+                    <div className={`px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-sm font-bold flex items-center gap-1 sm:gap-2 ${tempData.oil_level_alarm === 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+                      <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${tempData.oil_level_alarm === 0 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse' : 'bg-emerald-500'}`}></div>
+                      {tempData.oil_level_alarm === 0 ? 'TRIGGERED' : 'CLEAR'}
                     </div>
                   </div>
                   
-                  <div className="flex flex-col items-center sm:w-1/4">
-                    <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Relay</span>
-                    <div className={`px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-sm font-bold flex items-center gap-1 sm:gap-2 ${data.status.Relay === 1 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
-                      <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.Relay === 1 ? 'bg-emerald-500' : 'bg-gray-400'}`}></div>
-                      {data.status.Relay === 1 ? 'ACTIVE' : 'IDLE'}
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col items-center sm:w-1/4">
-                    <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Alarm</span>
-                    <div className={`px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-sm font-bold flex items-center gap-1 sm:gap-2 ${data.status.Alarm === 1 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
-                      <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.Alarm === 1 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse' : 'bg-emerald-500'}`}></div>
-                      {data.status.Alarm === 1 ? 'TRIGGERED' : 'CLEAR'}
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col items-center sm:w-1/4">
-                    <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Sync</span>
-                    <div className={`px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-sm font-bold flex items-center gap-1 sm:gap-2 ${data.status.Synced === 1 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
-                      <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${data.status.Synced === 1 ? 'bg-blue-500' : 'bg-amber-500'}`}></div>
-                      {data.status.Synced === 1 ? 'SYNCED' : 'PENDING'}
+                  <div className="flex flex-col items-center sm:w-1/2">
+                    <span className="text-[10px] sm:text-xs text-[#5e6c84] dark:text-[#94a3b8] font-semibold mb-1 uppercase tracking-wider">Oil Level Trip</span>
+                    <div className={`px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-sm font-bold flex items-center gap-1 sm:gap-2 ${tempData.oil_level_trip === 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+                      <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${tempData.oil_level_trip === 0 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse' : 'bg-emerald-500'}`}></div>
+                      {tempData.oil_level_trip === 0 ? 'TRIGGERED' : 'CLEAR'}
                     </div>
                   </div>
                 </div>

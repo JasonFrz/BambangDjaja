@@ -108,7 +108,9 @@ const startRealtimePoller = (io, activeSubscriptions) => {
               io.to(roomName).emit("oil_sensor", {
                 oil_temperature: parseFloat(latestOil.oil_temperature) || 0,
                 oil_pressure: parseFloat(latestOil.oil_pressure) || 0,
-                oil_level: true, 
+                oil_level: latestOil.oil_level == 1,
+                oil_level_alarm: (latestOil.oil_level_alarm == 1 || latestOil.oil_level_alarm === true) ? 1 : 0,
+                oil_level_trip: (latestOil.oil_level_trip == 1 || latestOil.oil_level_trip === true) ? 1 : 0,
                 timestamp: latestOil.timestamp,
                 adc_connected: true,
               });

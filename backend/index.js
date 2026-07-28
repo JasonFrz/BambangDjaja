@@ -38,6 +38,27 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
+    for (const roomName of socket.rooms) {
+      if (roomName.startsWith("trafo_")) {
+        const room = io.sockets.adapter.rooms.get(roomName);
+        if (!room || room.size === 0) {
+          activeSubscriptions.delete(roomName);
+          console.log(`Removed ${roomName} from active subscriptions`);
+        }
+      }
+    }
+  });
+
+  socket.on("disconnecting", () => {
+    for (const roomName of socket.rooms) {
+      if (roomName.startsWith("trafo_")) {
+        const room = io.sockets.adapter.rooms.get(roomName);
+        if (room && room.size === 1) {
+          activeSubscriptions.delete(roomName);
+          console.log(`Removed ${roomName} from active subscriptions as last client is leaving`);
+        }
+      }
+    }
   });
 });
 

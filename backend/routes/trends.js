@@ -293,4 +293,70 @@ router.get("/export", extractDb, async (req, res) => {
   }
 });
 
+router.get("/report", extractDb, async (req, res) => {
+  const { start, end } = req.query;
+  try {
+    const db = await getDbConnection(req.dbName);
+
+    let elecQuery = `
+      SELECT 
+        MIN(phase_a_v) as min_phase_a, MAX(phase_a_v) as max_phase_a, AVG(phase_a_v) as avg_phase_a,
+        MIN(phase_b_v) as min_phase_b, MAX(phase_b_v) as max_phase_b, AVG(phase_b_v) as avg_phase_b,
+        MIN(phase_c_v) as min_phase_c, MAX(phase_c_v) as max_phase_c, AVG(phase_c_v) as avg_phase_c,
+        MIN(line_ab_v) as min_line_ab, MAX(line_ab_v) as max_line_ab, AVG(line_ab_v) as avg_line_ab,
+        MIN(line_bc_v) as min_line_bc, MAX(line_bc_v) as max_line_bc, AVG(line_bc_v) as avg_line_bc,
+        MIN(line_ca_v) as min_line_ca, MAX(line_ca_v) as max_line_ca, AVG(line_ca_v) as avg_line_ca,
+        MIN(current_a) as min_current_a, MAX(current_a) as max_current_a, AVG(current_a) as avg_current_a,
+        MIN(current_b) as min_current_b, MAX(current_b) as max_current_b, AVG(current_b) as avg_current_b,
+        MIN(current_c) as min_current_c, MAX(current_c) as max_current_c, AVG(current_c) as avg_current_c,
+        MIN(power_active_total_kw) as min_power_active, MAX(power_active_total_kw) as max_power_active, AVG(power_active_total_kw) as avg_power_active,
+        MIN(power_reactive_total_kvar) as min_power_reactive, MAX(power_reactive_total_kvar) as max_power_reactive, AVG(power_reactive_total_kvar) as avg_power_reactive,
+        MIN(power_apparent_total_kva) as min_power_apparent, MAX(power_apparent_total_kva) as max_power_apparent, AVG(power_apparent_total_kva) as avg_power_apparent,
+        MIN(pf_total) as min_pf, MAX(pf_total) as max_pf, AVG(pf_total) as avg_pf,
+        MIN(frequency) as min_frequency, MAX(frequency) as max_frequency, AVG(frequency) as avg_frequency,
+        MIN(energy_active_total) as min_energy_active, MAX(energy_active_total) as max_energy_active, AVG(energy_active_total) as avg_energy_active,
+        MIN(energy_reactive_total) as min_energy_reactive, MAX(energy_reactive_total) as max_energy_reactive, AVG(energy_reactive_total) as avg_energy_reactive
+      FROM electrical_readings
+    `;
+    let elecParams = [];
+
+    let oilQuery = `
+      SELECT 
+        MIN(oil_temperature) as min_oil_temp, MAX(oil_temperature) as max_oil_temp, AVG(oil_temperature) as avg_oil_temp,
+        MIN(oil_pressure) as min_oil_press, MAX(oil_pressure) as max_oil_press, AVG(oil_pressure) as avg_oil_press
+      FROM oil_readings
+    `;
+    let oilParams = [];
+
+    if (start && end) {
+      elecQuery += ' WHERE timestamp >= ? AND timestamp <= ?';
+      elecParams.push(start, end);
+
+      oilQuery += ' WHERE timestamp >= ? AND timestamp <= ?';
+      oilParams.push(start, end);
+    }
+
+    const [elecRows] = await db.execute(elecQuery, elecParams);
+    const [oilRows] = await db.execute(oilQuery, oilParams);
+
+    const result = {
+      electrical: elecRows[0] || {},
+      oil: oilRows[0] || {}
+    };
+
+    if (result.electrical.avg_current_a !== undefined && result.electrical.avg_current_a !== null) {
+      result.electrical.avg_efficiency = calculateEfficiency(
+        result.electrical.avg_current_a, 
+        result.electrical.avg_current_b, 
+        result.electrical.avg_current_c
+      );
+    }
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server error generating report" });
+  }
+});
+
 module.exports = router;

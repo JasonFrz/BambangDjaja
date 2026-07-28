@@ -7,6 +7,7 @@ import { Thermometer, Gauge, Wifi, WifiOff, Filter, ChevronDown, RefreshCw, Acti
 import { useApi } from '../contexts/ApiContext';
 import { useTemperatureData } from '../contexts/TemperatureDataContext';
 import { ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout';
+import EnergyLoader from '../components/EnergyLoader';
 
 const DEFAULT_LAYOUTS = {
   lg: [
@@ -64,10 +65,14 @@ const Temperature = () => {
   };
 
   const [trendData, setTrendData] = useState([]);
-  const [dataInterval, setDataInterval] = useState(1);
+  const [dataInterval, setDataInterval] = useState(() => {
+    const saved = localStorage.getItem('tempInterval');
+    return saved ? Number(saved) : 1;
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [isFiltering, setIsFiltering] = useState(false);
@@ -257,7 +262,13 @@ const Temperature = () => {
   if (chartActiveCount > 1) chartGridColsClass = "grid-cols-1 lg:grid-cols-2";
 
   const isPressSafe = data.oil_pressure <= 0.50;
-  const isOilLevelSafe = data.oil_level === true;
+  const getOilLevelStatus = () => {
+    if (data.oil_level_alarm === 1 && data.oil_level_trip === 1) return { text: 'Safe', color: 'text-emerald-500' };
+    if (data.oil_level_alarm === 0 && data.oil_level_trip === 1) return { text: 'Alarm', color: 'text-amber-500' };
+    if (data.oil_level_alarm === 0 && data.oil_level_trip === 0) return { text: 'Trip', color: 'text-red-500' };
+    return { text: 'Unknown', color: 'text-gray-500' };
+  };
+  const oilLevelState = getOilLevelStatus();
 
   return (
     <div className="flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out] w-full max-w-7xl mx-auto">
@@ -297,14 +308,16 @@ const Temperature = () => {
 
       <div className="bg-white dark:bg-[#151521] p-5 rounded-2xl border border-[#dfe1e6] dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-4 animate-[slideUpFade_0.3s_ease-out]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 pb-3 border-b border-[#dfe1e6] dark:border-white/10 gap-3">
-          <div className="flex items-center gap-2">
-            <Settings size={18} className="text-[#5e6c84] dark:text-[#94a3b8]" />
+          <button onClick={() => setShowFilterOptions(!showFilterOptions)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <Settings size={18} className="text-[#0052cc] dark:text-blue-400" />
             <h3 className="font-semibold text-[#172b4d] dark:text-white">Show Options</h3>
-          </div>
+          </button>
           <div className="flex flex-wrap items-center gap-2">
-            <button onClick={showAll} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
-              Show All
-            </button>
+            {showFilterOptions && (
+              <button onClick={showAll} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
+                Show All
+              </button>
+            )}
             <button 
               onClick={() => setIsEditingLayout(!isEditingLayout)} 
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 ${isEditingLayout ? 'bg-[#0052cc] text-white' : 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20'}`}
@@ -342,24 +355,28 @@ const Temperature = () => {
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
-            <input type="checkbox" checked={filters.temperature} onChange={() => toggleFilter('temperature')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
-            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Temperature</span>
-          </label>
-          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
-            <input type="checkbox" checked={filters.pressure} onChange={() => toggleFilter('pressure')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
-            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Pressure</span>
-          </label>
-          <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
-            <input type="checkbox" checked={filters.oilLevel} onChange={() => toggleFilter('oilLevel')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
-            <span className="text-sm font-medium text-[#172b4d] dark:text-white">Oil Level</span>
-          </label>
-        </div>
-        {filterError && (
-          <span className="text-red-500 dark:text-red-400 text-sm font-medium mt-3 block animate-[fadeIn_0.3s_ease-out]">
-            {filterError}
-          </span>
+        {showFilterOptions && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+                <input type="checkbox" checked={filters.temperature} onChange={() => toggleFilter('temperature')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+                <span className="text-sm font-medium text-[#172b4d] dark:text-white">Temperature</span>
+              </label>
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+                <input type="checkbox" checked={filters.pressure} onChange={() => toggleFilter('pressure')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+                <span className="text-sm font-medium text-[#172b4d] dark:text-white">Pressure</span>
+              </label>
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer transition-all">
+                <input type="checkbox" checked={filters.oilLevel} onChange={() => toggleFilter('oilLevel')} className="w-4 h-4 text-[#0052cc] rounded border-gray-300 focus:ring-[#0052cc]" />
+                <span className="text-sm font-medium text-[#172b4d] dark:text-white">Oil Level</span>
+              </label>
+            </div>
+            {filterError && (
+              <span className="text-red-500 dark:text-red-400 text-sm font-medium mt-3 block animate-[fadeIn_0.3s_ease-out]">
+                {filterError}
+              </span>
+            )}
+          </>
         )}
       </div>
 
@@ -393,7 +410,11 @@ const Temperature = () => {
                     <span className="text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8] w-12 sm:w-10 lg:w-auto">Interval:</span>
                     <select
                       value={dataInterval}
-                      onChange={(e) => setDataInterval(Number(e.target.value))}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setDataInterval(val);
+                        localStorage.setItem('tempInterval', val);
+                      }}
                       className="flex-1 lg:flex-none px-3 py-1.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white text-sm outline-none focus:border-[#0052cc] shadow-sm cursor-pointer"
                     >
                       <option className="bg-white dark:bg-[#151521] text-[#172b4d] dark:text-white" value={1}>1 Detik (Live)</option>
@@ -406,11 +427,11 @@ const Temperature = () => {
                   <div className="flex items-center gap-2 w-full lg:w-auto">
                     <button 
                       onClick={handleApplyFilter}
-                      className={`flex-1 lg:flex-none whitespace-nowrap px-4 py-1.5 rounded-lg text-sm font-semibold shadow-sm transition-colors ${
+                      className={`flex-1 lg:flex-none whitespace-nowrap px-4 py-1.5 rounded-lg text-sm font-semibold shadow-sm transition-colors flex items-center justify-center gap-2 ${
                         isFiltering ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-[#0052cc] text-white hover:bg-[#0047b3]'
                       }`}
                     >
-                      {isFiltering ? 'Filter Aktif' : 'Filter Chart'}
+                      {loading ? <RefreshCw size={16} className="animate-spin" /> : (isFiltering ? 'Filter Aktif' : 'Filter Chart')}
                     </button>
                     <button 
                       onClick={() => fetchTrends(false)}
@@ -424,6 +445,11 @@ const Temperature = () => {
               </div>
             </div>
           )}
+
+      {loading && isFiltering && (
+        <EnergyLoader fullScreen={true} text="MENGAMBIL DATA FISIK..." />
+      )}
+
       <div ref={containerRef} className={isEditingLayout ? 'ring-2 ring-[#0052cc] ring-opacity-50 rounded-xl p-1 bg-[#0052cc]/5 dark:bg-[#0052cc]/10 transition-all' : 'transition-all'}>
         <ResponsiveGridLayout
           key={`${filterKey}-${isEditingLayout}`}
@@ -454,8 +480,8 @@ const Temperature = () => {
             {isEditingLayout && <GripHorizontal size={20} className="text-gray-400 mr-2" />}
           </div>
           <div className="mt-auto flex items-baseline gap-1">
-            <span className={`text-3xl font-bold font-mono tracking-tight ${isOilLevelSafe ? 'text-emerald-500' : 'text-red-500'}`}>
-              {isOilLevelSafe ? 'Active' : 'Non Active'}
+            <span className={`text-3xl font-bold font-mono tracking-tight ${oilLevelState.color}`}>
+              {oilLevelState.text}
             </span>
           </div>
         </div>

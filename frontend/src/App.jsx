@@ -6,6 +6,7 @@ import Temperature from './pages/Temperature';
 import Login from './pages/Login';
 import AddUser from './pages/AddUser';
 import TransformerData from './pages/TransformerData';
+import PerformanceReport from './pages/PerformanceReport';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { TrendDataProvider } from './contexts/TrendDataContext';
 import { TemperatureDataProvider } from './contexts/TemperatureDataContext';
@@ -48,6 +49,7 @@ function App() {
                   <Route path="transformer-data" element={<TransformerData />} />
                   <Route path="temperature" element={<Temperature />} />
                   <Route path="users" element={<AddUser />} />
+                  <Route path="performance-report" element={<PerformanceReport />} />
                 </Route>
               </Routes>
               <NetworkBadge />

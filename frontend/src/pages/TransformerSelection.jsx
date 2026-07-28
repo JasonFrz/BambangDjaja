@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Zap, Activity, ShieldCheck, ShieldAlert, Building2, MessageCircle } from 'lucide-react';
+import EnergyLoader from '../components/EnergyLoader';
 import { useApi } from '../contexts/ApiContext';
 import LoadingScreen from '../components/LoadingScreen';
 
@@ -132,9 +133,7 @@ const TransformerSelection = () => {
             {error}
           </div>
         ) : loading ? (
-          <div className="flex justify-center p-12">
-            <div className="w-10 h-10 border-4 border-[#0052cc]/30 border-t-[#0052cc] rounded-full animate-spin"></div>
-          </div>
+          <EnergyLoader text="Memuat daftar trafo..." />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
             {transformers.map((trafo, index) => (

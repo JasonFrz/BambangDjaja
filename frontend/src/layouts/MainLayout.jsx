@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Moon, Sun, LogOut, LayoutDashboard, TrendingUp, Users, ChevronLeft, ChevronRight, Settings, Key, ShieldCheck, Activity } from 'lucide-react';
+import { Moon, Sun, LogOut, LayoutDashboard, TrendingUp, Users, ChevronLeft, ChevronRight, Settings, Key, ShieldCheck, Activity, ClipboardList } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 const MainLayout = () => {
@@ -14,7 +14,7 @@ const MainLayout = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const dropdownRef = useRef(null);
 
-  const isTransformerDashboard = location.pathname === '/dashboard' || location.pathname === '/temperature' || location.pathname === '/transformer-data';
+  const isTransformerDashboard = location.pathname === '/dashboard' || location.pathname === '/temperature' || location.pathname === '/transformer-data' || location.pathname === '/performance-report';
   const isAdminDashboard = role === 'admin' && (location.pathname === '/users');
   const showSidebar = isTransformerDashboard || isAdminDashboard;
 
@@ -190,6 +190,18 @@ const MainLayout = () => {
                     <TrendingUp size={20} className="shrink-0" />
                     {!isSidebarCollapsed && <span className="truncate">Dashboard Physical</span>}
                   </Link>
+                  <Link 
+                    to="/performance-report"
+                    title={isSidebarCollapsed ? "Performance Report" : undefined}
+                    className={`flex items-center py-3 rounded-xl font-medium transition-all ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} ${
+                      location.pathname === '/performance-report' 
+                        ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
+                        : 'text-[#5e6c84] dark:text-[#94a3b8] hover:bg-[#f4f5f7] dark:hover:bg-white/5 hover:text-[#172b4d] dark:hover:text-white'
+                    }`}
+                  >
+                    <ClipboardList size={20} className="shrink-0" />
+                    {!isSidebarCollapsed && <span className="truncate">Performance Report</span>}
+                  </Link>
                 </>
               )}
             </nav>
@@ -252,6 +264,17 @@ const MainLayout = () => {
           >
             <TrendingUp size={20} />
             <span className="text-[10px] font-medium">Physical</span>
+          </Link>
+          <Link 
+            to="/performance-report"
+            className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
+              location.pathname === '/performance-report' 
+                ? 'text-[#0052cc] dark:text-[#4c9aff]' 
+                : 'text-[#5e6c84] dark:text-[#94a3b8] hover:text-[#172b4d] dark:hover:text-white'
+            }`}
+          >
+            <ClipboardList size={20} />
+            <span className="text-[10px] font-medium">Report</span>
           </Link>
         </nav>
       )}
