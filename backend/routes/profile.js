@@ -37,7 +37,8 @@ router.get('/', checkUser, (req, res) => {
     id: req.user.id,
     username: req.user.username,
     role: req.user.role,
-    nomor_telpon: req.user.nomor_telpon || ''
+    nomor_telpon: req.user.nomor_telpon || '',
+    email: req.user.email || ''
   });
 });
 
@@ -62,6 +63,19 @@ router.put('/', checkUser, async (req, res) => {
       }
       updates.push('nomor_telpon = ?');
       params.push(nomor_telpon);
+    }
+    
+    // Validasi email
+    if (req.body.email !== undefined && columns.includes('email')) {
+      const email = req.body.email.trim();
+      if (email !== '') {
+        const [existingEmail] = await req.db.execute('SELECT id FROM users WHERE email = ? AND username != ? LIMIT 1', [email, req.username]);
+        if (existingEmail.length > 0) {
+          return res.status(400).json({ error: 'Email is already used by another user' });
+        }
+      }
+      updates.push('email = ?');
+      params.push(email);
     }
 
     if (password) {

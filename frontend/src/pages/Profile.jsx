@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../contexts/ApiContext';
-import { User, Phone, Key, ShieldAlert, CheckCircle2, Save, Loader2, ArrowLeft } from 'lucide-react';
+import { User, Phone, Key, ShieldAlert, CheckCircle2, Save, Loader2, ArrowLeft, Mail } from 'lucide-react';
+import EnergyLoader from '../components/EnergyLoader';
 
 const Profile = () => {
   const [profile, setProfile] = useState(null);
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -31,6 +33,7 @@ const Profile = () => {
         if (res.ok) {
           setProfile(data);
           setPhone(data.nomor_telpon || '');
+          setEmail(data.email || '');
         } else {
           setError(data.error || 'Failed to fetch profile');
         }
@@ -53,6 +56,7 @@ const Profile = () => {
         headers: getHeaders(),
         body: JSON.stringify({ 
           nomor_telpon: phone,
+          email: email,
           password: password || undefined
         })
       });
@@ -73,9 +77,8 @@ const Profile = () => {
 
   if (!profile && !error) {
     return (
-      <div className="flex flex-col justify-center items-center h-64 space-y-4">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-        <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium animate-pulse">Loading data...</span>
+      <div className="flex flex-col justify-center items-center h-64">
+        <EnergyLoader text="Loading data..." />
       </div>
     );
   }
@@ -144,6 +147,20 @@ const Profile = () => {
                     onChange={(e) => setPhone(e.target.value)}
                     className="w-full bg-[#f4f5f7] dark:bg-[#070a13] border border-[#dfe1e6] dark:border-white/10 rounded-xl py-3 px-4 text-[#172b4d] dark:text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
                     placeholder="08xxxxxxxxxx"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-[#172b4d] dark:text-white flex items-center gap-2">
+                    <Mail size={16} className="text-gray-400" />
+                    Email
+                  </label>
+                  <input 
+                    type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-[#f4f5f7] dark:bg-[#070a13] border border-[#dfe1e6] dark:border-white/10 rounded-xl py-3 px-4 text-[#172b4d] dark:text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                    placeholder="your.email@example.com"
                   />
                 </div>
 

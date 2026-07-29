@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Moon, Sun, LogOut, LayoutDashboard, TrendingUp, Users, ChevronLeft, ChevronRight, Settings, Key, ShieldCheck, Activity, ClipboardList, User } from 'lucide-react';
+import { Moon, Sun, LogOut, LayoutDashboard, TrendingUp, Users, ChevronLeft, ChevronRight, Settings, Key, ShieldCheck, Activity, ClipboardList, User, Server } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 const MainLayout = () => {
@@ -213,18 +213,21 @@ const MainLayout = () => {
                     {!isSidebarCollapsed && <span className="truncate">Performance Report</span>}
                   </Link>
                   {role === 'superuser' && (
-                    <Link 
-                      to="/manage-users"
-                      title={isSidebarCollapsed ? "Manage Users" : undefined}
-                      className={`flex items-center py-3 rounded-xl font-medium transition-all ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} ${
-                        location.pathname === '/manage-users' 
-                          ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
-                          : 'text-[#5e6c84] dark:text-[#94a3b8] hover:bg-[#f4f5f7] dark:hover:bg-white/5 hover:text-[#172b4d] dark:hover:text-white'
-                      }`}
-                    >
-                      <Users size={20} className="shrink-0" />
-                      {!isSidebarCollapsed && <span className="truncate">Manage Users</span>}
-                    </Link>
+                    <>
+                      <Link 
+                        to="/manage-users"
+                        title={isSidebarCollapsed ? "Manage Users" : undefined}
+                        className={`flex items-center py-3 rounded-xl font-medium transition-all ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} ${
+                          location.pathname === '/manage-users' 
+                            ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
+                            : 'text-[#5e6c84] dark:text-[#94a3b8] hover:bg-[#f4f5f7] dark:hover:bg-white/5 hover:text-[#172b4d] dark:hover:text-white'
+                        }`}
+                      >
+                        <Users size={20} className="shrink-0" />
+                        {!isSidebarCollapsed && <span className="truncate">Manage Users</span>}
+                      </Link>
+
+                    </>
                   )}
                 </>
               )}

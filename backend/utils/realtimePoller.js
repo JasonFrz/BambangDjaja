@@ -1,6 +1,7 @@
 const { getDbConnection } = require('./db');
 const { calculateEfficiency } = require('./efficiency');
 const whatsappClient = require('./whatsappClient');
+const emailClient = require('./emailClient');
 
 const waCooldowns = new Map(); 
 const COOLDOWN_MS = 5 * 60 * 1000; 
@@ -83,21 +84,33 @@ const startRealtimePoller = (io, activeSubscriptions) => {
                     const [columnsInfo] = await db.execute("SHOW COLUMNS FROM users");
                     const columns = columnsInfo.map(c => c.Field);
                     
-                    if (columns.includes('nomor_telpon')) {
-                      const [users] = await db.execute("SELECT nomor_telpon FROM users WHERE nomor_telpon IS NOT NULL AND nomor_telpon != '' AND nomor_telpon != '+62'");
+                    if (columns.includes('nomor_telpon') || columns.includes('email')) {
+                      let selectCols = ['nomor_telpon'];
+                      if (columns.includes('email')) selectCols.push('email');
+                      
+                      const [users] = await db.execute(`SELECT ${selectCols.join(', ')} FROM users`);
                       for (const user of users) {
-                        const phone = user.nomor_telpon.trim();
+                        const phone = user.nomor_telpon ? user.nomor_telpon.trim() : '';
+                        const email = user.email ? user.email.trim() : '';
+                        
+                        const msg = `⚠️ *[TMU ALERT - FREKUENSI TINGGI]*\n\nTrafo *${trafoId}* (DB: ${dbName}) terdeteksi memiliki frekuensi tidak normal!\nFrekuensi saat ini: *${currentFreq.toFixed(2)} Hz*\n\nSilakan segera periksa sistem Anda.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
+                        const emailSubject = `[TMU ALERT] Frekuensi Tinggi Terdeteksi pada Trafo ${trafoId}`;
+                        const emailMsg = `Peringatan: Frekuensi tinggi terdeteksi!\n\nTrafo: ${trafoId}\nDatabase: ${dbName}\nFrekuensi saat ini: ${currentFreq.toFixed(2)} Hz\n\nSilakan segera periksa sistem Anda.\n\nPesan otomatis dari PT. Bambang Djaja - TMU System`;
+
                         if (phone.length >= 10) {
-                          const msg = `⚠️ *[TMU ALERT - FREKUENSI TINGGI]*\n\nTrafo *${trafoId}* (DB: ${dbName}) terdeteksi memiliki frekuensi tidak normal!\nFrekuensi saat ini: *${currentFreq.toFixed(2)} Hz*\n\nSilakan segera periksa sistem Anda.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
                           await whatsappClient.sendWhatsAppMessage(phone, msg).catch(() => {});
                           // Tambahkan delay agar puppeteer whatsapp tidak crash saat kirim massal
                           await new Promise(resolve => setTimeout(resolve, 3000));
+                        }
+                        
+                        if (email && email.includes('@')) {
+                          await emailClient.sendEmailMessage(email, emailSubject, emailMsg).catch(() => {});
                         }
                       }
                     }
                     waCooldowns.set(roomName, now);
                   } catch (waErr) {
-                    console.error('Gagal mengirim WA Alert:', waErr.message);
+                    console.error('Gagal mengirim WA/Email Alert:', waErr.message);
                   }
                 }
               }

@@ -146,7 +146,7 @@ const Login = () => {
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-[#8e9bb0] uppercase tracking-wider pl-1">
-                    Username
+                    Username or Email
                   </label>
                   <div className={`relative flex items-center bg-[#070a13] rounded-xl border transition-all duration-300 ${isFocused === 'username' ? 'border-[#4c9aff] shadow-[0_0_15px_rgba(76,154,255,0.2)]' : 'border-white/10 hover:border-white/20'}`}>
                     <div className={`pl-4 transition-colors duration-300 ${isFocused === 'username' ? 'text-[#4c9aff]' : 'text-[#5e6c84]'}`}>
@@ -159,7 +159,7 @@ const Login = () => {
                       onFocus={() => setIsFocused('username')}
                       onBlur={() => setIsFocused(null)}
                       className="w-full bg-transparent border-none py-3.5 px-3 text-white text-sm outline-none placeholder:text-[#5e6c84]"
-                      placeholder="admin"
+                      placeholder="admin / admin@example.com"
                       required
                     />
                   </div>

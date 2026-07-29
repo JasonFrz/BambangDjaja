@@ -30,7 +30,7 @@ const checkSuperuser = async (req, res, next) => {
 
 router.post('/', checkSuperuser, async (req, res) => {
   try {
-    const { username, password, nomor_telpon } = req.body;
+    const { username, password, nomor_telpon, email } = req.body;
     
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password are required' });
@@ -50,6 +50,19 @@ router.post('/', checkSuperuser, async (req, res) => {
         const [existingPhone] = await req.db.execute('SELECT id FROM users WHERE nomor_telpon = ? LIMIT 1', [nomor_telpon]);
         if (existingPhone.length > 0) {
           return res.status(400).json({ error: 'Phone number is already used by another user' });
+        }
+      }
+    }
+    
+    // Pengecekan email (jika diisi)
+    if (email && email.trim() !== '') {
+      const [columnsInfo] = await req.db.execute("SHOW COLUMNS FROM users");
+      const columns = columnsInfo.map(c => c.Field);
+      
+      if (columns.includes('email')) {
+        const [existingEmail] = await req.db.execute('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
+        if (existingEmail.length > 0) {
+          return res.status(400).json({ error: 'Email is already used by another user' });
         }
       }
     }
@@ -76,6 +89,12 @@ router.post('/', checkSuperuser, async (req, res) => {
     if (columns.includes('nomor_telpon')) {
       queryCols.push('nomor_telpon');
       queryVals.push(nomor_telpon || null);
+      placeholders.push('?');
+    }
+    
+    if (columns.includes('email')) {
+      queryCols.push('email');
+      queryVals.push(email || null);
       placeholders.push('?');
     }
 
@@ -114,6 +133,7 @@ router.get('/', checkSuperuser, async (req, res) => {
     
     let selectCols = ['id', 'username', 'role'];
     if (columns.includes('nomor_telpon')) selectCols.push('nomor_telpon');
+    if (columns.includes('email')) selectCols.push('email');
     if (columns.includes('created_at')) selectCols.push('created_at');
     if (columns.includes('company_name')) selectCols.push('company_name');
     
@@ -128,7 +148,7 @@ router.get('/', checkSuperuser, async (req, res) => {
 
 router.put('/:id', checkSuperuser, async (req, res) => {
   const { id } = req.params;
-  const { username, password, nomor_telpon } = req.body;
+  const { username, password, nomor_telpon, email } = req.body;
 
   try {
     const [existing] = await req.db.execute('SELECT id FROM users WHERE id = ? AND role = ? LIMIT 1', [id, 'user']);
@@ -148,8 +168,16 @@ router.put('/:id', checkSuperuser, async (req, res) => {
       }
     }
 
+    if (email && email.trim() !== '' && columns.includes('email')) {
+      const [existingEmail] = await req.db.execute('SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1', [email, id]);
+      if (existingEmail.length > 0) {
+        return res.status(400).json({ error: 'Email is already used by another user' });
+      }
+    }
+
     if (username !== undefined) { updates.push('username = ?'); params.push(username); }
     if (nomor_telpon !== undefined && columns.includes('nomor_telpon')) { updates.push('nomor_telpon = ?'); params.push(nomor_telpon); }
+    if (email !== undefined && columns.includes('email')) { updates.push('email = ?'); params.push(email); }
     if (password) {
         const password_hash = crypto.createHash('sha256').update(password).digest('hex');
         if (columns.includes('password_hash')) {

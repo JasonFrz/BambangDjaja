@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../contexts/ApiContext';
-import { Users, UserPlus, Key, ShieldAlert, X, CheckCircle2, Edit, Trash2, Phone, Search, Loader2 } from 'lucide-react';
+import { Users, UserPlus, Key, ShieldAlert, X, CheckCircle2, Edit, Trash2, Phone, Search, Loader2, Mail, Eye, EyeOff } from 'lucide-react';
+import EnergyLoader from '../components/EnergyLoader';
 
 const ManageUsersSuperuser = () => {
   const [users, setUsers] = useState([]);
@@ -11,6 +12,8 @@ const ManageUsersSuperuser = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);
 
   const [error, setError] = useState('');
@@ -64,13 +67,26 @@ const ManageUsersSuperuser = () => {
     setSuccess('');
     setIsLoading(true);
 
+    if (email && !email.toLowerCase().endsWith('@gmail.com')) {
+      setError('Email harus menggunakan domain @gmail.com.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (phone && !phone.startsWith('08')) {
+      setError('Nomor telepon harus diawali dengan 08.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const url = editingUserId ? `${apiUrl}/api/superuser-users/${editingUserId}` : `${apiUrl}/api/superuser-users`;
       const method = editingUserId ? 'PUT' : 'POST';
       const body = JSON.stringify({ 
         username, 
         password: password || undefined, 
-        nomor_telpon: phone 
+        nomor_telpon: phone,
+        email: email
       });
 
       const response = await fetch(url, {
@@ -99,6 +115,8 @@ const ManageUsersSuperuser = () => {
     setUsername('');
     setPassword('');
     setPhone('');
+    setEmail('');
+    setShowPassword(false);
     setShowCreateForm(false);
     setEditingUserId(null);
   };
@@ -108,6 +126,8 @@ const ManageUsersSuperuser = () => {
     setUsername(u.username || '');
     setPassword(''); // leave blank unless changing
     setPhone(u.nomor_telpon || '');
+    setEmail(u.email || '');
+    setShowPassword(false);
     setShowCreateForm(true);
     setError('');
     setSuccess('');
@@ -213,16 +233,40 @@ const ManageUsersSuperuser = () => {
                 <label className="text-sm font-semibold text-[#172b4d] dark:text-white">
                   Password {editingUserId && <span className="text-xs text-gray-400 font-normal">(Leave blank to keep unchanged)</span>}
                 </label>
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[#f4f5f7] dark:bg-[#070a13] border border-[#dfe1e6] dark:border-white/10 rounded-xl py-3 px-4 text-[#172b4d] dark:text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
-                  placeholder="Enter password"
-                  required={!editingUserId}
-                />
+                <div className="relative">
+                  <input 
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-[#f4f5f7] dark:bg-[#070a13] border border-[#dfe1e6] dark:border-white/10 rounded-xl py-3 px-4 pr-12 text-[#172b4d] dark:text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                    placeholder="Enter password"
+                    required={!editingUserId}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
-              <div className="space-y-1.5 md:col-span-2">
+              <div className="space-y-1.5 md:col-span-1">
+                <label className="text-sm font-semibold text-[#172b4d] dark:text-white">Email</label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                    <Mail size={16} />
+                  </div>
+                  <input 
+                    type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-[#f4f5f7] dark:bg-[#070a13] border border-[#dfe1e6] dark:border-white/10 rounded-xl py-3 pl-11 pr-4 text-[#172b4d] dark:text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                    placeholder="your.email@example.com"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5 md:col-span-1">
                 <label className="text-sm font-semibold text-[#172b4d] dark:text-white">Phone Number</label>
                 <div className="relative">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
@@ -278,6 +322,7 @@ const ManageUsersSuperuser = () => {
               <tr className="bg-[#f4f5f7]/90 dark:bg-white/5 border-b border-[#dfe1e6] dark:border-white/10 backdrop-blur-sm">
                 <th className="p-4 text-xs font-bold text-[#5e6c84] dark:text-[#94a3b8] uppercase tracking-wider">Username</th>
                 <th className="p-4 text-xs font-bold text-[#5e6c84] dark:text-[#94a3b8] uppercase tracking-wider">Role</th>
+                <th className="p-4 text-xs font-bold text-[#5e6c84] dark:text-[#94a3b8] uppercase tracking-wider">Email</th>
                 <th className="p-4 text-xs font-bold text-[#5e6c84] dark:text-[#94a3b8] uppercase tracking-wider">Phone</th>
                 <th className="p-4 text-xs font-bold text-[#5e6c84] dark:text-[#94a3b8] uppercase tracking-wider text-center">Actions</th>
               </tr>
@@ -285,16 +330,13 @@ const ManageUsersSuperuser = () => {
             <tbody className="divide-y divide-[#dfe1e6] dark:divide-white/10">
               {isLoadingUsers ? (
                 <tr>
-                  <td colSpan="4" className="p-12 text-center text-[#5e6c84] dark:text-[#94a3b8]">
-                    <div className="flex flex-col items-center justify-center space-y-3">
-                      <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-                      <span className="font-medium animate-pulse">Loading users...</span>
-                    </div>
+                  <td colSpan="5" className="p-12 text-center">
+                    <EnergyLoader text="Loading users..." />
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="p-8 text-center text-[#5e6c84] dark:text-[#94a3b8]">
+                  <td colSpan="5" className="p-8 text-center text-[#5e6c84] dark:text-[#94a3b8]">
                     No users found.
                   </td>
                 </tr>
@@ -313,6 +355,14 @@ const ManageUsersSuperuser = () => {
                       <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800/30">
                         {u.role}
                       </span>
+                    </td>
+                    <td className="p-4 text-sm text-[#172b4d] dark:text-gray-300">
+                      {u.email ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+                          <Mail size={12} className="text-gray-400" />
+                          {u.email}
+                        </span>
+                      ) : <span className="text-gray-400 italic">Not set</span>}
                     </td>
                     <td className="p-4 text-sm text-[#172b4d] dark:text-gray-300">
                       {u.nomor_telpon ? (

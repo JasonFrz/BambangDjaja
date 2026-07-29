@@ -248,6 +248,9 @@ const Dashboard = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportStart, setExportStart] = useState('');
   const [exportEnd, setExportEnd] = useState('');
+  
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [exportInterval, setExportInterval] = useState('');
   const [exportIntervalUnit, setExportIntervalUnit] = useState('second');
   const [isExporting, setIsExporting] = useState(false);
@@ -482,11 +485,15 @@ const Dashboard = () => {
   };
 
   const handleLogoutWA = async () => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus sesi WhatsApp (Logout)? Anda harus scan ulang QR code di server terminal.")) return;
+    setIsLoggingOut(true);
     try {
       await axios.post(`${apiUrl}/api/whatsapp/logout`);
+      setShowLogoutModal(false);
+      // Optional: Add a success toast here if desired
     } catch (error) {
       console.error("Gagal logout WA:", error);
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -894,13 +901,13 @@ const Dashboard = () => {
                     <button
                       onClick={handleTestWA}
                       onMouseDown={(e) => e.stopPropagation()}
-                      title="Test WA Notification"
+                      title="Test Notification (WA & Email)"
                       className="p-1.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800/80 transition-colors cursor-pointer"
                     >
                       <Send size={14} />
                     </button>
                     <button
-                      onClick={handleLogoutWA}
+                      onClick={() => setShowLogoutModal(true)}
                       onMouseDown={(e) => e.stopPropagation()}
                       title="Logout WA Session"
                       className="p-1.5 rounded-full bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800/80 transition-colors cursor-pointer"
@@ -1230,7 +1237,7 @@ const Dashboard = () => {
                     Batal
                   </button>
                   <button
-                    onClick={handleDownloadExcel}
+                    onClick={handleExportData}
                     disabled={isExporting}
                     className="px-5 py-2 rounded-lg font-semibold text-sm bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-2"
                   >
@@ -1242,6 +1249,47 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-white dark:bg-[#151521] rounded-2xl max-w-sm w-full shadow-2xl border border-gray-100 dark:border-white/10 overflow-hidden flex flex-col">
+            <div className="p-5 border-b border-gray-100 dark:border-white/10 flex items-center gap-3 bg-red-50/50 dark:bg-red-900/10">
+              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center text-red-600 dark:text-red-400">
+                <LogOut size={20} />
+              </div>
+              <h3 className="text-lg font-bold text-[#172b4d] dark:text-white">
+                Logout WhatsApp
+              </h3>
+            </div>
+            <div className="p-5 text-sm text-[#5e6c84] dark:text-[#94a3b8] leading-relaxed">
+              Apakah Anda yakin ingin menghapus sesi WhatsApp saat ini? Anda harus melakukan **scan ulang QR code** pada server terminal untuk mengaktifkan kembali bot WhatsApp.
+            </div>
+            <div className="p-4 border-t border-gray-100 dark:border-white/10 flex justify-end gap-3 bg-gray-50/50 dark:bg-white/5">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                disabled={isLoggingOut}
+                className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl transition-colors disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleLogoutWA}
+                disabled={isLoggingOut}
+                className="px-5 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white text-sm font-bold rounded-xl transition-colors flex items-center gap-2 shadow-lg shadow-red-500/20 disabled:shadow-none"
+              >
+                {isLoggingOut ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" /> Logout...
+                  </>
+                ) : (
+                  'Ya, Logout'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

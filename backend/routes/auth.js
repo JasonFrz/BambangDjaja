@@ -20,7 +20,19 @@ router.post('/login', async (req, res) => {
       console.log(`Checking database: ${dbName}...`);
       try {
         const db = await getDbConnection(dbName);
-        const [rows] = await db.execute('SELECT * FROM users WHERE username = ? LIMIT 1', [username]);
+        
+        const [columnsInfo] = await db.execute("SHOW COLUMNS FROM users");
+        const columns = columnsInfo.map(c => c.Field);
+        
+        let query = 'SELECT * FROM users WHERE username = ? LIMIT 1';
+        let queryParams = [username];
+        
+        if (columns.includes('email')) {
+          query = 'SELECT * FROM users WHERE username = ? OR email = ? LIMIT 1';
+          queryParams = [username, username];
+        }
+        
+        const [rows] = await db.execute(query, queryParams);
         
         if (rows.length > 0) {
           console.log(`User found in DB: ${dbName}`);

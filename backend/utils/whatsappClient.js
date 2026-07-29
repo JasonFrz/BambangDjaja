@@ -4,14 +4,29 @@ const qrcode = require('qrcode-terminal');
 let waClient = null;
 let waReady = false;
 
+const os = require('os');
+const isArm = os.platform() === 'linux' && os.arch().includes('arm');
+
 const initWhatsApp = () => {
   if (waClient) return;
 
   waClient = new Client({
     authStrategy: new LocalAuth({ dataPath: './wa_session' }),
+    webVersionCache: {
+      type: 'remote',
+      remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
+    },
     puppeteer: {
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage']
+      executablePath: isArm ? '/usr/bin/chromium-browser' : undefined,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-gpu',
+        '--disable-dev-shm-usage',
+        '--disable-software-rasterizer',
+        '--disable-extensions'
+      ]
     }
   });
 
@@ -42,9 +57,9 @@ const initWhatsApp = () => {
     console.log('⚠️ WhatsApp Disconnected:', reason);
 
     if (waClient) {
-      waClient.destroy().catch(() => {});
+      waClient.destroy().catch(() => { });
     }
-    
+
     waClient = null;
   });
 
@@ -83,8 +98,8 @@ const sendWhatsAppMessage = async (phone, text) => {
 const logoutWhatsApp = async () => {
   try {
     if (waClient) {
-      
-      await waClient.destroy().catch(() => {});
+
+      await waClient.destroy().catch(() => { });
       waClient = null;
     }
     waReady = false;
@@ -97,7 +112,7 @@ const logoutWhatsApp = async () => {
     setTimeout(() => {
       initWhatsApp();
     }, 2000);
-    
+
     return true;
   } catch (err) {
     console.error('Error logging out WA:', err);

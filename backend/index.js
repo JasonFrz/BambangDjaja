@@ -18,16 +18,16 @@ app.use(cors());
 app.use(express.json());
 app.set("io", io);
 
-const activeSubscriptions = new Map(); 
+const activeSubscriptions = new Map();
 
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
 
   socket.on("subscribe_transformer", (data) => {
-    
+
     const trafoId = data.trafoId || data;
     const dbName = data.dbName;
-    
+
     if (trafoId && dbName) {
       const roomName = `trafo_${dbName}_${trafoId}`;
       socket.join(roomName);
@@ -79,6 +79,7 @@ app.use("/api/trends", trendRoutes);
 app.use("/api/superadmin", superadminRoutes);
 app.use("/api/superuser-users", superuserUsersRoutes);
 app.use("/api/profile", profileRoutes);
+
 
 const startRealtimePoller = require("./utils/realtimePoller");
 const { initWhatsApp } = require("./utils/whatsappClient");
