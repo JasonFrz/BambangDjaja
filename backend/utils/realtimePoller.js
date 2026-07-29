@@ -80,11 +80,19 @@ const startRealtimePoller = (io, activeSubscriptions) => {
                 if (now - lastSent > COOLDOWN_MS) {
                   
                   try {
-                    const [users] = await db.execute('SELECT nomor_telpon FROM users WHERE nomor_telpon IS NOT NULL');
-                    for (const user of users) {
-                      if (user.nomor_telpon) {
-                        const msg = `⚠️ *[TMU ALERT - FREKUENSI TINGGI]*\n\nTrafo *${trafoId}* (DB: ${dbName}) terdeteksi memiliki frekuensi tidak normal!\nFrekuensi saat ini: *${currentFreq.toFixed(2)} Hz*\n\nSilakan segera periksa sistem Anda.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
-                        await whatsappClient.sendWhatsAppMessage(user.nomor_telpon, msg).catch(() => {});
+                    const [columnsInfo] = await db.execute("SHOW COLUMNS FROM users");
+                    const columns = columnsInfo.map(c => c.Field);
+                    
+                    if (columns.includes('nomor_telpon')) {
+                      const [users] = await db.execute("SELECT nomor_telpon FROM users WHERE nomor_telpon IS NOT NULL AND nomor_telpon != '' AND nomor_telpon != '+62'");
+                      for (const user of users) {
+                        const phone = user.nomor_telpon.trim();
+                        if (phone.length >= 10) {
+                          const msg = `⚠️ *[TMU ALERT - FREKUENSI TINGGI]*\n\nTrafo *${trafoId}* (DB: ${dbName}) terdeteksi memiliki frekuensi tidak normal!\nFrekuensi saat ini: *${currentFreq.toFixed(2)} Hz*\n\nSilakan segera periksa sistem Anda.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
+                          await whatsappClient.sendWhatsAppMessage(phone, msg).catch(() => {});
+                          // Tambahkan delay agar puppeteer whatsapp tidak crash saat kirim massal
+                          await new Promise(resolve => setTimeout(resolve, 3000));
+                        }
                       }
                     }
                     waCooldowns.set(roomName, now);

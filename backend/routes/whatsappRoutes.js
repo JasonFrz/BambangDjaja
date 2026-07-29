@@ -16,28 +16,51 @@ router.post('/test', async (req, res) => {
 
   try {
     const db = await getDbConnection(dbName);
-    const [users] = await db.execute('SELECT nomor_telpon FROM users WHERE username = ?', [username]);
-
-    if (users.length === 0) {
-      return res.status(404).json({ error: 'User tidak ditemukan' });
+    
+    // Mengecek apakah kolom nomor_telpon ada di table users
+    const [columnsInfo] = await db.execute("SHOW COLUMNS FROM users");
+    const columns = columnsInfo.map(c => c.Field);
+    
+    if (!columns.includes('nomor_telpon')) {
+      return res.status(400).json({ error: 'Database tidak memiliki fitur nomor telepon untuk pengguna.' });
     }
 
-    const phone = users[0].nomor_telpon;
-    if (!phone) {
-      return res.status(400).json({ error: 'Nomor telepon tidak terdaftar untuk user ini.' });
+    // Ambil SEMUA pengguna yang memiliki nomor telepon yang valid
+    const [users] = await db.execute("SELECT username, nomor_telpon, role FROM users WHERE nomor_telpon IS NOT NULL AND nomor_telpon != '' AND nomor_telpon != '+62'");
+
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'Tidak ada user dengan nomor telepon terdaftar di database ini.' });
     }
 
     const message = `🔔 *[TEST NOTIFIKASI TMU]*\n\nNotifikasi uji coba berhasil.\nFrekuensi saat ini: *${frequency.toFixed(2)} Hz*\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
     
-    await whatsappClient.sendWhatsAppMessage(phone, message);
-    
     console.log(`\n========================================`);
-    console.log(`✅ BERHASIL MENGIRIM PESAN WHATSAPP`);
-    console.log(`Username : ${username}`);
-    console.log(`No. HP   : ${phone}`);
+    console.log(`✅ MENGIRIM PESAN WHATSAPP KE ${users.length} USER`);
+    
+    let successCount = 0;
+    
+    for (const user of users) {
+      const phone = user.nomor_telpon.trim();
+      if (phone.length >= 10) {
+        try {
+          await whatsappClient.sendWhatsAppMessage(phone, message);
+          console.log(`- Berhasil: ${user.username} (${user.role}) - ${phone}`);
+          successCount++;
+          // Tambahkan delay agar puppeteer whatsapp tidak crash saat kirim massal
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        } catch (err) {
+          console.log(`- Gagal: ${user.username} (${user.role}) - ${phone} (${err.message})`);
+        }
+      }
+    }
+    
     console.log(`========================================\n`);
     
-    return res.json({ success: true, message: `Pesan berhasil dikirim ke ${phone}` });
+    if (successCount === 0) {
+       return res.status(500).json({ error: 'Gagal mengirim pesan ke semua nomor yang terdaftar. Pastikan nomor sudah benar dan terdaftar di WhatsApp.' });
+    }
+    
+    return res.json({ success: true, message: `Pesan berhasil dikirim ke ${successCount} user.` });
   } catch (error) {
     console.error('Test WA Error:', error);
     return res.status(500).json({ error: error.message || 'Gagal mengirim pesan WhatsApp' });

@@ -100,7 +100,6 @@ export const TemperatureDataProvider = ({ children }) => {
           adc_connected: connected
         };
       });
-      setIsLive(connected);
 
       if (connected) {
         const dataDate = msg.timestamp ? new Date(msg.timestamp) : new Date();
@@ -139,18 +138,35 @@ export const TemperatureDataProvider = ({ children }) => {
 
     socket.on("disconnect", () => {
       setIsConnected(false);
-      setIsLive(false);
     });
 
     socket.on("connect_error", () => {
       setIsConnected(false);
-      setIsLive(false);
     });
 
     return () => {
       socket.disconnect();
     };
   }, [apiUrl]);
+
+  useEffect(() => {
+    const checkLive = () => {
+      if (lastDataRef.current && lastDataRef.current.timestamp) {
+        const lastDataTime = new Date(lastDataRef.current.timestamp);
+        const diffMs = Date.now() - lastDataTime.getTime();
+        const isDataRecent = diffMs < 120000; // 2 menit
+        
+        // Kita juga perlu mengecek apakah socket masih connected
+        setIsLive(isConnected && isDataRecent);
+      } else {
+        setIsLive(false);
+      }
+    };
+    
+    checkLive();
+    const interval = setInterval(checkLive, 5000); 
+    return () => clearInterval(interval);
+  }, [isConnected]);
 
   return (
     <TemperatureDataContext.Provider value={{ liveData, data, isConnected, isLive }}>

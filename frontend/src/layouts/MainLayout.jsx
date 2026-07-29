@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Moon, Sun, LogOut, LayoutDashboard, TrendingUp, Users, ChevronLeft, ChevronRight, Settings, Key, ShieldCheck, Activity, ClipboardList } from 'lucide-react';
+import { Moon, Sun, LogOut, LayoutDashboard, TrendingUp, Users, ChevronLeft, ChevronRight, Settings, Key, ShieldCheck, Activity, ClipboardList, User } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 const MainLayout = () => {
@@ -14,9 +14,10 @@ const MainLayout = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const dropdownRef = useRef(null);
 
-  const isTransformerDashboard = location.pathname === '/dashboard' || location.pathname === '/temperature' || location.pathname === '/transformer-data' || location.pathname === '/performance-report';
-  const isAdminDashboard = role === 'admin' && (location.pathname === '/users');
-  const showSidebar = isTransformerDashboard || isAdminDashboard;
+  const isTransformerDashboard = ['/dashboard', '/temperature', '/transformer-data', '/performance-report', '/manage-users'].includes(location.pathname);
+  const isAdminDashboard = role === 'admin' && (location.pathname === '/users' || location.pathname === '/provisioning' || location.pathname === '/manage-transformers');
+  const isSuperuserDashboard = role === 'superuser' && (location.pathname === '/manage-users');
+  const showSidebar = isTransformerDashboard || isAdminDashboard || isSuperuserDashboard;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -91,6 +92,14 @@ const MainLayout = () => {
                   <p className="text-xs text-[#5e6c84] dark:text-[#94a3b8] capitalize mt-0.5">{role}</p>
                 </div>
                 <div className="p-2">
+                  <Link 
+                    to="/profile"
+                    onClick={() => setIsDropdownOpen(false)}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[#172b4d] dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-colors font-medium text-sm text-left mb-1"
+                  >
+                    <User size={16} />
+                    Profile
+                  </Link>
                   <button 
                     onClick={handleLogout}
                     className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium text-sm text-left"
@@ -152,6 +161,7 @@ const MainLayout = () => {
                 </>
               )}
 
+
               {isTransformerDashboard && (
                 <>
                   <Link 
@@ -167,18 +177,6 @@ const MainLayout = () => {
                     {!isSidebarCollapsed && <span className="truncate">Dashboard Electrical</span>}
                   </Link>
                   <Link 
-                    to="/transformer-data"
-                    title={isSidebarCollapsed ? "Transformer Data" : undefined}
-                    className={`flex items-center py-3 rounded-xl font-medium transition-all ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} ${
-                      location.pathname === '/transformer-data' 
-                        ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
-                        : 'text-[#5e6c84] dark:text-[#94a3b8] hover:bg-[#f4f5f7] dark:hover:bg-white/5 hover:text-[#172b4d] dark:hover:text-white'
-                    }`}
-                  >
-                    <Settings size={20} className="shrink-0" />
-                    {!isSidebarCollapsed && <span className="truncate">Transformer Data</span>}
-                  </Link>
-                  <Link 
                     to="/temperature"
                     title={isSidebarCollapsed ? "Dashboard Physical" : undefined}
                     className={`flex items-center py-3 rounded-xl font-medium transition-all ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} ${
@@ -189,6 +187,18 @@ const MainLayout = () => {
                   >
                     <TrendingUp size={20} className="shrink-0" />
                     {!isSidebarCollapsed && <span className="truncate">Dashboard Physical</span>}
+                  </Link>
+                  <Link 
+                    to="/transformer-data"
+                    title={isSidebarCollapsed ? "Transformer Data" : undefined}
+                    className={`flex items-center py-3 rounded-xl font-medium transition-all ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} ${
+                      location.pathname === '/transformer-data' 
+                        ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
+                        : 'text-[#5e6c84] dark:text-[#94a3b8] hover:bg-[#f4f5f7] dark:hover:bg-white/5 hover:text-[#172b4d] dark:hover:text-white'
+                    }`}
+                  >
+                    <Settings size={20} className="shrink-0" />
+                    {!isSidebarCollapsed && <span className="truncate">Transformer Data</span>}
                   </Link>
                   <Link 
                     to="/performance-report"
@@ -202,6 +212,20 @@ const MainLayout = () => {
                     <ClipboardList size={20} className="shrink-0" />
                     {!isSidebarCollapsed && <span className="truncate">Performance Report</span>}
                   </Link>
+                  {role === 'superuser' && (
+                    <Link 
+                      to="/manage-users"
+                      title={isSidebarCollapsed ? "Manage Users" : undefined}
+                      className={`flex items-center py-3 rounded-xl font-medium transition-all ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} ${
+                        location.pathname === '/manage-users' 
+                          ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
+                          : 'text-[#5e6c84] dark:text-[#94a3b8] hover:bg-[#f4f5f7] dark:hover:bg-white/5 hover:text-[#172b4d] dark:hover:text-white'
+                      }`}
+                    >
+                      <Users size={20} className="shrink-0" />
+                      {!isSidebarCollapsed && <span className="truncate">Manage Users</span>}
+                    </Link>
+                  )}
                 </>
               )}
             </nav>
@@ -276,6 +300,19 @@ const MainLayout = () => {
             <ClipboardList size={20} />
             <span className="text-[10px] font-medium">Report</span>
           </Link>
+          {role === 'superuser' && (
+            <Link 
+              to="/manage-users"
+              className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
+                location.pathname === '/manage-users' 
+                  ? 'text-indigo-700 dark:text-indigo-400' 
+                  : 'text-[#5e6c84] dark:text-[#94a3b8] hover:text-[#172b4d] dark:hover:text-white'
+              }`}
+            >
+              <Users size={20} />
+              <span className="text-[10px] font-medium">Users</span>
+            </Link>
+          )}
         </nav>
       )}
 

@@ -12,7 +12,7 @@ async function generateDummyData() {
     port: process.env.AIVEN_DB_PORT,
     user: process.env.AIVEN_DB_USER,
     password: process.env.AIVEN_DB_PASSWORD,
-    database: 'db_halo' 
+    database: 'db_baru' 
   });
 
   console.log('Connected to MySQL. Seeding dummy data...');
@@ -21,7 +21,7 @@ async function generateDummyData() {
   const oilRecords = [];
 
   const now = new Date();
-  const startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000); 
+  const startTime = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000); 
 
   for (let t = startTime.getTime(); t <= now.getTime(); t += 2000) {
     const ts = new Date(t).toISOString().slice(0, 19).replace('T', ' ');
@@ -63,18 +63,20 @@ async function generateDummyData() {
       ts,
       getRandomDecimal(45, 72),  
       getRandomDecimal(1.5, 3.2), 
-      1 
+      1, // oil_level_alarm
+      1, // oil_level_trip
+      1  // synced
     ]);
   }
 
   const elecSql = `INSERT INTO electrical_readings 
     (timestamp, phase_a_v, phase_b_v, phase_c_v, line_ab_v, line_bc_v, line_ca_v, 
      current_a, current_b, current_c, current_n, power_active_total_kw, power_reactive_total_kvar, power_apparent_total_kva, pf_total, 
-     power_active_a_kw, power_active_b_kw, power_active_c_kw, frequency, energy_active_total, energy_reactive_total, 
+     power_active_a, power_active_b, power_active_c, frequency, energy_active_total, energy_reactive_total, 
      avg_phase_v, avg_line_v, avg_current, current_unbalance, on_off_status, relay_status, alarm_status, synced) 
     VALUES ?`;
 
-  const oilSql = `INSERT INTO oil_readings (timestamp, oil_temperature, oil_pressure, synced) VALUES ?`;
+  const oilSql = `INSERT INTO oil_readings (timestamp, oil_temperature, oil_pressure, oil_level_alarm, oil_level_trip, synced) VALUES ?`;
 
   const BATCH_SIZE = 5000;
   for (let i = 0; i < electricalRecords.length; i += BATCH_SIZE) {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Zap } from 'lucide-react';
 
-const EnergyLoader = ({ text = "Memuat data...", fullScreen = false }) => {
+const EnergyLoader = ({ text = "Loading data...", fullScreen = false }) => {
   const content = (
     <div className="flex flex-col items-center justify-center p-8">
       <div className="relative w-24 h-24 mb-6">

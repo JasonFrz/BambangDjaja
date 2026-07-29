@@ -137,6 +137,13 @@ const PerformanceReport = () => {
 
     addRow("Oil Temperature", "°C", oil.min_oil_temp, oil.max_oil_temp, oil.avg_oil_temp);
     addRow("Oil Pressure", "Bar", oil.min_oil_press, oil.max_oil_press, oil.avg_oil_press);
+    
+    if (oil.alarm_triggers !== undefined) {
+      tableRows.push(["Oil Level Alarm (0)", "-", "-", `${oil.alarm_triggers} triggers`]);
+    }
+    if (oil.trip_triggers !== undefined) {
+      tableRows.push(["Oil Level Trip (0)", "-", "-", `${oil.trip_triggers} triggers`]);
+    }
 
     autoTable(doc, {
       head: [tableColumn],
@@ -286,6 +293,8 @@ const PerformanceReport = () => {
                   { name: "Efficiency", unit: "%", min: null, max: null, avg: reportData.electrical?.avg_efficiency },
                   { name: "Oil Temperature", unit: "°C", min: reportData.oil?.min_oil_temp, max: reportData.oil?.max_oil_temp, avg: reportData.oil?.avg_oil_temp },
                   { name: "Oil Pressure", unit: "Bar", min: reportData.oil?.min_oil_press, max: reportData.oil?.max_oil_press, avg: reportData.oil?.avg_oil_press },
+                  ...(reportData.oil?.alarm_triggers !== undefined ? [{ name: "Oil Level Alarm (0)", unit: "triggers", min: null, max: null, avg: reportData.oil.alarm_triggers }] : []),
+                  ...(reportData.oil?.trip_triggers !== undefined ? [{ name: "Oil Level Trip (0)", unit: "triggers", min: null, max: null, avg: reportData.oil.trip_triggers }] : []),
                 ].map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
                     <td className="px-6 py-3.5 font-medium border-r border-[#dfe1e6]/50 dark:border-white/5">{row.name}</td>

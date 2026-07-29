@@ -5,6 +5,8 @@ import Dashboard from './pages/Dashboard';
 import Temperature from './pages/Temperature';
 import Login from './pages/Login';
 import AddUser from './pages/AddUser';
+import ManageUsersSuperuser from './pages/ManageUsersSuperuser';
+import Profile from './pages/Profile';
 import TransformerData from './pages/TransformerData';
 import PerformanceReport from './pages/PerformanceReport';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -49,6 +51,8 @@ function App() {
                   <Route path="transformer-data" element={<TransformerData />} />
                   <Route path="temperature" element={<Temperature />} />
                   <Route path="users" element={<AddUser />} />
+                  <Route path="manage-users" element={<ManageUsersSuperuser />} />
+                  <Route path="profile" element={<Profile />} />
                   <Route path="performance-report" element={<PerformanceReport />} />
                 </Route>
               </Routes>

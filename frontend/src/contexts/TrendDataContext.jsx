@@ -11,7 +11,7 @@ export const TrendDataProvider = ({ children }) => {
   const [liveData, setLiveData] = useState([]);
   const { apiUrl } = useApi();
   const { data: wsData, isConnected } = useWebSocket(apiUrl);
-  const isLive = isConnected && (!wsData || wsData.modbus_connected !== false);
+  const [isLive, setIsLive] = useState(false);
   const lastDataRef = useRef(null);
 
   useEffect(() => {
@@ -97,6 +97,23 @@ export const TrendDataProvider = ({ children }) => {
       return updated;
     });
   }, [wsData]);
+
+  useEffect(() => {
+    const checkLive = () => {
+      if (lastDataRef.current && lastDataRef.current.timestamp) {
+        const lastDataTime = new Date(lastDataRef.current.timestamp);
+        const diffMs = Date.now() - lastDataTime.getTime();
+        const isDataRecent = diffMs < 120000; // 2 menit
+        setIsLive(isConnected && isDataRecent && (!wsData || wsData.modbus_connected !== false));
+      } else {
+        setIsLive(false);
+      }
+    };
+    
+    checkLive();
+    const interval = setInterval(checkLive, 5000); 
+    return () => clearInterval(interval);
+  }, [isConnected, wsData]);
 
   return (
     <TrendDataContext.Provider value={{ liveData, wsData, isConnected, isLive }}>

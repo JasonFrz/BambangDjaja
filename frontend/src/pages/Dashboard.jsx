@@ -249,7 +249,10 @@ const Dashboard = () => {
   const [exportStart, setExportStart] = useState('');
   const [exportEnd, setExportEnd] = useState('');
   const [exportInterval, setExportInterval] = useState('');
+  const [exportIntervalUnit, setExportIntervalUnit] = useState('second');
   const [isExporting, setIsExporting] = useState(false);
+  const [exportStep, setExportStep] = useState(0);
+  const [exportCount, setExportCount] = useState(0);
   const [downloadMB, setDownloadMB] = useState("0.0");
   const [exportError, setExportError] = useState(null);
   const [showFilterOptions, setShowFilterOptions] = useState(false);
@@ -328,11 +331,35 @@ const Dashboard = () => {
 
     try {
       setIsExporting(true);
+      setExportStep(1);
       setDownloadMB("0.0");
+      
+      const intervalTimer = setInterval(() => {
+        setExportStep(prev => prev < 3 ? prev + 1 : prev);
+      }, 5000);
       
       const startParam = exportStart.replace('T', ' ') + ':00';
       const endParam = exportEnd.replace('T', ' ') + ':00';
-      const url = `${apiUrl}/api/trends/export?start=${encodeURIComponent(startParam)}&end=${encodeURIComponent(endParam)}`;
+      let url = `${apiUrl}/api/trends/export?start=${encodeURIComponent(startParam)}&end=${encodeURIComponent(endParam)}`;
+      let countUrl = `${apiUrl}/api/trends/export-count?start=${encodeURIComponent(startParam)}&end=${encodeURIComponent(endParam)}`;
+      
+      if (exportInterval && !isNaN(exportInterval)) {
+        let multiplier = 1;
+        if (exportIntervalUnit === 'minute') multiplier = 60;
+        else if (exportIntervalUnit === 'hour') multiplier = 3600;
+        else if (exportIntervalUnit === 'day') multiplier = 86400;
+        
+        const finalIntervalSeconds = parseInt(exportInterval) * multiplier;
+        url += `&interval=${finalIntervalSeconds}`;
+        countUrl += `&interval=${finalIntervalSeconds}`;
+      }
+
+      try {
+        const countRes = await axios.get(countUrl);
+        setExportCount(countRes.data.total || 0);
+      } catch(e) {
+        setExportCount(0);
+      }
 
       const response = await axios.get(url, { 
         responseType: 'blob',
@@ -344,13 +371,23 @@ const Dashboard = () => {
         }
       });
 
+      clearInterval(intervalTimer);
+      setExportStep(4);
+      
       const rowCount = response.headers['x-row-count'];
 
       const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const filename = `Export_${exportStart}_to_${exportEnd}.xlsx`;
       saveAs(blob, filename);
-      setShowExportModal(false);
+      setTimeout(() => {
+        setShowExportModal(false);
+        setIsExporting(false);
+        setExportStep(0);
+      }, 1000);
     } catch (err) {
+      clearInterval(intervalTimer);
+      setIsExporting(false);
+      setExportStep(0);
       console.error(err);
       if (err.response && err.response.status === 404) {
         try {
@@ -1129,27 +1166,57 @@ const Dashboard = () => {
                   className="w-full px-4 py-2.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none focus:border-green-500 transition-colors"
                 />
               </div>
+
+              <div className="flex flex-col gap-1.5 mt-2">
+                <label className="text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8] uppercase tracking-wider">Interval Waktu - Opsional</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    placeholder="Contoh: 5"
+                    value={exportInterval}
+                    onChange={(e) => setExportInterval(e.target.value)}
+                    min="1"
+                    className="w-full px-4 py-2.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none focus:border-green-500 transition-colors"
+                  />
+                  <select
+                    value={exportIntervalUnit}
+                    onChange={(e) => setExportIntervalUnit(e.target.value)}
+                    className="w-1/3 px-4 py-2.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none focus:border-green-500 transition-colors cursor-pointer"
+                  >
+                    <option value="second" className="bg-white dark:bg-[#151521] text-[#172b4d] dark:text-white">Detik</option>
+                    <option value="minute" className="bg-white dark:bg-[#151521] text-[#172b4d] dark:text-white">Menit</option>
+                    <option value="hour" className="bg-white dark:bg-[#151521] text-[#172b4d] dark:text-white">Jam</option>
+                    <option value="day" className="bg-white dark:bg-[#151521] text-[#172b4d] dark:text-white">Hari</option>
+                  </select>
+                </div>
+                <span className="text-[10px] text-gray-500 mt-0.5">Kosongkan untuk menarik semua data tanpa difilter interval.</span>
+              </div>
             </div>
 
             <div className="p-5 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5">
               {isExporting ? (
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between items-center text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8]">
-                    <span className="flex items-center gap-2">
-                      <span className="animate-spin inline-block w-3 h-3 border-2 border-green-500 border-t-transparent rounded-full"></span>
-                      Memproses & Mengunduh Data...
+                <div className="flex flex-col gap-3">
+                  <div className="flex justify-between items-center text-xs font-semibold">
+                    <span className="flex items-center gap-2.5 text-blue-600 dark:text-blue-400">
+                      <div className="relative flex items-center justify-center w-4 h-4">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75 animate-ping"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                      </div>
+                      {exportStep === 1 && "Menyiapkan Koneksi ke Database..."}
+                      {exportStep === 2 && `Mengekstrak ${exportCount.toLocaleString('id-ID')} baris data...`}
+                      {exportStep === 3 && "Menyusun File Excel..."}
+                      {exportStep === 4 && "Berhasil! Sedang Menyimpan File..."}
                     </span>
-                    <span className="text-green-600 dark:text-green-400">{downloadMB} MB</span>
+                    <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-md text-[10px] tabular-nums font-bold">
+                      {downloadMB} MB
+                    </span>
                   </div>
-                  <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
-                    <div className="absolute top-0 left-0 h-full bg-green-500 rounded-full animate-[progress_1.5s_ease-in-out_infinite] w-[30%]"></div>
+                  <div className="w-full h-2.5 bg-gray-200 dark:bg-[#151521] rounded-full overflow-hidden relative shadow-inner">
+                    <div className="absolute top-0 left-0 h-full w-[40%] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full animate-[progress_1.5s_ease-in-out_infinite] shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>
                   </div>
-                  <style>{`
-                    @keyframes progress {
-                      0% { left: -30%; }
-                      100% { left: 100%; }
-                    }
-                  `}</style>
+                  <div className="text-[10px] text-gray-500 dark:text-gray-400 text-center animate-pulse">
+                    Proses ini dapat memakan waktu 10-60 detik tergantung pada rentang data. Mohon tunggu dan jangan tutup tab ini.
+                  </div>
                 </div>
               ) : (
                 <div className="flex justify-end gap-3">

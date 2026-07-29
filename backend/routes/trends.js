@@ -157,11 +157,36 @@ router.get("/oil", extractDb, async (req, res) => {
   }
 });
 
-router.get("/export", extractDb, async (req, res) => {
-  const { start, end } = req.query;
+router.get("/export-count", extractDb, async (req, res) => {
+  const { start, end, interval } = req.query;
   if (!start || !end) {
     return res.status(400).json({ error: "Missing start or end parameter" });
   }
+
+  try {
+    const db = await getDbConnection(req.dbName);
+    const [countRows] = await db.execute('SELECT COUNT(*) as total FROM electrical_readings WHERE timestamp >= ? AND timestamp <= ?', [start, end]);
+    
+    let estimatedRows = countRows[0].total;
+    const intervalMs = interval && !isNaN(interval) ? parseInt(interval) * 1000 : null;
+    if (intervalMs && intervalMs > 2000) {
+      estimatedRows = Math.floor(estimatedRows / (intervalMs / 2000));
+    }
+    
+    res.status(200).json({ total: estimatedRows });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.get("/export", extractDb, async (req, res) => {
+  const { start, end, interval } = req.query;
+  if (!start || !end) {
+    return res.status(400).json({ error: "Missing start or end parameter" });
+  }
+  
+  const intervalMs = interval && !isNaN(interval) ? parseInt(interval) * 1000 : null;
 
   try {
     const db = await getDbConnection(req.dbName);
@@ -228,13 +253,20 @@ router.get("/export", extractDb, async (req, res) => {
         power_active_total_kw as power_active_total,
         power_reactive_total_kvar as power_reactive_total,
         power_apparent_total_kva as power_apparent_total
-      FROM electrical_readings
+      FROM electrical_readings FORCE INDEX (idx_timestamp)
       WHERE timestamp >= ? AND timestamp <= ?
       ORDER BY timestamp ASC
     `;
     const elecStream = db.pool.query(elecQuery, [start, end]).stream();
 
+    let lastElecTs = null;
     for await (const row of elecStream) {
+      const currentTs = new Date(row.timestamp).getTime();
+      if (intervalMs && lastElecTs && (currentTs - lastElecTs < intervalMs)) {
+        continue;
+      }
+      lastElecTs = currentTs;
+      
       sheet.addRow({
         time: new Date(row.timestamp).toLocaleString('id-ID'),
         phaseA: r2(row.phase_a_v),
@@ -263,6 +295,8 @@ router.get("/export", extractDb, async (req, res) => {
       { header: 'Waktu (Time)', key: 'time', width: 25 },
       { header: 'Oil Temperature (°C)', key: 'oilTemp', width: 22 },
       { header: 'Oil Pressure (Bar)', key: 'oilPressure', width: 20 },
+      { header: 'Oil Level Alarm', key: 'oilAlarm', width: 20 },
+      { header: 'Oil Level Trip', key: 'oilTrip', width: 20 },
     ];
 
     oilSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -270,17 +304,26 @@ router.get("/export", extractDb, async (req, res) => {
     oilSheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
 
     const oilQuery = `
-      SELECT * FROM oil_readings
+      SELECT * FROM oil_readings FORCE INDEX (idx_timestamp)
       WHERE timestamp >= ? AND timestamp <= ?
       ORDER BY timestamp ASC
     `;
     const oilStream = db.pool.query(oilQuery, [start, end]).stream();
 
+    let lastOilTs = null;
     for await (const row of oilStream) {
+      const currentTs = new Date(row.timestamp).getTime();
+      if (intervalMs && lastOilTs && (currentTs - lastOilTs < intervalMs)) {
+        continue;
+      }
+      lastOilTs = currentTs;
+
       oilSheet.addRow({
         time: new Date(row.timestamp).toLocaleString('id-ID'),
         oilTemp: r2(row.oil_temperature),
         oilPressure: r2(row.oil_pressure),
+        oilAlarm: (row.oil_level_alarm == 1 || row.oil_level_alarm === true) ? 'Safe' : 'Alarm',
+        oilTrip: (row.oil_level_trip == 1 || row.oil_level_trip === true) ? 'Safe' : 'Trip',
       }).commit();
     }
     oilSheet.commit();
@@ -289,7 +332,9 @@ router.get("/export", extractDb, async (req, res) => {
     
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Server error saat export Excel" });
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Gagal mengekspor data" });
+    }
   }
 });
 
@@ -323,7 +368,9 @@ router.get("/report", extractDb, async (req, res) => {
     let oilQuery = `
       SELECT 
         MIN(oil_temperature) as min_oil_temp, MAX(oil_temperature) as max_oil_temp, AVG(oil_temperature) as avg_oil_temp,
-        MIN(oil_pressure) as min_oil_press, MAX(oil_pressure) as max_oil_press, AVG(oil_pressure) as avg_oil_press
+        MIN(oil_pressure) as min_oil_press, MAX(oil_pressure) as max_oil_press, AVG(oil_pressure) as avg_oil_press,
+        SUM(CASE WHEN oil_level_alarm = 0 THEN 1 ELSE 0 END) as alarm_triggers,
+        SUM(CASE WHEN oil_level_trip = 0 THEN 1 ELSE 0 END) as trip_triggers
       FROM oil_readings
     `;
     let oilParams = [];
