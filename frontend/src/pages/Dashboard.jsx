@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import axios from 'axios';
 import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine
@@ -108,6 +108,8 @@ const Dashboard = () => {
   const filterKey = useMemo(() => Object.values(filters).map(v => v ? '1' : '0').join(''), [filters]);
 
   const handleLayoutChange = useCallback((currentLayout, allLayouts) => {
+    if (!isEditingLayoutRef.current) return;
+    
     setLayouts(prev => {
       const merged = {};
       Object.keys(DEFAULT_LAYOUTS).forEach(bp => {
@@ -232,6 +234,11 @@ const Dashboard = () => {
   const [filterError, setFilterError] = useState(null);
 
   const [isEditingLayout, setIsEditingLayout] = useState(false);
+  const isEditingLayoutRef = useRef(isEditingLayout);
+  useEffect(() => {
+    isEditingLayoutRef.current = isEditingLayout;
+  }, [isEditingLayout]);
+
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Deep clone layouts to prevent react-grid-layout from mutating React state directly
