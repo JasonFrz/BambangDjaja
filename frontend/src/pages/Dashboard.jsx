@@ -92,7 +92,7 @@ const Dashboard = () => {
   ], []);
 
   const [layouts, setLayouts] = useState(() => {
-    const savedLayouts = localStorage.getItem('dashboardLayouts_v7');
+    const savedLayouts = localStorage.getItem(STORAGE_KEY);
     if (savedLayouts) {
       const parsed = JSON.parse(savedLayouts);
       Object.keys(parsed).forEach(bp => {
@@ -130,14 +130,14 @@ const Dashboard = () => {
       const prevStr = JSON.stringify(prev);
       if (newStr === prevStr) return prev;
 
-      localStorage.setItem('dashboardLayouts_v7', newStr);
+      localStorage.setItem(STORAGE_KEY, newStr);
       return merged;
     });
   }, [ALL_KEYS]);
 
   const resetLayout = () => {
     setLayouts(DEFAULT_LAYOUTS);
-    localStorage.removeItem('dashboardLayouts_v7');
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   const toggleFilter = (key) => {
