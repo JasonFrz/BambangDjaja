@@ -214,8 +214,7 @@ router.get("/export", extractDb, async (req, res) => {
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
       stream: res,
       useStyles: true,
-      useSharedStrings: false,
-      zip: { zlib: { level: 9 } }
+      useSharedStrings: false
     });
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -253,14 +252,14 @@ router.get("/export", extractDb, async (req, res) => {
         power_active_total_kw as power_active_total,
         power_reactive_total_kvar as power_reactive_total,
         power_apparent_total_kva as power_apparent_total
-      FROM electrical_readings FORCE INDEX (idx_timestamp)
+      FROM electrical_readings
       WHERE timestamp >= ? AND timestamp <= ?
       ORDER BY timestamp ASC
     `;
-    const elecStream = db.pool.query(elecQuery, [start, end]).stream();
+    const [elecRows] = await db.execute(elecQuery, [start, end]);
 
     let lastElecTs = null;
-    for await (const row of elecStream) {
+    for (const row of elecRows) {
       const currentTs = new Date(row.timestamp).getTime();
       if (intervalMs && lastElecTs && (currentTs - lastElecTs < intervalMs)) {
         continue;
@@ -304,14 +303,14 @@ router.get("/export", extractDb, async (req, res) => {
     oilSheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
 
     const oilQuery = `
-      SELECT * FROM oil_readings FORCE INDEX (idx_timestamp)
+      SELECT * FROM oil_readings
       WHERE timestamp >= ? AND timestamp <= ?
       ORDER BY timestamp ASC
     `;
-    const oilStream = db.pool.query(oilQuery, [start, end]).stream();
+    const [oilRows] = await db.execute(oilQuery, [start, end]);
 
     let lastOilTs = null;
-    for await (const row of oilStream) {
+    for (const row of oilRows) {
       const currentTs = new Date(row.timestamp).getTime();
       if (intervalMs && lastOilTs && (currentTs - lastOilTs < intervalMs)) {
         continue;
