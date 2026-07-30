@@ -711,7 +711,7 @@ const Dashboard = () => {
 
       <div ref={containerRef} className={isEditingLayout ? 'ring-2 ring-[#0052cc] ring-opacity-50 rounded-xl p-1 bg-[#0052cc]/5 dark:bg-[#0052cc]/10 transition-all' : 'transition-all'}>
         <ResponsiveGridLayout
-          key={`${filterKey}-${isEditingLayout}`}
+          key={filterKey}
           className="layout -mx-2 mt-4"
           width={width}
           layouts={effectiveLayouts}
