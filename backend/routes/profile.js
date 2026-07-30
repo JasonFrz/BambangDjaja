@@ -3,6 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { getDbConnection } = require('../utils/db');
+const formatPhoneNumber = require('../utils/phoneFormatter');
 
 const checkUser = async (req, res, next) => {
   const dbName = req.headers['x-db-name'];
@@ -43,7 +44,8 @@ router.get('/', checkUser, (req, res) => {
 });
 
 router.put('/', checkUser, async (req, res) => {
-  const { password, nomor_telpon } = req.body;
+  let { password, nomor_telpon } = req.body;
+  nomor_telpon = formatPhoneNumber(nomor_telpon);
 
   try {
     const [columnsInfo] = await req.db.execute("SHOW COLUMNS FROM users");

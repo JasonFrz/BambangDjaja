@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { getDbConnection } = require('../utils/db');
+const formatPhoneNumber = require('../utils/phoneFormatter');
 
 const checkAdmin = async (req, res, next) => {
   const dbName = req.headers['x-db-name'];
@@ -30,7 +31,8 @@ const checkAdmin = async (req, res, next) => {
 
 router.post('/', checkAdmin, async (req, res) => {
   try {
-    const { username, password, role, company_name, nomor_telpon } = req.body;
+    let { username, password, role, company_name, nomor_telpon } = req.body;
+    nomor_telpon = formatPhoneNumber(nomor_telpon);
     
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password are required' });
@@ -96,7 +98,8 @@ router.put('/:username/password', checkAdmin, async (req, res) => {
 
 router.put('/:username', checkAdmin, async (req, res) => {
   const { username } = req.params;
-  const { company_name, db_name, role, nomor_telpon } = req.body;
+  let { company_name, db_name, role, nomor_telpon } = req.body;
+  nomor_telpon = formatPhoneNumber(nomor_telpon);
 
   try {
     const [existing] = await req.db.execute('SELECT id FROM users WHERE username = ?', [username]);

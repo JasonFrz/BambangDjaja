@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const { getDbConnection } = require('../utils/db');
+const formatPhoneNumber = require('../utils/phoneFormatter');
 
 const checkSuperuser = async (req, res, next) => {
   const dbName = req.headers['x-db-name'];
@@ -30,7 +31,8 @@ const checkSuperuser = async (req, res, next) => {
 
 router.post('/', checkSuperuser, async (req, res) => {
   try {
-    const { username, password, nomor_telpon, email } = req.body;
+    let { username, password, nomor_telpon, email } = req.body;
+    nomor_telpon = formatPhoneNumber(nomor_telpon);
     
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password are required' });
@@ -148,7 +150,8 @@ router.get('/', checkSuperuser, async (req, res) => {
 
 router.put('/:id', checkSuperuser, async (req, res) => {
   const { id } = req.params;
-  const { username, password, nomor_telpon, email } = req.body;
+  let { username, password, nomor_telpon, email } = req.body;
+  nomor_telpon = formatPhoneNumber(nomor_telpon);
 
   try {
     const [existing] = await req.db.execute('SELECT id FROM users WHERE id = ? AND role = ? LIMIT 1', [id, 'user']);

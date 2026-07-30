@@ -4,7 +4,7 @@ import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine
 } from 'recharts';
 import { Link, useLocation } from "react-router-dom";
-import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Filter, ChevronDown, RefreshCw, Settings, GripHorizontal, Edit3, Send, LogOut, Download } from "lucide-react";
+import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Filter, ChevronDown, RefreshCw, Settings, GripHorizontal, Edit3, Send, LogOut, Download, Loader2 } from "lucide-react";
 import { useTrendData } from "../contexts/TrendDataContext";
 import { useTemperatureData } from "../contexts/TemperatureDataContext";
 import * as ExcelJS from 'exceljs';
@@ -1237,7 +1237,7 @@ const Dashboard = () => {
                     Batal
                   </button>
                   <button
-                    onClick={handleExportData}
+                    onClick={handleDownloadExcel}
                     disabled={isExporting}
                     className="px-5 py-2 rounded-lg font-semibold text-sm bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-2"
                   >
