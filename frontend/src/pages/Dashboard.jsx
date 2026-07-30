@@ -129,9 +129,6 @@ const Dashboard = () => {
       });
 
       const newStr = JSON.stringify(merged);
-      const prevStr = JSON.stringify(prev);
-      if (newStr === prevStr) return prev;
-
       localStorage.setItem(STORAGE_KEY, newStr);
       return merged;
     });
@@ -241,14 +238,8 @@ const Dashboard = () => {
 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  // Deep clone layouts to prevent react-grid-layout from mutating React state directly
-  const effectiveLayouts = useMemo(() => {
-    const cloned = {};
-    Object.keys(layouts).forEach(bp => {
-      cloned[bp] = (layouts[bp] || []).map(item => ({ ...item }));
-    });
-    return cloned;
-  }, [layouts]);
+  // Pass layouts directly, do not deep clone on every render, as RGL relies on object references.
+  const effectiveLayouts = layouts;
 
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportStart, setExportStart] = useState('');
