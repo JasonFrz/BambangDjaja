@@ -234,8 +234,14 @@ const Dashboard = () => {
   const [isEditingLayout, setIsEditingLayout] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  // Using layouts directly, since isDraggable and isResizable on ResponsiveGridLayout handles edit mode
-  const effectiveLayouts = layouts;
+  // Deep clone layouts to prevent react-grid-layout from mutating React state directly
+  const effectiveLayouts = useMemo(() => {
+    const cloned = {};
+    Object.keys(layouts).forEach(bp => {
+      cloned[bp] = (layouts[bp] || []).map(item => ({ ...item }));
+    });
+    return cloned;
+  }, [layouts]);
 
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportStart, setExportStart] = useState('');
