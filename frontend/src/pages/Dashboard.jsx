@@ -234,16 +234,8 @@ const Dashboard = () => {
   const [isEditingLayout, setIsEditingLayout] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  const effectiveLayouts = useMemo(() => {
-    const result = {};
-    Object.keys(layouts).forEach(bp => {
-      result[bp] = (layouts[bp] || []).map(item => ({
-        ...item,
-        static: !isEditingLayout
-      }));
-    });
-    return result;
-  }, [layouts, isEditingLayout]);
+  // Using layouts directly, since isDraggable and isResizable on ResponsiveGridLayout handles edit mode
+  const effectiveLayouts = layouts;
 
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportStart, setExportStart] = useState('');
