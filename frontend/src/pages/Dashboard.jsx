@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from "
 import axios from 'axios';
 import {
   AreaChart, Area, LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine
+  XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine,
+  PieChart, Pie, Cell, Label
 } from 'recharts';
 import {
   Zap, Activity, Waves, Gauge, Wifi, WifiOff, Plus, X, Settings2, Trash2,
@@ -156,7 +157,60 @@ const ChartTooltip = ({ active, payload, label }) => {
 };
 
 // ─── Stat Panel Renderer ─────────────────────────────────────────────────────
-const StatPanel = memo(({ panel, latestData, isEditing }) => {
+const SvgGauge = ({ percent, value, unit, isDanger, color }) => {
+  const radius = 80;
+  const strokeWidth = 24;
+  const cx = 100;
+  const cy = 90;
+  const circumference = Math.PI * radius;
+  const dashoffset = circumference - (percent * circumference);
+
+  return (
+    <svg viewBox="0 0 200 100" className="w-full h-full overflow-visible drop-shadow-sm">
+      <path
+        d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
+        fill="none"
+        stroke="rgba(150,150,150,0.15)"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+      <path
+        d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
+        fill="none"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={dashoffset}
+        className="transition-all duration-700 ease-out"
+      />
+      <text
+        x={cx}
+        y={cy - 6}
+        textAnchor="middle"
+        dominantBaseline="baseline"
+        fontSize="34"
+        fontWeight="bold"
+        className={`font-mono tracking-tighter ${isDanger ? 'fill-red-500' : 'fill-[#172b4d] dark:fill-white'}`}
+      >
+        {value.toFixed(2)}
+      </text>
+      <text
+        x={cx}
+        y={cy + 8}
+        textAnchor="middle"
+        dominantBaseline="hanging"
+        fontSize="12"
+        fontWeight="600"
+        className="fill-[#8993a4] dark:fill-[#64748b]"
+      >
+        {unit}
+      </text>
+    </svg>
+  );
+};
+
+const StatPanel = memo(({ panel, latestData, chartData, isEditing }) => {
   const metrics = panel.metrics || [];
   const firstMetric = METRICS[metrics[0]];
   const IconComponent = firstMetric?.icon || Activity;
@@ -177,6 +231,43 @@ const StatPanel = memo(({ panel, latestData, isEditing }) => {
     'Performance': 'bg-pink-500/5', 'Oil': 'bg-red-500/5',
   };
 
+  if (panel.type === 'gauge') {
+    const meta = METRICS[metrics[0]];
+    const val = latestData[metrics[0]] ?? 0;
+    
+    // Dynamic min/max defaults for the gauge bounds
+    let min = meta?.thresholds?.min ?? 0;
+    let max = meta?.thresholds?.max ?? (min + 100);
+    if (metrics[0] === 'frequency') { min = 45; max = 55; }
+    else if (metrics[0] === 'pfTotal') { min = 0; max = 1; }
+    else if (firstMetric?.group?.includes('Voltage')) { min = 0; max = 500; }
+    else if (firstMetric?.group === 'Current') { min = 0; max = 100; }
+    else if (firstMetric?.group === 'Power') { min = 0; max = 1000; }
+    if (val > max) max = Math.ceil(val * 1.2); // Ensure value is never strictly > max
+
+    const percent = Math.max(0, Math.min(1, (val - min) / (max - min)));
+    const tMin = meta?.thresholds?.min;
+    const tMax = meta?.thresholds?.max;
+    const isDanger = (tMin !== undefined && val < tMin) || (tMax !== undefined && val > tMax);
+    const color = isDanger ? '#ef4444' : (meta?.color || '#3b82f6');
+
+    return (
+      <div className="h-full w-full flex flex-col relative">
+        <div className={`flex items-center gap-3 mb-2 select-none z-10 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
+          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center text-white shadow-lg shrink-0 ${isDanger ? 'animate-pulse' : ''}`}>
+            <IconComponent size={18} />
+          </div>
+          <h3 className="font-semibold text-[#172b4d] dark:text-white text-sm font-heading tracking-tight truncate flex-1">{panel.title}</h3>
+          {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
+        </div>
+        <div className="flex-1 relative overflow-hidden flex flex-col justify-end w-full pb-4">
+          <SvgGauge percent={percent} value={val} unit={meta?.unit} isDanger={isDanger} color={color} />
+        </div>
+      </div>
+    );
+  }
+
+  // panel.type === 'stat'
   return (
     <div className="h-full w-full flex flex-col">
       <div className={`flex items-center gap-3 mb-3 select-none ${isEditing ? 'cursor-move drag-handle' : ''}`}>
@@ -186,18 +277,34 @@ const StatPanel = memo(({ panel, latestData, isEditing }) => {
         <h3 className="font-semibold text-[#172b4d] dark:text-white text-sm font-heading tracking-tight truncate flex-1">{panel.title}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
-      <div className="flex-1 flex flex-col justify-center gap-2 overflow-y-auto custom-scrollbar">
-        {metrics.length === 1 ? (
-          // Single big number
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-3xl font-bold text-[#172b4d] dark:text-white font-mono tracking-tight">
+      
+      {metrics.length === 1 ? (
+        <div className="flex-1 flex flex-col min-h-0 relative group" style={{ containerType: 'inline-size' }}>
+          <div className="absolute inset-0 flex flex-col items-center justify-center pb-8 z-10 pointer-events-none">
+            <span className="font-bold text-[#172b4d] dark:text-white font-mono tracking-tighter drop-shadow-md leading-none" style={{ fontSize: 'clamp(24px, 20cqi, 72px)' }}>
               {(latestData[metrics[0]] ?? 0).toFixed(2)}
             </span>
-            <span className="text-sm font-semibold text-[#8993a4] dark:text-[#64748b]">{METRICS[metrics[0]]?.unit}</span>
+            <span className="font-semibold text-[#8993a4] dark:text-[#64748b] mt-1" style={{ fontSize: 'clamp(10px, 5cqi, 16px)' }}>{METRICS[metrics[0]]?.unit}</span>
           </div>
-        ) : (
-          // Multiple metric rows
-          metrics.map(m => {
+          {chartData && chartData.length > 0 && (
+            <div className="absolute bottom-0 left-0 right-0 h-2/5 opacity-40 group-hover:opacity-80 transition-opacity">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id={`spark-${panel.id}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={METRICS[metrics[0]]?.color || '#3b82f6'} stopOpacity={0.5} />
+                      <stop offset="95%" stopColor={METRICS[metrics[0]]?.color || '#3b82f6'} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <Area type="monotone" dataKey={metrics[0]} stroke={METRICS[metrics[0]]?.color || '#3b82f6'} fill={`url(#spark-${panel.id})`} strokeWidth={2} dot={false} isAnimationActive={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col justify-center gap-2 overflow-y-auto custom-scrollbar">
+          {metrics.map(m => {
             const meta = METRICS[m];
             if (!meta) return null;
             return (
@@ -212,9 +319,9 @@ const StatPanel = memo(({ panel, latestData, isEditing }) => {
                 </div>
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 });
@@ -467,8 +574,8 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel }) => {
           {/* Panel Type */}
           <div>
             <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wider">Panel Type</label>
-            <div className="flex gap-2">
-              {[{ v: 'stat', l: '📊 Real-time Stats', d: 'Displays current values' }, { v: 'chart', l: '📈 Trend Chart', d: 'Displays data charts' }].map(t => (
+            <div className="flex gap-2 flex-wrap">
+              {[{ v: 'stat', l: '📊 Stat + Trend', d: 'Big Number & Sparkline' }, { v: 'chart', l: '📈 Trend Chart', d: 'Full data charts' }, { v: 'gauge', l: '⏱️ Gauge', d: 'Speedometer (PF & Hz)' }].map(t => (
                 <button key={t.v} onClick={() => setPanelType(t.v)} className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold transition-all text-left ${panelType === t.v ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/20' : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'}`}>
                   <div className="font-bold">{t.l}</div>
                   <div className={`text-[10px] mt-0.5 ${panelType === t.v ? 'text-blue-100' : 'text-gray-400'}`}>{t.d}</div>
@@ -977,7 +1084,7 @@ const Dashboard = () => {
                   ) : panel.type === 'chart' ? (
                     <ChartPanel panel={panel} chartData={getChartDataForPanel(panel)} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />
                   ) : (
-                    <StatPanel panel={panel} latestData={latestData} isEditing={isEditing} />
+                    <StatPanel panel={panel} latestData={latestData} chartData={getChartDataForPanel(panel)} isEditing={isEditing} />
                   )}
                 </div>
               </div>
