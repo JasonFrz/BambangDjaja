@@ -248,10 +248,12 @@ const MainLayout = () => {
             <Outlet />
           </main>
     
-          <footer className="py-4 md:py-6 px-4 md:px-8 flex flex-col sm:flex-row justify-between items-center text-[#5e6c84] dark:text-[#94a3b8] text-xs sm:text-sm shrink-0 mt-auto gap-2 sm:gap-0 text-center sm:text-left">
-            <p>&copy; {new Date().getFullYear()} PT. Bambang Djaja. All rights reserved.</p>
-            <p>Transformer Monitoring Unit V1.0</p>
-          </footer>
+          {!isFullscreen && (
+            <footer className="py-4 md:py-6 px-4 md:px-8 flex flex-col sm:flex-row justify-between items-center text-[#5e6c84] dark:text-[#94a3b8] text-xs sm:text-sm shrink-0 mt-auto gap-2 sm:gap-0 text-center sm:text-left">
+              <p>&copy; {new Date().getFullYear()} PT. Bambang Djaja. All rights reserved.</p>
+              <p>Transformer Monitoring Unit V1.0</p>
+            </footer>
+          )}
         </div>
       </div>
 

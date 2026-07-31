@@ -28,14 +28,14 @@ const METRICS = {
   // Electrical — from TrendDataContext wsData/liveData
   phaseA:             { label: 'Phase A Voltage', unit: 'V', color: '#ef4444', group: 'Phase Voltage', icon: Zap, source: 'electrical', thresholds: { min: 200, max: 240 } },
   phaseB:             { label: 'Phase B Voltage', unit: 'V', color: '#eab308', group: 'Phase Voltage', icon: Zap, source: 'electrical', thresholds: { min: 200, max: 240 } },
-  phaseC:             { label: 'Phase C Voltage', unit: 'V', color: '#1f2937', group: 'Phase Voltage', icon: Zap, source: 'electrical', thresholds: { min: 200, max: 240 } },
+  phaseC:             { label: 'Phase C Voltage', unit: 'V', color: '#3b82f6', group: 'Phase Voltage', icon: Zap, source: 'electrical', thresholds: { min: 200, max: 240 } },
   lineAB:             { label: 'Line AB Voltage', unit: 'V', color: '#ec4899', group: 'Line Voltage', icon: Activity, source: 'electrical' },
   lineBC:             { label: 'Line BC Voltage', unit: 'V', color: '#8b5cf6', group: 'Line Voltage', icon: Activity, source: 'electrical' },
   lineCA:             { label: 'Line CA Voltage', unit: 'V', color: '#06b6d4', group: 'Line Voltage', icon: Activity, source: 'electrical' },
   currentA:           { label: 'Current A', unit: 'A', color: '#ef4444', group: 'Current', icon: Waves, source: 'electrical' },
   currentB:           { label: 'Current B', unit: 'A', color: '#eab308', group: 'Current', icon: Waves, source: 'electrical' },
-  currentC:           { label: 'Current C', unit: 'A', color: '#1f2937', group: 'Current', icon: Waves, source: 'electrical' },
-  currentN:           { label: 'Current N', unit: 'A', color: '#3b82f6', group: 'Current', icon: Waves, source: 'electrical' },
+  currentC:           { label: 'Current C', unit: 'A', color: '#3b82f6', group: 'Current', icon: Waves, source: 'electrical' },
+  currentN:           { label: 'Current N', unit: 'A', color: '#9ca3af', group: 'Current', icon: Waves, source: 'electrical' },
   powerActiveTotal:   { label: 'Active Power', unit: 'kW', color: '#10b981', group: 'Power', icon: TrendingUp, source: 'electrical' },
   powerReactiveTotal: { label: 'Reactive Power', unit: 'kVAR', color: '#f59e0b', group: 'Power', icon: TrendingUp, source: 'electrical' },
   powerApparentTotal: { label: 'Apparent Power', unit: 'kVA', color: '#8b5cf6', group: 'Power', icon: TrendingUp, source: 'electrical' },
@@ -672,6 +672,12 @@ const Dashboard = () => {
   const { confirm } = useDialog();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSyncHoverActive, setIsSyncHoverActive] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const handleFullscreen = () => setIsFullscreen(!!document.fullscreenElement);
@@ -681,7 +687,11 @@ const Dashboard = () => {
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => console.error(err));
+      if (containerRef.current) {
+        containerRef.current.requestFullscreen().catch(err => console.error(err));
+      } else {
+        document.documentElement.requestFullscreen().catch(err => console.error(err));
+      }
     } else {
       document.exitFullscreen();
     }
@@ -809,12 +819,18 @@ const Dashboard = () => {
   }, []);
 
   // ─── Generate layout for a new panel ─────────────────────────────────
-  const generateLayoutForPanel = useCallback((panelId, type) => {
+  const generateLayoutForPanel = useCallback((panelId, type, currentLayouts = {}) => {
     const isChart = type === 'chart';
+    
+    const getBottomY = (bpLayout) => {
+      if (!bpLayout || bpLayout.length === 0) return 0;
+      return Math.max(...bpLayout.map(l => (l.y || 0) + (l.h || 0)));
+    };
+
     return {
-      lg: { i: panelId, x: 0, y: Infinity, w: isChart ? 6 : 3, h: isChart ? 5 : 4, minW: 2, minH: isChart ? 4 : 2 },
-      md: { i: panelId, x: 0, y: Infinity, w: isChart ? 10 : 5, h: isChart ? 5 : 4, minW: 2, minH: isChart ? 4 : 2 },
-      sm: { i: panelId, x: 0, y: Infinity, w: 6, h: isChart ? 5 : 4, minW: 2, minH: isChart ? 4 : 2 },
+      lg: { i: panelId, x: 0, y: getBottomY(currentLayouts.lg), w: isChart ? 6 : 3, h: isChart ? 5 : 4, minW: 2, minH: isChart ? 4 : 2 },
+      md: { i: panelId, x: 0, y: getBottomY(currentLayouts.md), w: isChart ? 10 : 5, h: isChart ? 5 : 4, minW: 2, minH: isChart ? 4 : 2 },
+      sm: { i: panelId, x: 0, y: getBottomY(currentLayouts.sm), w: 6, h: isChart ? 5 : 4, minW: 2, minH: isChart ? 4 : 2 },
     };
   }, []);
 
@@ -832,7 +848,7 @@ const Dashboard = () => {
     setGridLayouts(prev => {
       const hasLayout = Object.values(prev).some(bp => bp.some(l => l.i === panelConfig.id));
       if (hasLayout) return prev;
-      const newL = generateLayoutForPanel(panelConfig.id, panelConfig.type);
+      const newL = generateLayoutForPanel(panelConfig.id, panelConfig.type, prev);
       const updated = {};
       Object.keys(prev).forEach(bp => {
         updated[bp] = [...(prev[bp] || []), newL[bp] || newL.lg];
@@ -981,9 +997,9 @@ const Dashboard = () => {
   }
 
   return (
-    <div ref={containerRef} className="flex flex-col gap-4 animate-[fadeIn_0.3s_ease-out] w-full">
+    <div ref={containerRef} className={`flex flex-col gap-4 animate-[fadeIn_0.3s_ease-out] w-full ${isFullscreen ? 'p-6 bg-[#f4f7fe] dark:bg-[#0b1120] min-h-screen' : ''}`}>
       {/* ─── Header ─── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full relative">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <h2 className="text-2xl md:text-3xl font-bold text-[#172b4d] dark:text-white font-heading tracking-tight">Dashboard</h2>
@@ -1000,6 +1016,18 @@ const Dashboard = () => {
             Real-time Monitoring • {panels.length} active panels
           </p>
         </div>
+
+        {/* Clock for Fullscreen Mode */}
+        {isFullscreen && (
+          <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 flex-col items-center justify-center">
+            <span className="text-[#172b4d] dark:text-white font-bold tracking-widest text-lg leading-none">
+              {currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </span>
+            <span className="text-xs text-[#5e6c84] dark:text-[#94a3b8] font-medium mt-1">
+              {currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </span>
+          </div>
+        )}
 
         {/* Toolbar */}
         <div className="flex items-center gap-2 flex-wrap">
