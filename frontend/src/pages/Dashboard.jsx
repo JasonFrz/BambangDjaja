@@ -172,14 +172,14 @@ const SvgGauge = ({ percent, value, unit, isDanger, color }) => {
         fill="none"
         stroke="rgba(150,150,150,0.15)"
         strokeWidth={strokeWidth}
-        strokeLinecap="round"
+        strokeLinecap="butt"
       />
       <path
         d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
         fill="none"
         stroke={color}
         strokeWidth={strokeWidth}
-        strokeLinecap="round"
+        strokeLinecap="butt"
         strokeDasharray={circumference}
         strokeDashoffset={dashoffset}
         className="transition-all duration-700 ease-out"
@@ -191,7 +191,7 @@ const SvgGauge = ({ percent, value, unit, isDanger, color }) => {
         dominantBaseline="baseline"
         fontSize="34"
         fontWeight="bold"
-        className={`font-mono tracking-tighter ${isDanger ? 'fill-red-500' : 'fill-[#172b4d] dark:fill-white'}`}
+        className={`font-sans tracking-tight ${isDanger ? 'fill-red-500' : 'fill-[#172b4d] dark:fill-white'}`}
       >
         {value.toFixed(2)}
       </text>
@@ -281,7 +281,7 @@ const StatPanel = memo(({ panel, latestData, chartData, isEditing }) => {
       {metrics.length === 1 ? (
         <div className="flex-1 flex flex-col min-h-0 relative group" style={{ containerType: 'inline-size' }}>
           <div className="absolute inset-0 flex flex-col items-center justify-center pb-8 z-10 pointer-events-none">
-            <span className="font-bold text-[#172b4d] dark:text-white font-mono tracking-tighter drop-shadow-md leading-none" style={{ fontSize: 'clamp(24px, 20cqi, 72px)' }}>
+            <span className="font-bold text-[#172b4d] dark:text-white font-sans tracking-tight drop-shadow-md leading-none" style={{ fontSize: 'clamp(24px, 20cqi, 72px)' }}>
               {(latestData[metrics[0]] ?? 0).toFixed(2)}
             </span>
             <span className="font-semibold text-[#8993a4] dark:text-[#64748b] mt-1" style={{ fontSize: 'clamp(10px, 5cqi, 16px)' }}>{METRICS[metrics[0]]?.unit}</span>
