@@ -9,7 +9,8 @@ import {
   Zap, Activity, Waves, Gauge, Wifi, WifiOff, Plus, X, Settings2, Trash2,
   RefreshCw, GripVertical, Edit3, Send, LogOut, Download, Loader2,
   ChevronDown, Check, Search, Layers, RotateCcw, Thermometer,
-  TrendingUp, BarChart3, Eye, AlertTriangle, Maximize2, Minimize2, MousePointer2
+  TrendingUp, BarChart3, Eye, AlertTriangle, Maximize2, Minimize2, MousePointer2,
+  BellRing, Power, FileDown, Monitor, Crosshair, LayoutGrid, PlusSquare
 } from "lucide-react";
 import { useTrendData } from "../contexts/TrendDataContext";
 import { useTemperatureData } from "../contexts/TemperatureDataContext";
@@ -130,6 +131,7 @@ const DEFAULT_GRID_LAYOUTS = {
 // ─── Storage Keys ────────────────────────────────────────────────────────────
 const PANELS_KEY = 'grafana_panels_v2';
 const LAYOUTS_KEY = 'grafana_layouts_v2';
+const PROFILES_KEY = 'grafana_profiles_v3';
 const uid = () => 'p_' + Math.random().toString(36).substr(2, 9);
 
 // ─── Custom Tooltip ──────────────────────────────────────────────────────────
@@ -254,9 +256,6 @@ const StatPanel = memo(({ panel, latestData, chartData, isEditing }) => {
     return (
       <div className="h-full w-full flex flex-col relative">
         <div className={`flex items-center gap-3 mb-2 select-none z-10 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center text-white shadow-lg shrink-0 ${isDanger ? 'animate-pulse' : ''}`}>
-            <IconComponent size={18} />
-          </div>
           <h3 className="font-semibold text-[#172b4d] dark:text-white text-sm font-heading tracking-tight truncate flex-1">{panel.title}</h3>
           {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
         </div>
@@ -271,9 +270,6 @@ const StatPanel = memo(({ panel, latestData, chartData, isEditing }) => {
   return (
     <div className="h-full w-full flex flex-col">
       <div className={`flex items-center gap-3 mb-3 select-none ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center text-white shadow-lg shadow-black/10 shrink-0`}>
-          <IconComponent size={18} />
-        </div>
         <h3 className="font-semibold text-[#172b4d] dark:text-white text-sm font-heading tracking-tight truncate flex-1">{panel.title}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
@@ -451,7 +447,7 @@ const ChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => 
             {metrics.map(m => (
               <Line key={m} type="monotone" dataKey={m} name={METRICS[m]?.label || m} stroke={METRICS[m]?.color || '#8884d8'} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls isAnimationActive={false} />
             ))}
-            {metrics.includes('frequency') && <ReferenceLine y={52.5} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: 'Limit', fill: '#ef4444', fontSize: 10 }} />}
+            {metrics.includes('frequency') && <ReferenceLine y={50.5} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: 'Limit (50.5)', fill: '#ef4444', fontSize: 10 }} />}
           </LineChart>
         </ResponsiveContainer>
       );
@@ -477,18 +473,15 @@ const ChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => 
           {metrics.map(m => (
             <Area key={m} type="monotone" dataKey={m} name={METRICS[m]?.label || m} stroke={METRICS[m]?.color || '#8884d8'} fill={`url(#areaGrad-${m})`} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls isAnimationActive={false} />
           ))}
-          {metrics.includes('frequency') && <ReferenceLine y={52.5} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: 'Limit', fill: '#ef4444', fontSize: 10 }} />}
+          {metrics.includes('frequency') && <ReferenceLine y={50.5} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: 'Limit (50.5)', fill: '#ef4444', fontSize: 10 }} />}
         </AreaChart>
       </ResponsiveContainer>
     );
   };
 
   return (
-    <div className={`h-full w-full flex flex-col transition-colors duration-500 ${hasViolation ? 'ring-2 ring-red-500/50 bg-red-500/5 dark:bg-red-500/10 rounded-xl' : ''}`}>
+    <div className="h-full w-full flex flex-col transition-colors duration-500">
       <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center text-white shadow-md shrink-0 ${hasViolation ? 'animate-pulse' : ''}`}>
-          <IconComponent size={16} />
-        </div>
         <h3 className="text-sm font-semibold text-[#172b4d] dark:text-white font-heading truncate flex-1">{panel.title}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
@@ -520,15 +513,41 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel }) => {
   }, [editingPanel, isOpen]);
 
   const toggleMetric = (key) => {
-    setSelectedMetrics(prev => prev.includes(key) ? prev.filter(m => m !== key) : [...prev, key]);
+    setSelectedMetrics(prev => {
+      if (prev.includes(key)) return prev.filter(m => m !== key);
+      if (panelType === 'gauge') return [key]; // Only allow 1 metric for gauge, replace if new selected
+      return [...prev, key];
+    });
   };
+
+  // Enforce single metric if user switches type to gauge after selecting multiple
+  useEffect(() => {
+    if (panelType === 'gauge' && selectedMetrics.length > 1) {
+      setSelectedMetrics([selectedMetrics[0]]);
+    }
+  }, [panelType, selectedMetrics]);
+
+  // Compute dynamic auto-title
+  const derivedTitle = useMemo(() => {
+    if (selectedMetrics.length === 0) return 'Custom Panel';
+    if (selectedMetrics.length === 1) return METRICS[selectedMetrics[0]]?.label || selectedMetrics[0];
+    
+    const groups = new Set(selectedMetrics.map(m => METRICS[m]?.group).filter(Boolean));
+    if (groups.size === 1) return `${Array.from(groups)[0]} Overview`;
+    
+    // Check if it's all some kind of voltage
+    const allVoltages = selectedMetrics.every(m => METRICS[m]?.group?.includes('Voltage'));
+    if (allVoltages) return 'Voltage Overview';
+    
+    return 'Mixed Metrics Overview';
+  }, [selectedMetrics]);
 
   const handleSave = () => {
     if (selectedMetrics.length === 0) return;
-    const autoTitle = title || selectedMetrics.map(m => METRICS[m]?.label || m).join(', ');
+    
     onSave({
       id: editingPanel?.id || uid(),
-      title: autoTitle,
+      title: title.trim() || derivedTitle,
       type: panelType,
       metrics: selectedMetrics,
       chartType,
@@ -568,7 +587,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel }) => {
           {/* Title */}
           <div>
             <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wider">Panel Title</label>
-            <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Auto from metrics..." className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-black/20 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder={`Auto: ${derivedTitle}`} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-black/20 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
           </div>
 
           {/* Panel Type */}
@@ -669,10 +688,30 @@ const Dashboard = () => {
   const { liveData, wsData, isConnected, isLive, isLoading: isLoadingTrend, updateInterval, setUpdateInterval } = useTrendData();
   const { apiUrl } = useApi();
   const { data: tempData, liveData: oilLiveData } = useTemperatureData();
-  const { confirm } = useDialog();
+  const { confirm, prompt } = useDialog();
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isSyncHoverActive, setIsSyncHoverActive] = useState(true);
+  const [isSyncHoverActive, setIsSyncHoverActive] = useState(() => {
+    const stored = localStorage.getItem('grafana_sync_hover');
+    return stored !== null ? JSON.parse(stored) : true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('grafana_sync_hover', JSON.stringify(isSyncHoverActive));
+  }, [isSyncHoverActive]);
+
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -697,28 +736,67 @@ const Dashboard = () => {
     }
   };
 
-  // ─── Panels & Layouts from localStorage ──────────────────────────────
-  const [panels, setPanels] = useState(() => {
+  // ─── Workspace / Profiles State ──────────────────────────────────────────────
+  const [profilesState, setProfilesState] = useState(() => {
     try {
-      const s = localStorage.getItem(PANELS_KEY);
-      return s ? JSON.parse(s) : null; // null = first time
-    } catch { return null; }
+      const stored = localStorage.getItem(PROFILES_KEY);
+      if (stored) return JSON.parse(stored);
+      
+      // Migration from v2
+      let defaultPanels = null;
+      let defaultLayouts = DEFAULT_GRID_LAYOUTS;
+      try {
+        const sP = localStorage.getItem(PANELS_KEY);
+        if (sP) defaultPanels = JSON.parse(sP);
+      } catch {}
+      try {
+        const sL = localStorage.getItem(LAYOUTS_KEY);
+        if (sL) {
+          const parsed = JSON.parse(sL);
+          Object.keys(parsed).forEach(bp => {
+            if (parsed[bp]) parsed[bp] = parsed[bp].map(({ static: _s, ...rest }) => rest);
+          });
+          defaultLayouts = parsed;
+        }
+      } catch {}
+
+      const initialProfiles = {
+        activeProfileId: 'default',
+        profiles: {
+          default: {
+            id: 'default',
+            name: 'Main Dashboard',
+            panels: defaultPanels,
+            layouts: defaultLayouts
+          }
+        }
+      };
+      
+      localStorage.setItem(PROFILES_KEY, JSON.stringify(initialProfiles));
+      return initialProfiles;
+    } catch {
+      return {
+        activeProfileId: 'default',
+        profiles: {
+          default: { id: 'default', name: 'Main Dashboard', panels: null, layouts: DEFAULT_GRID_LAYOUTS }
+        }
+      };
+    }
   });
 
-  const [gridLayouts, setGridLayouts] = useState(() => {
-    try {
-      const s = localStorage.getItem(LAYOUTS_KEY);
-      if (s) {
-        const parsed = JSON.parse(s);
-        // Strip 'static' property that react-grid-layout injects
-        Object.keys(parsed).forEach(bp => {
-          if (parsed[bp]) parsed[bp] = parsed[bp].map(({ static: _s, ...rest }) => rest);
-        });
-        return parsed;
-      }
-    } catch {}
-    return DEFAULT_GRID_LAYOUTS;
-  });
+  const activeProfile = profilesState.profiles[profilesState.activeProfileId] || profilesState.profiles['default'];
+  const [panels, setPanels] = useState(activeProfile.panels);
+  const [gridLayouts, setGridLayouts] = useState(activeProfile.layouts);
+
+  // Sync state when profile is switched
+  useEffect(() => {
+    const prof = profilesState.profiles[profilesState.activeProfileId];
+    if (prof) {
+      setPanels(prof.panels);
+      setGridLayouts(prof.layouts);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profilesState.activeProfileId]);
 
   const [isEditing, setIsEditing] = useState(false);
   const isEditingRef = useRef(false);
@@ -759,14 +837,82 @@ const Dashboard = () => {
     return () => observer.disconnect();
   }, [isLoadingTrend, panels]);
   
-  // ─── Persist panels ──────────────────────────────────────────────────
+  // ─── Persist to Active Profile ───────────────────────────────────────
+  const isInitialMount = useRef(true);
   useEffect(() => {
-    if (panels !== null) localStorage.setItem(PANELS_KEY, JSON.stringify(panels));
-  }, [panels]);
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    setProfilesState(prev => {
+      const activeId = prev.activeProfileId;
+      const currentProf = prev.profiles[activeId];
+      if (!currentProf) return prev;
 
-  useEffect(() => {
-    localStorage.setItem(LAYOUTS_KEY, JSON.stringify(gridLayouts));
-  }, [gridLayouts]);
+      // Prevent redundant saves if identical
+      if (currentProf.panels === panels && currentProf.layouts === gridLayouts) return prev;
+
+      const nextState = {
+        ...prev,
+        profiles: {
+          ...prev.profiles,
+          [activeId]: {
+            ...currentProf,
+            panels: panels,
+            layouts: gridLayouts
+          }
+        }
+      };
+      localStorage.setItem(PROFILES_KEY, JSON.stringify(nextState));
+      return nextState;
+    });
+  }, [panels, gridLayouts]);
+
+  // Profile Management Functions
+  const handleCreateProfile = async () => {
+    const name = await prompt('Enter new dashboard profile name:', { title: 'Save As New Profile', placeholder: 'e.g. My Custom View' });
+    if (!name || name.trim() === '') return;
+    
+    const newId = 'p_' + Math.random().toString(36).substr(2, 9);
+    setProfilesState(prev => {
+      const newState = {
+        ...prev,
+        activeProfileId: newId,
+        profiles: {
+          ...prev.profiles,
+          [newId]: {
+            id: newId,
+            name: name.trim(),
+            panels: panels ? [...panels] : null,
+            layouts: JSON.parse(JSON.stringify(gridLayouts))
+          }
+        }
+      };
+      localStorage.setItem(PROFILES_KEY, JSON.stringify(newState));
+      return newState;
+    });
+  };
+
+  const handleDeleteProfile = () => {
+    if (profilesState.activeProfileId === 'default') {
+      alert("Cannot delete the default Main Dashboard.");
+      return;
+    }
+    
+    if (window.confirm(`Are you sure you want to delete profile "${profilesState.profiles[profilesState.activeProfileId]?.name}"?`)) {
+      setProfilesState(prev => {
+        const newProfiles = { ...prev.profiles };
+        delete newProfiles[prev.activeProfileId];
+        const newState = {
+          ...prev,
+          activeProfileId: 'default',
+          profiles: newProfiles
+        };
+        localStorage.setItem(PROFILES_KEY, JSON.stringify(newState));
+        return newState;
+      });
+    }
+  };
 
   // ─── Latest data from WebSocket ──────────────────────────────────────
   const latestData = useMemo(() => {
@@ -999,12 +1145,14 @@ const Dashboard = () => {
   return (
     <div ref={containerRef} className={`flex flex-col gap-4 animate-[fadeIn_0.3s_ease-out] w-full ${isFullscreen ? 'p-6 bg-[#f4f7fe] dark:bg-[#0b1120] min-h-screen' : ''}`}>
       {/* ─── Header ─── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full relative">
-        <div>
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between w-full gap-4">
+        
+        {/* Left Side: Title & Badges */}
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-1">
             <h2 className="text-2xl md:text-3xl font-bold text-[#172b4d] dark:text-white font-heading tracking-tight">Dashboard</h2>
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${isLive ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 animate-glow-pulse' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-              {isLive ? <Wifi size={12} /> : <WifiOff size={12} />}
+              {isLive ? <Wifi strokeWidth={2.5} size={12} /> : <WifiOff strokeWidth={2.5} size={12} />}
               {isLive ? 'Live' : 'Offline'}
             </div>
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${isFreqSafe ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
@@ -1017,9 +1165,9 @@ const Dashboard = () => {
           </p>
         </div>
 
-        {/* Clock for Fullscreen Mode */}
+        {/* Center: Clock (Only in Fullscreen & Desktop) */}
         {isFullscreen && (
-          <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 flex-col items-center justify-center">
+          <div className="hidden xl:flex flex-col items-center justify-center shrink-0 px-4">
             <span className="text-[#172b4d] dark:text-white font-bold tracking-widest text-lg leading-none">
               {currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </span>
@@ -1029,8 +1177,69 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Toolbar */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Right Side: Toolbar */}
+        <div className="flex flex-1 items-center gap-2 flex-wrap xl:justify-end">
+          {/* --- Text/Dropdown Buttons (Top Group) --- */}
+          {/* Profile Selector (Custom Dropdown) */}
+          <div className="relative" ref={profileDropdownRef}>
+            <button
+              onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+              className="flex items-center justify-between min-w-[150px] px-3 py-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-indigo-600 dark:text-indigo-400 text-xs font-bold cursor-pointer hover:bg-gray-50 dark:hover:bg-[#374151] transition-colors shadow-sm"
+            >
+              <span className="truncate pr-4">{profilesState.profiles[profilesState.activeProfileId]?.name || 'Main Dashboard'}</span>
+              <ChevronDown size={14} className={`text-indigo-500 shrink-0 transition-transform ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {isProfileDropdownOpen && (
+              <div className="absolute top-full mt-1.5 left-0 w-56 bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl z-[100] overflow-hidden flex flex-col animate-[slideDownFade_0.15s_ease-out] origin-top">
+                <div className="px-3 py-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider bg-gray-50/50 dark:bg-black/10 border-b border-gray-100 dark:border-white/5">
+                  Saved Dashboards
+                </div>
+                
+                {/* Scrollable list area (limit to ~3 items) */}
+                <div className="max-h-[105px] overflow-y-auto custom-scrollbar">
+                  {Object.values(profilesState.profiles).map(p => {
+                    const isActive = p.id === profilesState.activeProfileId;
+                    return (
+                      <button 
+                        key={p.id}
+                        onClick={() => {
+                          setProfilesState(prev => {
+                            const newState = { ...prev, activeProfileId: p.id };
+                            localStorage.setItem(PROFILES_KEY, JSON.stringify(newState));
+                            return newState;
+                          });
+                          setIsProfileDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between group transition-colors ${isActive ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300' : 'text-[#172b4d] dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'}`}
+                      >
+                        <span className="truncate">{p.name}</span>
+                        {isActive && <Check size={14} className="text-indigo-600 dark:text-indigo-400 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                {/* Actions */}
+                <div className="border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/10">
+                  <button 
+                    onClick={() => { setIsProfileDropdownOpen(false); handleCreateProfile(); }} 
+                    className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 flex items-center gap-2 transition-colors"
+                  >
+                    <PlusSquare size={14} /> Save As New Profile...
+                  </button>
+                  <button 
+                    disabled={profilesState.activeProfileId === 'default'}
+                    onClick={() => { setIsProfileDropdownOpen(false); handleDeleteProfile(); }} 
+                    className="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-2 transition-colors"
+                  >
+                    <Trash2 size={14} /> Delete Current Profile
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Interval Selector */}
           <select 
             value={updateInterval} 
@@ -1043,41 +1252,43 @@ const Dashboard = () => {
             <option value={60000}>Update 1 Menit</option>
           </select>
 
-          {/* WA Buttons */}
-          <button onClick={handleTestWA} title="Test WA Notification" className="p-2 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors shadow-sm">
-            <Send size={16} />
-          </button>
-          <button onClick={() => setShowLogoutModal(true)} title="Logout WA" className="p-2 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shadow-sm">
-            <LogOut size={16} />
-          </button>
           {/* Export */}
-          <button onClick={() => setShowExportModal(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition-colors shadow-sm">
-            <Download size={14} /> Export
+          <button onClick={() => setShowExportModal(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 border border-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors shadow-sm">
+            <FileDown strokeWidth={2.5} size={14} /> Export
+          </button>
+
+          {/* Add Panel */}
+          <button onClick={() => { setEditingPanel(null); setEditorOpen(true); }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all">
+            <PlusSquare strokeWidth={2.5} size={14} /><span className="hidden sm:inline">Add Panel</span>
+          </button>
+
+          {/* --- Icon-only Buttons (Bottom Group) --- */}
+          {/* WA Buttons */}
+          <button onClick={handleTestWA} title="Test WA Notification" className="p-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 transition-colors shadow-sm">
+            <BellRing strokeWidth={2.5} size={16} />
+          </button>
+          <button onClick={() => setShowLogoutModal(true)} title="Logout WA" className="p-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/20 transition-colors shadow-sm">
+            <Power strokeWidth={2.5} size={16} />
           </button>
           
           {/* TV Mode */}
-          <button onClick={toggleFullscreen} className={`p-2 rounded-xl text-white transition-colors shadow-sm ${isFullscreen ? 'bg-orange-500 hover:bg-orange-600' : 'bg-slate-800 hover:bg-slate-900'}`} title={isFullscreen ? "Exit TV Mode" : "TV Mode"}>
-            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          <button onClick={toggleFullscreen} className={`p-2 rounded-xl border transition-colors shadow-sm ${isFullscreen ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-[#1f2937] border-gray-200 dark:border-white/10 text-gray-500 hover:text-[#172b4d] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#374151]'}`} title={isFullscreen ? "Exit TV Mode" : "TV Mode"}>
+            {isFullscreen ? <Minimize2 strokeWidth={2.5} size={16} /> : <Monitor strokeWidth={2.5} size={16} />}
           </button>
           
           {/* Sync Hover Toggle */}
-          <button onClick={() => setIsSyncHoverActive(!isSyncHoverActive)} className={`p-2 rounded-xl transition-all shadow-sm ${isSyncHoverActive ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20'}`} title={isSyncHoverActive ? "Sync Hover: On" : "Sync Hover: Off"}>
-            <MousePointer2 size={16} />
+          <button onClick={() => setIsSyncHoverActive(!isSyncHoverActive)} className={`p-2 rounded-xl border transition-colors shadow-sm ${isSyncHoverActive ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-[#1f2937] border-gray-200 dark:border-white/10 text-gray-500 hover:text-[#172b4d] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#374151]'}`} title={isSyncHoverActive ? "Sync Hover: On" : "Sync Hover: Off"}>
+            <Crosshair strokeWidth={2.5} size={16} />
           </button>
 
           {/* Reset */}
-          <button onClick={handleResetDashboard} className="p-2 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shadow-sm" title="Reset Dashboard">
-            <RotateCcw size={16} />
+          <button onClick={handleResetDashboard} className="p-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 transition-colors shadow-sm" title="Reset Dashboard">
+            <RotateCcw strokeWidth={2.5} size={16} />
           </button>
 
           {/* Edit Layout */}
-          <button onClick={() => setIsEditing(!isEditing)} className={`p-2 rounded-xl transition-all shadow-sm ${isEditing ? 'bg-[#0052cc] text-white' : 'bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10'}`} title={isEditing ? 'Done Editing' : 'Edit Layout'}>
-            <Edit3 size={16} />
-          </button>
-          
-          {/* Add Panel */}
-          <button onClick={() => { setEditingPanel(null); setEditorOpen(true); }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all">
-            <Plus size={14} /><span className="hidden sm:inline">Add Panel</span>
+          <button onClick={() => setIsEditing(!isEditing)} className={`p-2 rounded-xl border transition-colors shadow-sm ${isEditing ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-[#1f2937] border-gray-200 dark:border-white/10 text-gray-500 hover:text-[#172b4d] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#374151]'}`} title={isEditing ? 'Done Editing' : 'Edit Layout'}>
+            <LayoutGrid strokeWidth={2.5} size={16} />
           </button>
         </div>
       </div>
@@ -1111,7 +1322,7 @@ const Dashboard = () => {
               <div key={panel.id} className="flex">
                 <div className={`bg-white dark:bg-[#151521] rounded-2xl p-4 shadow-sm border transition-all h-full w-full flex flex-col relative group overflow-hidden ${isEditing ? 'border-blue-200 dark:border-blue-500/20 ring-1 ring-blue-100 dark:ring-blue-500/10' : 'border-transparent dark:border-white/5 hover:shadow-md'}`}>
                   {/* Panel action buttons (visible on hover) */}
-                  <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-50">
                     {panel.type !== 'status' && (
                       <button onClick={() => handleEditPanel(panel)} className="p-1.5 rounded-lg bg-white/80 dark:bg-black/40 backdrop-blur-sm hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-blue-500 transition-colors shadow-sm" title="Edit Panel">
                         <Settings2 size={13} />
