@@ -20,7 +20,10 @@ export const TrendDataProvider = ({ children }) => {
     if (!dbName) return;
 
     axios.get(`${apiUrl}/api/trends/meter`, {
-      headers: { 'X-DB-Name': dbName }
+      headers: { 
+        'X-DB-Name': dbName,
+        'ngrok-skip-browser-warning': '69420'
+      }
     })
     .then(res => {
       const historical = res.data.map(reading => {

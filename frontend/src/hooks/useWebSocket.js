@@ -8,7 +8,9 @@ export const useWebSocket = (url) => {
   useEffect(() => {
     
     const socket = io(url, {
-      transports: ["websocket"], 
+      extraHeaders: {
+        "ngrok-skip-browser-warning": "69420"
+      },
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
     });
