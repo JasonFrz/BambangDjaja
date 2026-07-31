@@ -27,27 +27,27 @@ import 'react-resizable/css/styles.css';
 // Maps WebSocket data keys to display metadata
 const METRICS = {
   // Electrical — from TrendDataContext wsData/liveData
-  phaseA:             { label: 'Phase A Voltage', unit: 'V', color: '#ef4444', group: 'Phase Voltage', icon: Zap, source: 'electrical', thresholds: { min: 200, max: 240 } },
-  phaseB:             { label: 'Phase B Voltage', unit: 'V', color: '#eab308', group: 'Phase Voltage', icon: Zap, source: 'electrical', thresholds: { min: 200, max: 240 } },
-  phaseC:             { label: 'Phase C Voltage', unit: 'V', color: '#3b82f6', group: 'Phase Voltage', icon: Zap, source: 'electrical', thresholds: { min: 200, max: 240 } },
-  lineAB:             { label: 'Line AB Voltage', unit: 'V', color: '#ec4899', group: 'Line Voltage', icon: Activity, source: 'electrical' },
-  lineBC:             { label: 'Line BC Voltage', unit: 'V', color: '#8b5cf6', group: 'Line Voltage', icon: Activity, source: 'electrical' },
-  lineCA:             { label: 'Line CA Voltage', unit: 'V', color: '#06b6d4', group: 'Line Voltage', icon: Activity, source: 'electrical' },
-  currentA:           { label: 'Current A', unit: 'A', color: '#ef4444', group: 'Current', icon: Waves, source: 'electrical' },
-  currentB:           { label: 'Current B', unit: 'A', color: '#eab308', group: 'Current', icon: Waves, source: 'electrical' },
-  currentC:           { label: 'Current C', unit: 'A', color: '#3b82f6', group: 'Current', icon: Waves, source: 'electrical' },
-  currentN:           { label: 'Current N', unit: 'A', color: '#9ca3af', group: 'Current', icon: Waves, source: 'electrical' },
-  powerActiveTotal:   { label: 'Active Power', unit: 'kW', color: '#10b981', group: 'Power', icon: TrendingUp, source: 'electrical' },
+  phaseA: { label: 'Phase A Voltage', unit: 'V', color: '#ef4444', group: 'Phase Voltage', icon: Zap, source: 'electrical', thresholds: { min: 200, max: 240 } },
+  phaseB: { label: 'Phase B Voltage', unit: 'V', color: '#eab308', group: 'Phase Voltage', icon: Zap, source: 'electrical', thresholds: { min: 200, max: 240 } },
+  phaseC: { label: 'Phase C Voltage', unit: 'V', color: '#3b82f6', group: 'Phase Voltage', icon: Zap, source: 'electrical', thresholds: { min: 200, max: 240 } },
+  lineAB: { label: 'Line AB Voltage', unit: 'V', color: '#ec4899', group: 'Line Voltage', icon: Activity, source: 'electrical' },
+  lineBC: { label: 'Line BC Voltage', unit: 'V', color: '#8b5cf6', group: 'Line Voltage', icon: Activity, source: 'electrical' },
+  lineCA: { label: 'Line CA Voltage', unit: 'V', color: '#06b6d4', group: 'Line Voltage', icon: Activity, source: 'electrical' },
+  currentA: { label: 'Current A', unit: 'A', color: '#ef4444', group: 'Current', icon: Waves, source: 'electrical' },
+  currentB: { label: 'Current B', unit: 'A', color: '#eab308', group: 'Current', icon: Waves, source: 'electrical' },
+  currentC: { label: 'Current C', unit: 'A', color: '#3b82f6', group: 'Current', icon: Waves, source: 'electrical' },
+  currentN: { label: 'Current N', unit: 'A', color: '#9ca3af', group: 'Current', icon: Waves, source: 'electrical' },
+  powerActiveTotal: { label: 'Active Power', unit: 'kW', color: '#10b981', group: 'Power', icon: TrendingUp, source: 'electrical' },
   powerReactiveTotal: { label: 'Reactive Power', unit: 'kVAR', color: '#f59e0b', group: 'Power', icon: TrendingUp, source: 'electrical' },
   powerApparentTotal: { label: 'Apparent Power', unit: 'kVA', color: '#8b5cf6', group: 'Power', icon: TrendingUp, source: 'electrical' },
-  pfTotal:            { label: 'Power Factor', unit: '', color: '#14b8a6', group: 'Power Quality', icon: Gauge, source: 'electrical', thresholds: { min: 0.85 } },
-  frequency:          { label: 'Frequency', unit: 'Hz', color: '#6366f1', group: 'Power Quality', icon: Gauge, source: 'electrical', thresholds: { min: 49.5, max: 50.5 } },
-  energyActiveTotal:  { label: 'Active Energy', unit: 'kWh', color: '#22c55e', group: 'Energy', icon: BarChart3, source: 'electrical' },
-  energyReactiveTotal:{ label: 'Reactive Energy', unit: 'kVARh', color: '#eab308', group: 'Energy', icon: BarChart3, source: 'electrical' },
-  efficiency:         { label: 'Efficiency', unit: '%', color: '#e83e8c', group: 'Performance', icon: TrendingUp, source: 'electrical' },
+  pfTotal: { label: 'Power Factor', unit: '', color: '#14b8a6', group: 'Power Quality', icon: Gauge, source: 'electrical', thresholds: { min: 0.85 } },
+  frequency: { label: 'Frequency', unit: 'Hz', color: '#6366f1', group: 'Power Quality', icon: Gauge, source: 'electrical', thresholds: { min: 49.5, max: 50.5 } },
+  energyActiveTotal: { label: 'Active Energy', unit: 'kWh', color: '#22c55e', group: 'Energy', icon: BarChart3, source: 'electrical' },
+  energyReactiveTotal: { label: 'Reactive Energy', unit: 'kVARh', color: '#eab308', group: 'Energy', icon: BarChart3, source: 'electrical' },
+  efficiency: { label: 'Efficiency', unit: '%', color: '#e83e8c', group: 'Performance', icon: TrendingUp, source: 'electrical' },
   // Oil — from TemperatureDataContext
-  oil_temperature:    { label: 'Oil Temperature', unit: '°C', color: '#ef4444', group: 'Oil', icon: Thermometer, source: 'oil' },
-  oil_pressure:       { label: 'Oil Pressure', unit: 'Bar', color: '#3b82f6', group: 'Oil', icon: Gauge, source: 'oil' },
+  oil_temperature: { label: 'Oil Temperature', unit: '°C', color: '#ef4444', group: 'Oil', icon: Thermometer, source: 'oil' },
+  oil_pressure: { label: 'Oil Pressure', unit: 'Bar', color: '#3b82f6', group: 'Oil', icon: Gauge, source: 'oil' },
 };
 
 // Group metrics
@@ -236,7 +236,7 @@ const StatPanel = memo(({ panel, latestData, chartData, isEditing }) => {
   if (panel.type === 'gauge') {
     const meta = METRICS[metrics[0]];
     const val = latestData[metrics[0]] ?? 0;
-    
+
     // Dynamic min/max defaults for the gauge bounds
     let min = meta?.thresholds?.min ?? 0;
     let max = meta?.thresholds?.max ?? (min + 100);
@@ -273,7 +273,7 @@ const StatPanel = memo(({ panel, latestData, chartData, isEditing }) => {
         <h3 className="font-semibold text-[#172b4d] dark:text-white text-sm font-heading tracking-tight truncate flex-1">{panel.title}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
-      
+
       {metrics.length === 1 ? (
         <div className="flex-1 flex flex-col min-h-0 relative group" style={{ containerType: 'inline-size' }}>
           <div className="absolute inset-0 flex flex-col items-center justify-center pb-8 z-10 pointer-events-none">
@@ -531,20 +531,20 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel }) => {
   const derivedTitle = useMemo(() => {
     if (selectedMetrics.length === 0) return 'Custom Panel';
     if (selectedMetrics.length === 1) return METRICS[selectedMetrics[0]]?.label || selectedMetrics[0];
-    
+
     const groups = new Set(selectedMetrics.map(m => METRICS[m]?.group).filter(Boolean));
     if (groups.size === 1) return `${Array.from(groups)[0]} Overview`;
-    
+
     // Check if it's all some kind of voltage
     const allVoltages = selectedMetrics.every(m => METRICS[m]?.group?.includes('Voltage'));
     if (allVoltages) return 'Voltage Overview';
-    
+
     return 'Mixed Metrics Overview';
   }, [selectedMetrics]);
 
   const handleSave = () => {
     if (selectedMetrics.length === 0) return;
-    
+
     onSave({
       id: editingPanel?.id || uid(),
       title: title.trim() || derivedTitle,
@@ -688,7 +688,7 @@ const Dashboard = () => {
   const { liveData, wsData, isConnected, isLive, isLoading: isLoadingTrend, updateInterval, setUpdateInterval } = useTrendData();
   const { apiUrl } = useApi();
   const { data: tempData, liveData: oilLiveData } = useTemperatureData();
-  const { confirm, prompt } = useDialog();
+  const { confirm, prompt, alert } = useDialog();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSyncHoverActive, setIsSyncHoverActive] = useState(() => {
     const stored = localStorage.getItem('grafana_sync_hover');
@@ -741,14 +741,14 @@ const Dashboard = () => {
     try {
       const stored = localStorage.getItem(PROFILES_KEY);
       if (stored) return JSON.parse(stored);
-      
+
       // Migration from v2
       let defaultPanels = null;
       let defaultLayouts = DEFAULT_GRID_LAYOUTS;
       try {
         const sP = localStorage.getItem(PANELS_KEY);
         if (sP) defaultPanels = JSON.parse(sP);
-      } catch {}
+      } catch { }
       try {
         const sL = localStorage.getItem(LAYOUTS_KEY);
         if (sL) {
@@ -758,7 +758,7 @@ const Dashboard = () => {
           });
           defaultLayouts = parsed;
         }
-      } catch {}
+      } catch { }
 
       const initialProfiles = {
         activeProfileId: 'default',
@@ -771,7 +771,7 @@ const Dashboard = () => {
           }
         }
       };
-      
+
       localStorage.setItem(PROFILES_KEY, JSON.stringify(initialProfiles));
       return initialProfiles;
     } catch {
@@ -824,7 +824,7 @@ const Dashboard = () => {
   // Container ref for accurate RGL width
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(1200);
-  
+
   useEffect(() => {
     if (isLoadingTrend || panels === null || !containerRef.current) return;
     const observer = new ResizeObserver(entries => {
@@ -836,7 +836,7 @@ const Dashboard = () => {
     observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, [isLoadingTrend, panels]);
-  
+
   // ─── Persist to Active Profile ───────────────────────────────────────
   const isInitialMount = useRef(true);
   useEffect(() => {
@@ -872,7 +872,7 @@ const Dashboard = () => {
   const handleCreateProfile = async () => {
     const name = await prompt('Enter new dashboard profile name:', { title: 'Save As New Profile', placeholder: 'e.g. My Custom View' });
     if (!name || name.trim() === '') return;
-    
+
     const newId = 'p_' + Math.random().toString(36).substr(2, 9);
     setProfilesState(prev => {
       const newState = {
@@ -893,13 +893,14 @@ const Dashboard = () => {
     });
   };
 
-  const handleDeleteProfile = () => {
+  const handleDeleteProfile = async () => {
     if (profilesState.activeProfileId === 'default') {
-      alert("Cannot delete the default Main Dashboard.");
+      await alert("Cannot delete the default Main Dashboard.", { title: 'Delete Failed' });
       return;
     }
-    
-    if (window.confirm(`Are you sure you want to delete profile "${profilesState.profiles[profilesState.activeProfileId]?.name}"?`)) {
+
+    const isConfirmed = await confirm(`Are you sure you want to delete profile "${profilesState.profiles[profilesState.activeProfileId]?.name}"?`, { title: 'Delete Profile' });
+    if (isConfirmed) {
       setProfilesState(prev => {
         const newProfiles = { ...prev.profiles };
         delete newProfiles[prev.activeProfileId];
@@ -967,16 +968,13 @@ const Dashboard = () => {
   // ─── Generate layout for a new panel ─────────────────────────────────
   const generateLayoutForPanel = useCallback((panelId, type, currentLayouts = {}) => {
     const isChart = type === 'chart';
-    
-    const getBottomY = (bpLayout) => {
-      if (!bpLayout || bpLayout.length === 0) return 0;
-      return Math.max(...bpLayout.map(l => (l.y || 0) + (l.h || 0)));
-    };
 
+    // Set y: 0 to place new panels at the top. 
+    // react-grid-layout will automatically push other panels down.
     return {
-      lg: { i: panelId, x: 0, y: getBottomY(currentLayouts.lg), w: isChart ? 6 : 3, h: isChart ? 5 : 4, minW: 2, minH: isChart ? 4 : 2 },
-      md: { i: panelId, x: 0, y: getBottomY(currentLayouts.md), w: isChart ? 10 : 5, h: isChart ? 5 : 4, minW: 2, minH: isChart ? 4 : 2 },
-      sm: { i: panelId, x: 0, y: getBottomY(currentLayouts.sm), w: 6, h: isChart ? 5 : 4, minW: 2, minH: isChart ? 4 : 2 },
+      lg: { i: panelId, x: 0, y: 0, w: isChart ? 6 : 3, h: isChart ? 5 : 4, minW: 2, minH: isChart ? 4 : 2 },
+      md: { i: panelId, x: 0, y: 0, w: isChart ? 10 : 5, h: isChart ? 5 : 4, minW: 2, minH: isChart ? 4 : 2 },
+      sm: { i: panelId, x: 0, y: 0, w: 6, h: isChart ? 5 : 4, minW: 2, minH: isChart ? 4 : 2 },
     };
   }, []);
 
@@ -1146,7 +1144,7 @@ const Dashboard = () => {
     <div ref={containerRef} className={`flex flex-col gap-4 animate-[fadeIn_0.3s_ease-out] w-full ${isFullscreen ? 'p-6 bg-[#f4f7fe] dark:bg-[#0b1120] min-h-screen' : ''}`}>
       {/* ─── Header ─── */}
       <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between w-full gap-4">
-        
+
         {/* Left Side: Title & Badges */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-1">
@@ -1189,19 +1187,19 @@ const Dashboard = () => {
               <span className="truncate pr-4">{profilesState.profiles[profilesState.activeProfileId]?.name || 'Main Dashboard'}</span>
               <ChevronDown size={14} className={`text-indigo-500 shrink-0 transition-transform ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
-            
+
             {isProfileDropdownOpen && (
               <div className="absolute top-full mt-1.5 left-0 w-56 bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl z-[100] overflow-hidden flex flex-col animate-[slideDownFade_0.15s_ease-out] origin-top">
                 <div className="px-3 py-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider bg-gray-50/50 dark:bg-black/10 border-b border-gray-100 dark:border-white/5">
                   Saved Dashboards
                 </div>
-                
+
                 {/* Scrollable list area (limit to ~3 items) */}
                 <div className="max-h-[105px] overflow-y-auto custom-scrollbar">
                   {Object.values(profilesState.profiles).map(p => {
                     const isActive = p.id === profilesState.activeProfileId;
                     return (
-                      <button 
+                      <button
                         key={p.id}
                         onClick={() => {
                           setProfilesState(prev => {
@@ -1219,18 +1217,18 @@ const Dashboard = () => {
                     );
                   })}
                 </div>
-                
+
                 {/* Actions */}
                 <div className="border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/10">
-                  <button 
-                    onClick={() => { setIsProfileDropdownOpen(false); handleCreateProfile(); }} 
+                  <button
+                    onClick={() => { setIsProfileDropdownOpen(false); handleCreateProfile(); }}
                     className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 flex items-center gap-2 transition-colors"
                   >
                     <PlusSquare size={14} /> Save As New Profile...
                   </button>
-                  <button 
+                  <button
                     disabled={profilesState.activeProfileId === 'default'}
-                    onClick={() => { setIsProfileDropdownOpen(false); handleDeleteProfile(); }} 
+                    onClick={() => { setIsProfileDropdownOpen(false); handleDeleteProfile(); }}
                     className="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-2 transition-colors"
                   >
                     <Trash2 size={14} /> Delete Current Profile
@@ -1241,8 +1239,8 @@ const Dashboard = () => {
           </div>
 
           {/* Interval Selector */}
-          <select 
-            value={updateInterval} 
+          <select
+            value={updateInterval}
             onChange={(e) => setUpdateInterval(Number(e.target.value))}
             className="px-3 py-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-[#172b4d] dark:text-white text-xs font-semibold cursor-pointer outline-none hover:bg-gray-50 dark:hover:bg-[#374151] transition-colors shadow-sm"
           >
@@ -1252,44 +1250,52 @@ const Dashboard = () => {
             <option value={60000}>Update 1 Menit</option>
           </select>
 
-          {/* Export */}
-          <button onClick={() => setShowExportModal(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 border border-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors shadow-sm">
-            <FileDown strokeWidth={2.5} size={14} /> Export
-          </button>
+          {!isFullscreen && (
+            <>
+              {/* Export */}
+              <button onClick={() => setShowExportModal(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 border border-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors shadow-sm">
+                <FileDown strokeWidth={2.5} size={14} /> Export
+              </button>
 
-          {/* Add Panel */}
-          <button onClick={() => { setEditingPanel(null); setEditorOpen(true); }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all">
-            <PlusSquare strokeWidth={2.5} size={14} /><span className="hidden sm:inline">Add Panel</span>
-          </button>
+              {/* Add Panel */}
+              <button onClick={() => { setEditingPanel(null); setEditorOpen(true); }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all">
+                <PlusSquare strokeWidth={2.5} size={14} /><span className="hidden sm:inline">Add Panel</span>
+              </button>
 
-          {/* --- Icon-only Buttons (Bottom Group) --- */}
-          {/* WA Buttons */}
-          <button onClick={handleTestWA} title="Test WA Notification" className="p-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 transition-colors shadow-sm">
-            <BellRing strokeWidth={2.5} size={16} />
-          </button>
-          <button onClick={() => setShowLogoutModal(true)} title="Logout WA" className="p-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/20 transition-colors shadow-sm">
-            <Power strokeWidth={2.5} size={16} />
-          </button>
-          
+              {/* --- Icon-only Buttons (Bottom Group) --- */}
+              {/* WA Buttons */}
+              <button onClick={handleTestWA} title="Test WA Notification" className="p-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 transition-colors shadow-sm">
+                <BellRing strokeWidth={2.5} size={16} />
+              </button>
+              <button onClick={() => setShowLogoutModal(true)} title="Logout WA" className="p-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/20 transition-colors shadow-sm">
+                <Power strokeWidth={2.5} size={16} />
+              </button>
+            </>
+          )}
+
           {/* TV Mode */}
           <button onClick={toggleFullscreen} className={`p-2 rounded-xl border transition-colors shadow-sm ${isFullscreen ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-[#1f2937] border-gray-200 dark:border-white/10 text-gray-500 hover:text-[#172b4d] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#374151]'}`} title={isFullscreen ? "Exit TV Mode" : "TV Mode"}>
             {isFullscreen ? <Minimize2 strokeWidth={2.5} size={16} /> : <Monitor strokeWidth={2.5} size={16} />}
           </button>
-          
-          {/* Sync Hover Toggle */}
-          <button onClick={() => setIsSyncHoverActive(!isSyncHoverActive)} className={`p-2 rounded-xl border transition-colors shadow-sm ${isSyncHoverActive ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-[#1f2937] border-gray-200 dark:border-white/10 text-gray-500 hover:text-[#172b4d] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#374151]'}`} title={isSyncHoverActive ? "Sync Hover: On" : "Sync Hover: Off"}>
-            <Crosshair strokeWidth={2.5} size={16} />
-          </button>
 
-          {/* Reset */}
-          <button onClick={handleResetDashboard} className="p-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 transition-colors shadow-sm" title="Reset Dashboard">
-            <RotateCcw strokeWidth={2.5} size={16} />
-          </button>
+          {!isFullscreen && (
+            <>
+              {/* Sync Hover Toggle */}
+              <button onClick={() => setIsSyncHoverActive(!isSyncHoverActive)} className={`p-2 rounded-xl border transition-colors shadow-sm ${isSyncHoverActive ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-[#1f2937] border-gray-200 dark:border-white/10 text-gray-500 hover:text-[#172b4d] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#374151]'}`} title={isSyncHoverActive ? "Sync Hover: On" : "Sync Hover: Off"}>
+                <Crosshair strokeWidth={2.5} size={16} />
+              </button>
 
-          {/* Edit Layout */}
-          <button onClick={() => setIsEditing(!isEditing)} className={`p-2 rounded-xl border transition-colors shadow-sm ${isEditing ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-[#1f2937] border-gray-200 dark:border-white/10 text-gray-500 hover:text-[#172b4d] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#374151]'}`} title={isEditing ? 'Done Editing' : 'Edit Layout'}>
-            <LayoutGrid strokeWidth={2.5} size={16} />
-          </button>
+              {/* Reset */}
+              <button onClick={handleResetDashboard} className="p-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 transition-colors shadow-sm" title="Reset Dashboard">
+                <RotateCcw strokeWidth={2.5} size={16} />
+              </button>
+
+              {/* Edit Layout */}
+              <button onClick={() => setIsEditing(!isEditing)} className={`p-2 rounded-xl border transition-colors shadow-sm ${isEditing ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-[#1f2937] border-gray-200 dark:border-white/10 text-gray-500 hover:text-[#172b4d] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#374151]'}`} title={isEditing ? 'Done Editing' : 'Edit Layout'}>
+                <LayoutGrid strokeWidth={2.5} size={16} />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
