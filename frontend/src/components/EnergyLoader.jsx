@@ -1,9 +1,9 @@
 import React from 'react';
 import { Zap } from 'lucide-react';
 
-const EnergyLoader = ({ text = "Loading data...", fullScreen = false }) => {
+const EnergyLoader = ({ text = "Loading data...", fullScreen = false, size = "default" }) => {
   const content = (
-    <div className="flex flex-col items-center justify-center p-8">
+    <div className={`flex flex-col items-center justify-center p-8 ${size === 'small' ? 'scale-50' : 'scale-100'}`}>
       <div className="relative w-24 h-24 mb-6">
         {/* Outer rotating ring */}
         <div className="absolute inset-0 border-4 border-t-[#0052cc] border-r-transparent border-b-[#00a3ff] border-l-transparent rounded-full animate-[spin_2s_linear_infinite]"></div>
@@ -46,7 +46,7 @@ const EnergyLoader = ({ text = "Loading data...", fullScreen = false }) => {
   }
 
   return (
-    <div className="w-full h-full min-h-[300px] flex items-center justify-center animate-[fadeIn_0.3s_ease-out]">
+    <div className={`w-full h-full flex items-center justify-center animate-[fadeIn_0.3s_ease-out] ${size === 'small' ? 'min-h-[100px]' : 'min-h-[300px]'}`}>
       {content}
     </div>
   );

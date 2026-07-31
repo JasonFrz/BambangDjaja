@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../contexts/ApiContext';
+import { useDialog } from '../contexts/DialogContext';
 import { Users, UserPlus, Key, ShieldAlert, X, CheckCircle2, Edit, Trash2, Phone, Search, Loader2, Mail, Eye, EyeOff } from 'lucide-react';
 import EnergyLoader from '../components/EnergyLoader';
 
 const ManageUsersSuperuser = () => {
+  const { confirm } = useDialog();
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
 
@@ -134,7 +136,8 @@ const ManageUsersSuperuser = () => {
   };
 
   const handleDeleteUser = async (u) => {
-    if (!window.confirm(`Are you sure you want to delete user '${u.username}'?`)) return;
+    const isConfirmed = await confirm(`Are you sure you want to delete user '${u.username}'?`);
+    if (!isConfirmed) return;
     
     setError('');
     setSuccess('');

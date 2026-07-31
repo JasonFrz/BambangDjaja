@@ -3,10 +3,13 @@ import axios from 'axios';
 import { Database, Table, Trash2, ShieldAlert, LogIn, ChevronRight, RefreshCw, Server, Search, AlertTriangle } from 'lucide-react';
 import { useApi } from '../contexts/ApiContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useDialog } from '../contexts/DialogContext';
+import EnergyLoader from '../components/EnergyLoader';
 
 const SuperAdminDashboard = () => {
   const { apiUrl } = useApi();
   const { isDarkMode } = useTheme();
+  const { alert } = useDialog();
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
@@ -229,7 +232,7 @@ const SuperAdminDashboard = () => {
           
           <div className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
             {isLoadingDbs ? (
-              <div className="flex justify-center p-6"><RefreshCw className="animate-spin text-gray-400" size={24} /></div>
+              <div className="flex justify-center p-6"><EnergyLoader size="small" text="Loading..." /></div>
             ) : filteredDbs.length > 0 ? (
               filteredDbs.map(db => (
                 <button
@@ -271,7 +274,7 @@ const SuperAdminDashboard = () => {
               </div>
               <div className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
                 {isLoadingTables ? (
-                  <div className="flex justify-center p-6"><RefreshCw className="animate-spin text-gray-400" size={24} /></div>
+                  <div className="flex justify-center p-6"><EnergyLoader size="small" text="Loading..." /></div>
                 ) : tables.length > 0 ? (
                   tables.map(table => (
                     <button
@@ -347,9 +350,8 @@ const SuperAdminDashboard = () => {
               </div>
               <div className="flex-1 overflow-auto p-4 custom-scrollbar">
                 {isLoadingData ? (
-                  <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-3">
-                    <RefreshCw className="animate-spin" size={32} />
-                    <p className="text-sm font-medium">Loading data...</p>
+                  <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                    <EnergyLoader size="small" text="Loading data..." />
                   </div>
                 ) : tableData.length > 0 ? (
                   <div className="bg-white dark:bg-black/20 rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden shadow-sm">

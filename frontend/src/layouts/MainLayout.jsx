@@ -14,7 +14,7 @@ const MainLayout = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const dropdownRef = useRef(null);
 
-  const isTransformerDashboard = ['/dashboard', '/temperature', '/transformer-data', '/performance-report', '/manage-users'].includes(location.pathname);
+  const isTransformerDashboard = ['/dashboard', '/transformer-data', '/performance-report', '/manage-users'].includes(location.pathname);
   const isAdminDashboard = role === 'admin' && (location.pathname === '/users' || location.pathname === '/provisioning' || location.pathname === '/manage-transformers');
   const isSuperuserDashboard = role === 'superuser' && (location.pathname === '/manage-users');
   const showSidebar = isTransformerDashboard || isAdminDashboard || isSuperuserDashboard;
@@ -166,7 +166,7 @@ const MainLayout = () => {
                 <>
                   <Link 
                     to="/dashboard"
-                    title={isSidebarCollapsed ? "Dashboard Electrical" : undefined}
+                    title={isSidebarCollapsed ? "Dashboard" : undefined}
                     className={`flex items-center py-3 rounded-xl font-medium transition-all ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} ${
                       location.pathname === '/dashboard' 
                         ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
@@ -174,19 +174,7 @@ const MainLayout = () => {
                     }`}
                   >
                     <LayoutDashboard size={20} className="shrink-0" />
-                    {!isSidebarCollapsed && <span className="truncate">Dashboard Electrical</span>}
-                  </Link>
-                  <Link 
-                    to="/temperature"
-                    title={isSidebarCollapsed ? "Dashboard Physical" : undefined}
-                    className={`flex items-center py-3 rounded-xl font-medium transition-all ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} ${
-                      location.pathname === '/temperature' 
-                        ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
-                        : 'text-[#5e6c84] dark:text-[#94a3b8] hover:bg-[#f4f5f7] dark:hover:bg-white/5 hover:text-[#172b4d] dark:hover:text-white'
-                    }`}
-                  >
-                    <TrendingUp size={20} className="shrink-0" />
-                    {!isSidebarCollapsed && <span className="truncate">Dashboard Physical</span>}
+                    {!isSidebarCollapsed && <span className="truncate">Dashboard</span>}
                   </Link>
                   <Link 
                     to="/transformer-data"
@@ -281,17 +269,7 @@ const MainLayout = () => {
             <Settings size={20} />
             <span className="text-[10px] font-medium">Data</span>
           </Link>
-          <Link 
-            to="/temperature"
-            className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-              location.pathname === '/temperature' 
-                ? 'text-[#0052cc] dark:text-[#4c9aff]' 
-                : 'text-[#5e6c84] dark:text-[#94a3b8] hover:text-[#172b4d] dark:hover:text-white'
-            }`}
-          >
-            <TrendingUp size={20} />
-            <span className="text-[10px] font-medium">Physical</span>
-          </Link>
+
           <Link 
             to="/performance-report"
             className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${

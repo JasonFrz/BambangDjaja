@@ -12,6 +12,7 @@ export const TrendDataProvider = ({ children }) => {
   const { apiUrl } = useApi();
   const { data: wsData, isConnected } = useWebSocket(apiUrl);
   const [isLive, setIsLive] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const lastDataRef = useRef(null);
 
   useEffect(() => {
@@ -63,7 +64,8 @@ export const TrendDataProvider = ({ children }) => {
         setLiveData(historical);
       }
     })
-    .catch(err => console.error("Failed to load historical trend data", err));
+    .catch(err => console.error("Error fetching trend data:", err))
+    .finally(() => setIsLoading(false));
   }, [apiUrl]);
 
   useEffect(() => {
@@ -116,7 +118,7 @@ export const TrendDataProvider = ({ children }) => {
   }, [isConnected, wsData]);
 
   return (
-    <TrendDataContext.Provider value={{ liveData, wsData, isConnected, isLive }}>
+    <TrendDataContext.Provider value={{ data: liveData, liveData, wsData, isConnected, isLive, isLoading }}>
       {children}
     </TrendDataContext.Provider>
   );

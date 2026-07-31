@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../contexts/ApiContext';
+import { useDialog } from '../contexts/DialogContext';
 import { Key, ShieldAlert, CheckCircle, Copy, Clock, Server, Edit, Trash2, Sparkles, X } from 'lucide-react';
 
 const DeviceProvisioning = () => {
+  const { confirm } = useDialog();
   const [companyCode, setCompanyCode] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [dbName, setDbName] = useState('');
@@ -196,7 +198,8 @@ const DeviceProvisioning = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus token ini?')) return;
+    const isConfirmed = await confirm('Apakah Anda yakin ingin menghapus token ini?');
+    if (!isConfirmed) return;
     
     try {
       const response = await fetch(`${apiUrl}/api/provision/tokens/${id}`, {

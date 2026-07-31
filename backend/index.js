@@ -72,6 +72,7 @@ const trendRoutes = require("./routes/trends");
 const superadminRoutes = require("./routes/superadmin");
 const superuserUsersRoutes = require("./routes/superuser_users");
 const profileRoutes = require("./routes/profile");
+const analyticsRoutes = require("./routes/analytics");
 
 app.use("/api", authRoutes);
 app.use("/api/users", userRoutes);
@@ -79,6 +80,7 @@ app.use("/api/trends", trendRoutes);
 app.use("/api/superadmin", superadminRoutes);
 app.use("/api/superuser-users", superuserUsersRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 
 const startRealtimePoller = require("./utils/realtimePoller");

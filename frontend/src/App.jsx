@@ -2,17 +2,18 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import Dashboard from './pages/Dashboard';
-import Temperature from './pages/Temperature';
 import Login from './pages/Login';
 import AddUser from './pages/AddUser';
 import ManageUsersSuperuser from './pages/ManageUsersSuperuser';
 import Profile from './pages/Profile';
 import TransformerData from './pages/TransformerData';
 import PerformanceReport from './pages/PerformanceReport';
+
 import { ThemeProvider } from './contexts/ThemeContext';
 import { TrendDataProvider } from './contexts/TrendDataContext';
 import { TemperatureDataProvider } from './contexts/TemperatureDataContext';
 import { ApiProvider } from './contexts/ApiContext';
+import { DialogProvider } from './contexts/DialogContext';
 import NetworkBadge from './components/NetworkBadge';
 
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
@@ -34,7 +35,8 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   return (
     <ApiProvider>
-      <ThemeProvider>
+      <DialogProvider>
+        <ThemeProvider>
         <TrendDataProvider>
           <TemperatureDataProvider>
             <BrowserRouter>
@@ -49,18 +51,19 @@ function App() {
                   <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="dashboard" element={<Dashboard />} />
                   <Route path="transformer-data" element={<TransformerData />} />
-                  <Route path="temperature" element={<Temperature />} />
                   <Route path="users" element={<AddUser />} />
                   <Route path="manage-users" element={<ManageUsersSuperuser />} />
                   <Route path="profile" element={<Profile />} />
                   <Route path="performance-report" element={<PerformanceReport />} />
+
                 </Route>
               </Routes>
               <NetworkBadge />
             </BrowserRouter>
           </TemperatureDataProvider>
         </TrendDataProvider>
-      </ThemeProvider>
+        </ThemeProvider>
+      </DialogProvider>
     </ApiProvider>
   );
 }

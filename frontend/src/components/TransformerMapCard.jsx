@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { MapPin, Navigation, CheckCircle2 } from 'lucide-react';
+import { useDialog } from '../contexts/DialogContext';
 import 'leaflet/dist/leaflet.css';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -25,9 +26,10 @@ function ChangeView({ center }) {
   return null;
 }
 
-const TransformerMapCard = () => {
-  const defaultLat = -7.336432504428765;
-  const defaultLng = 112.76284930220689;
+const TransformerMapCard = ({ latitude, longitude, onLocationUpdate }) => {
+  const { alert } = useDialog();
+  const defaultLat = latitude || -7.336432504428765;
+  const defaultLng = longitude || 112.76284930220689;
 
   const [position, setPosition] = useState([defaultLat, defaultLng]);
   const [inputLat, setInputLat] = useState(defaultLat.toString());
