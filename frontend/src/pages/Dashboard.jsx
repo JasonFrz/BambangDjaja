@@ -926,6 +926,20 @@ const Dashboard = () => {
 
   const isFreqSafe = (latestData.frequency || 0) <= 52.5;
 
+  // Lock all items if not editing
+  const lockedLayouts = useMemo(() => {
+    const locked = {};
+    for (const [bp, layout] of Object.entries(gridLayouts)) {
+      locked[bp] = layout.map(l => ({
+        ...l,
+        static: !isEditing,
+        isDraggable: isEditing,
+        isResizable: isEditing
+      }));
+    }
+    return locked;
+  }, [gridLayouts, isEditing]);
+
   // ─── Onboarding screen (first visit — panels is null) ───────────────
   if (panels === null) {
     return (
@@ -1023,17 +1037,19 @@ const Dashboard = () => {
             <MousePointer2 size={16} />
           </button>
 
-          {/* Edit Layout */}
-          <button onClick={() => setIsEditing(!isEditing)} className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${isEditing ? 'bg-[#0052cc] text-white' : 'bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10'}`}>
-            <Edit3 size={14} />{isEditing ? 'Done Editing' : 'Edit Layout'}
-          </button>
-          {/* Add Panel */}
-          <button onClick={() => { setEditingPanel(null); setEditorOpen(true); }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all">
-            <Plus size={14} /><span className="hidden sm:inline">Add Panel</span>
-          </button>
           {/* Reset */}
           <button onClick={handleResetDashboard} className="p-2 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shadow-sm" title="Reset Dashboard">
             <RotateCcw size={16} />
+          </button>
+
+          {/* Edit Layout */}
+          <button onClick={() => setIsEditing(!isEditing)} className={`p-2 rounded-xl transition-all shadow-sm ${isEditing ? 'bg-[#0052cc] text-white' : 'bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10'}`} title={isEditing ? 'Done Editing' : 'Edit Layout'}>
+            <Edit3 size={16} />
+          </button>
+          
+          {/* Add Panel */}
+          <button onClick={() => { setEditingPanel(null); setEditorOpen(true); }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all">
+            <Plus size={14} /><span className="hidden sm:inline">Add Panel</span>
           </button>
         </div>
       </div>
@@ -1052,7 +1068,7 @@ const Dashboard = () => {
           <ResponsiveGridLayout
             className="layout"
             width={containerWidth}
-            layouts={gridLayouts}
+            layouts={lockedLayouts}
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
             cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
             rowHeight={50}
