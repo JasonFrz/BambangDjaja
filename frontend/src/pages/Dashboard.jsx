@@ -499,6 +499,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel }) => {
   const [selectedMetrics, setSelectedMetrics] = useState([]);
   const [chartType, setChartType] = useState('area');
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeGroupTab, setActiveGroupTab] = useState(Object.keys(METRIC_GROUPS)[0]);
 
   useEffect(() => {
     if (editingPanel) {
@@ -617,42 +618,93 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel }) => {
             </div>
           )}
 
-          {/* Metric Search */}
+          {/* Metric Selection UI */}
           <div>
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wider">Select Metrics ({selectedMetrics.length} selected)</label>
-            <div className="relative mb-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-              <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search metric..." className="w-full pl-8 pr-4 py-2 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none" />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Select Metrics ({selectedMetrics.length} selected)</label>
             </div>
-          </div>
+            
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+              <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search metrics..." className="w-full pl-8 pr-4 py-2 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors" />
+            </div>
 
-          {/* Metric Groups */}
-          <div className="space-y-3 max-h-[220px] overflow-y-auto custom-scrollbar">
-            {Object.entries(filteredGroups).map(([gName, gMetrics]) => {
-              const GIcon = GROUP_ICON_MAP[gName] || Activity;
-              return (
-                <div key={gName}>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <GIcon size={12} className="text-gray-400" />
-                    <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{gName}</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
-                    {gMetrics.map(m => {
+            {searchQuery ? (
+              // Flat list if searching
+              <div className="space-y-3 max-h-[240px] overflow-y-auto custom-scrollbar p-1">
+                {Object.entries(filteredGroups).map(([gName, gMetrics]) => {
+                  const GIcon = GROUP_ICON_MAP[gName] || Activity;
+                  return (
+                    <div key={gName}>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <GIcon size={12} className="text-gray-400" />
+                        <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{gName}</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        {gMetrics.map(m => {
+                          const sel = selectedMetrics.includes(m.key);
+                          return (
+                            <button key={m.key} onClick={() => toggleMetric(m.key)} className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs transition-all ${sel ? 'bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 shadow-sm' : 'bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-white/10 hover:shadow-sm'}`}>
+                              <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${sel ? 'border-blue-500 bg-blue-500' : 'border-gray-300 dark:border-gray-600'}`}>
+                                {sel && <Check size={10} className="text-white" />}
+                              </div>
+                              <span className="font-semibold truncate">{m.label}</span>
+                              {m.unit && <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 ml-auto bg-gray-100 dark:bg-white/5 px-1.5 rounded">{m.unit}</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              // Tabbed Layout if not searching
+              <div className="flex border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden h-[240px] bg-white dark:bg-[#151521]">
+                {/* Left Tabs */}
+                <div className="w-[140px] shrink-0 bg-gray-50 dark:bg-black/20 border-r border-gray-200 dark:border-white/10 overflow-y-auto custom-scrollbar">
+                  {Object.keys(METRIC_GROUPS).map(gName => {
+                    const GIcon = GROUP_ICON_MAP[gName] || Activity;
+                    const isActive = activeGroupTab === gName;
+                    const selectedInGroup = METRIC_GROUPS[gName].filter(m => selectedMetrics.includes(m.key)).length;
+                    return (
+                      <button 
+                        key={gName} 
+                        onClick={() => setActiveGroupTab(gName)} 
+                        className={`w-full flex items-center justify-between px-3 py-3 text-left transition-colors border-l-2 ${isActive ? 'bg-white dark:bg-white/5 border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.02]'}`}
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <GIcon size={14} className={`shrink-0 ${isActive ? 'text-blue-500' : 'text-gray-400'}`} />
+                          <span className="text-[11px] font-bold uppercase tracking-wide truncate">{gName}</span>
+                        </div>
+                        {selectedInGroup > 0 && <span className="text-[9px] font-bold bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full shrink-0">{selectedInGroup}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                {/* Right Content */}
+                <div className="flex-1 p-3 overflow-y-auto custom-scrollbar">
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {(METRIC_GROUPS[activeGroupTab] || []).map(m => {
                       const sel = selectedMetrics.includes(m.key);
                       return (
-                        <button key={m.key} onClick={() => toggleMetric(m.key)} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-xs transition-all ${sel ? 'bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400' : 'bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'}`}>
-                          <div className="w-2.5 h-2.5 rounded-sm border-2 flex items-center justify-center shrink-0" style={{ borderColor: m.color, backgroundColor: sel ? m.color : 'transparent' }}>
-                            {sel && <Check size={7} className="text-white" />}
+                        <button key={m.key} onClick={() => toggleMetric(m.key)} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-left text-xs transition-all ${sel ? 'bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 shadow-sm' : 'bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-white/10 hover:shadow-sm'}`}>
+                          <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${sel ? 'border-blue-500 bg-blue-500' : 'border-gray-300 dark:border-gray-600'}`}>
+                            {sel && <Check size={10} className="text-white" />}
                           </div>
-                          <span className="font-medium truncate">{m.label}</span>
-                          {m.unit && <span className="text-[9px] text-gray-400 ml-auto">{m.unit}</span>}
+                          <div className="flex-1 flex items-center gap-2 truncate">
+                            <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: m.color }} />
+                            <span className="font-semibold truncate">{m.label}</span>
+                          </div>
+                          {m.unit && <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-white/5 px-1.5 rounded ml-auto shrink-0">{m.unit}</span>}
                         </button>
                       );
                     })}
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            )}
           </div>
 
           {/* Selected chips */}
@@ -1219,21 +1271,23 @@ const Dashboard = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/10">
-                  <button
-                    onClick={() => { setIsProfileDropdownOpen(false); handleCreateProfile(); }}
-                    className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 flex items-center gap-2 transition-colors"
-                  >
-                    <PlusSquare size={14} /> Save As New Profile...
-                  </button>
-                  <button
-                    disabled={profilesState.activeProfileId === 'default'}
-                    onClick={() => { setIsProfileDropdownOpen(false); handleDeleteProfile(); }}
-                    className="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-2 transition-colors"
-                  >
-                    <Trash2 size={14} /> Delete Current Profile
-                  </button>
-                </div>
+                {!isFullscreen && (
+                  <div className="border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/10">
+                    <button
+                      onClick={() => { setIsProfileDropdownOpen(false); handleCreateProfile(); }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 flex items-center gap-2 transition-colors"
+                    >
+                      <PlusSquare size={14} /> Save As New Profile...
+                    </button>
+                    <button
+                      disabled={profilesState.activeProfileId === 'default'}
+                      onClick={() => { setIsProfileDropdownOpen(false); handleDeleteProfile(); }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-2 transition-colors"
+                    >
+                      <Trash2 size={14} /> Delete Current Profile
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
