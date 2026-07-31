@@ -10,7 +10,8 @@ export const useTrendData = () => useContext(TrendDataContext);
 export const TrendDataProvider = ({ children }) => {
   const [liveData, setLiveData] = useState([]);
   const { apiUrl } = useApi();
-  const { data: wsData, isConnected } = useWebSocket(apiUrl);
+  const [updateInterval, setUpdateInterval] = useState(5000); 
+  const { data: wsData, isConnected } = useWebSocket(apiUrl, updateInterval);
   const [isLive, setIsLive] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const lastDataRef = useRef(null);
@@ -121,7 +122,15 @@ export const TrendDataProvider = ({ children }) => {
   }, [isConnected, wsData]);
 
   return (
-    <TrendDataContext.Provider value={{ data: liveData, liveData, wsData, isConnected, isLive, isLoading }}>
+    <TrendDataContext.Provider value={{
+      liveData,
+      wsData,
+      isConnected,
+      isLive,
+      isLoading,
+      updateInterval,
+      setUpdateInterval
+    }}>
       {children}
     </TrendDataContext.Provider>
   );

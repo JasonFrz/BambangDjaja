@@ -12,6 +12,7 @@ const MainLayout = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const dropdownRef = useRef(null);
 
   const isTransformerDashboard = ['/dashboard', '/transformer-data', '/performance-report', '/manage-users'].includes(location.pathname);
@@ -26,7 +27,14 @@ const MainLayout = () => {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+
+    const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -44,6 +52,7 @@ const MainLayout = () => {
   return (
     <div className="flex flex-col h-screen w-full bg-[#f4f7fe] dark:bg-[#0b1120] transition-colors duration-300 overflow-hidden">
 
+      {!isFullscreen && (
       <header className="h-[70px] px-6 md:px-8 flex justify-between items-center border-b border-[#dfe1e6] dark:border-white/10 bg-white/80 dark:bg-[#151521]/80 backdrop-blur-md z-30 shrink-0 relative">
         <Link to="/" className="flex items-center gap-3 group">
           <img src="/tmu-logo.png" alt="Logo" className="w-auto h-7 md:h-8 group-hover:opacity-80 transition-opacity" />
@@ -113,10 +122,11 @@ const MainLayout = () => {
           </div>
         </div>
       </header>
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         
-        {showSidebar && (
+        {showSidebar && !isFullscreen && (
           <aside className={`border-r border-[#dfe1e6] dark:border-white/10 bg-white/80 dark:bg-[#151521]/80 backdrop-blur-md flex flex-col transition-all duration-300 z-20 hidden md:flex shrink-0 ${isSidebarCollapsed ? 'w-20' : 'w-64'}`}>
             <nav className="flex-1 py-6 px-4 flex flex-col gap-2 overflow-y-auto overflow-x-hidden">
 

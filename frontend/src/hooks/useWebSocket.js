@@ -1,9 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 
-export const useWebSocket = (url) => {
+export const useWebSocket = (url, updateInterval = 0) => {
   const [data, setData] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const lastUpdateRef = useRef(0);
+  const intervalRef = useRef(updateInterval);
+
+  useEffect(() => {
+    intervalRef.current = updateInterval;
+  }, [updateInterval]);
 
   useEffect(() => {
     
@@ -28,6 +34,12 @@ export const useWebSocket = (url) => {
 
     socket.on("meter", (msg) => {
       if (!msg) return;
+
+      const now = Date.now();
+      if (intervalRef.current > 0 && now - lastUpdateRef.current < intervalRef.current) {
+        return;
+      }
+      lastUpdateRef.current = now;
 
       if (msg.modbus_connected === false && msg.phaseA === undefined) {
         setData({

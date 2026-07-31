@@ -8,7 +8,7 @@ import {
   Zap, Activity, Waves, Gauge, Wifi, WifiOff, Plus, X, Settings2, Trash2,
   RefreshCw, GripVertical, Edit3, Send, LogOut, Download, Loader2,
   ChevronDown, Check, Search, Layers, RotateCcw, Thermometer,
-  TrendingUp, BarChart3, Eye, AlertTriangle, Maximize2, Minimize2
+  TrendingUp, BarChart3, Eye, AlertTriangle, Maximize2, Minimize2, MousePointer2
 } from "lucide-react";
 import { useTrendData } from "../contexts/TrendDataContext";
 import { useTemperatureData } from "../contexts/TemperatureDataContext";
@@ -25,21 +25,21 @@ import 'react-resizable/css/styles.css';
 // Maps WebSocket data keys to display metadata
 const METRICS = {
   // Electrical — from TrendDataContext wsData/liveData
-  phaseA:             { label: 'Phase A Voltage', unit: 'V', color: '#3b82f6', group: 'Phase Voltage', icon: Zap, source: 'electrical' },
-  phaseB:             { label: 'Phase B Voltage', unit: 'V', color: '#f59e0b', group: 'Phase Voltage', icon: Zap, source: 'electrical' },
-  phaseC:             { label: 'Phase C Voltage', unit: 'V', color: '#10b981', group: 'Phase Voltage', icon: Zap, source: 'electrical' },
+  phaseA:             { label: 'Phase A Voltage', unit: 'V', color: '#ef4444', group: 'Phase Voltage', icon: Zap, source: 'electrical', thresholds: { min: 200, max: 240 } },
+  phaseB:             { label: 'Phase B Voltage', unit: 'V', color: '#eab308', group: 'Phase Voltage', icon: Zap, source: 'electrical', thresholds: { min: 200, max: 240 } },
+  phaseC:             { label: 'Phase C Voltage', unit: 'V', color: '#1f2937', group: 'Phase Voltage', icon: Zap, source: 'electrical', thresholds: { min: 200, max: 240 } },
   lineAB:             { label: 'Line AB Voltage', unit: 'V', color: '#ec4899', group: 'Line Voltage', icon: Activity, source: 'electrical' },
   lineBC:             { label: 'Line BC Voltage', unit: 'V', color: '#8b5cf6', group: 'Line Voltage', icon: Activity, source: 'electrical' },
   lineCA:             { label: 'Line CA Voltage', unit: 'V', color: '#06b6d4', group: 'Line Voltage', icon: Activity, source: 'electrical' },
   currentA:           { label: 'Current A', unit: 'A', color: '#ef4444', group: 'Current', icon: Waves, source: 'electrical' },
-  currentB:           { label: 'Current B', unit: 'A', color: '#f59e0b', group: 'Current', icon: Waves, source: 'electrical' },
-  currentC:           { label: 'Current C', unit: 'A', color: '#3b82f6', group: 'Current', icon: Waves, source: 'electrical' },
-  currentN:           { label: 'Current N', unit: 'A', color: '#6b7280', group: 'Current', icon: Waves, source: 'electrical' },
+  currentB:           { label: 'Current B', unit: 'A', color: '#eab308', group: 'Current', icon: Waves, source: 'electrical' },
+  currentC:           { label: 'Current C', unit: 'A', color: '#1f2937', group: 'Current', icon: Waves, source: 'electrical' },
+  currentN:           { label: 'Current N', unit: 'A', color: '#3b82f6', group: 'Current', icon: Waves, source: 'electrical' },
   powerActiveTotal:   { label: 'Active Power', unit: 'kW', color: '#10b981', group: 'Power', icon: TrendingUp, source: 'electrical' },
   powerReactiveTotal: { label: 'Reactive Power', unit: 'kVAR', color: '#f59e0b', group: 'Power', icon: TrendingUp, source: 'electrical' },
   powerApparentTotal: { label: 'Apparent Power', unit: 'kVA', color: '#8b5cf6', group: 'Power', icon: TrendingUp, source: 'electrical' },
-  pfTotal:            { label: 'Power Factor', unit: '', color: '#14b8a6', group: 'Power Quality', icon: Gauge, source: 'electrical' },
-  frequency:          { label: 'Frequency', unit: 'Hz', color: '#6366f1', group: 'Power Quality', icon: Gauge, source: 'electrical' },
+  pfTotal:            { label: 'Power Factor', unit: '', color: '#14b8a6', group: 'Power Quality', icon: Gauge, source: 'electrical', thresholds: { min: 0.85 } },
+  frequency:          { label: 'Frequency', unit: 'Hz', color: '#6366f1', group: 'Power Quality', icon: Gauge, source: 'electrical', thresholds: { min: 49.5, max: 50.5 } },
   energyActiveTotal:  { label: 'Active Energy', unit: 'kWh', color: '#22c55e', group: 'Energy', icon: BarChart3, source: 'electrical' },
   energyReactiveTotal:{ label: 'Reactive Energy', unit: 'kVARh', color: '#eab308', group: 'Energy', icon: BarChart3, source: 'electrical' },
   efficiency:         { label: 'Efficiency', unit: '%', color: '#e83e8c', group: 'Performance', icon: TrendingUp, source: 'electrical' },
@@ -253,7 +253,7 @@ const StatusPanel = memo(({ tempData, isLive, isEditing }) => (
 ));
 
 // ─── Chart Panel Renderer ────────────────────────────────────────────────────
-const ChartPanel = memo(({ panel, chartData, isEditing }) => {
+const ChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
   const metrics = panel.metrics || [];
   const firstMetric = METRICS[metrics[0]];
   const IconComponent = firstMetric?.icon || Activity;
@@ -275,6 +275,15 @@ const ChartPanel = memo(({ panel, chartData, isEditing }) => {
   };
   const gridProps = { strokeDasharray: "3 3", stroke: '#e2e8f020', vertical: false };
 
+  // Check for threshold violations
+  const latestPoint = chartData && chartData.length > 0 ? chartData[chartData.length - 1] : null;
+  const hasViolation = latestPoint && metrics.some(m => {
+    const t = METRICS[m]?.thresholds;
+    if (!t) return false;
+    const val = latestPoint[m];
+    return (t.min !== undefined && val < t.min) || (t.max !== undefined && val > t.max);
+  });
+
   const renderChart = () => {
     if (!chartData || chartData.length === 0) {
       return (
@@ -287,10 +296,29 @@ const ChartPanel = memo(({ panel, chartData, isEditing }) => {
       );
     }
 
+    if (panel.type === 'stat') {
+      const latestPoint = chartData[chartData.length - 1];
+      return (
+        <div className="flex flex-col h-full overflow-y-auto custom-scrollbar p-2 gap-3">
+          {metrics.map(m => (
+            <div key={m} className="flex flex-col items-center justify-center bg-gray-50 dark:bg-[#1a1a2e] rounded-xl p-3 border border-gray-100 dark:border-white/5 shadow-inner">
+              <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">{METRICS[m]?.label}</span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-3xl sm:text-4xl font-black tracking-tight" style={{ color: METRICS[m]?.color || '#8884d8' }}>
+                  {latestPoint[m] !== undefined ? latestPoint[m].toFixed(2) : '--'}
+                </span>
+                <span className="text-sm font-semibold text-gray-400">{METRICS[m]?.unit}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     if (panel.chartType === 'bar') {
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }}>
+          <BarChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined}>
             <CartesianGrid {...gridProps} />
             <XAxis {...commonXAxis} />
             <YAxis {...commonYAxis} />
@@ -307,7 +335,7 @@ const ChartPanel = memo(({ panel, chartData, isEditing }) => {
     if (panel.chartType === 'line') {
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }}>
+          <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined}>
             <CartesianGrid {...gridProps} />
             <XAxis {...commonXAxis} />
             <YAxis {...commonYAxis} />
@@ -325,7 +353,7 @@ const ChartPanel = memo(({ panel, chartData, isEditing }) => {
     // Default: area
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }}>
+        <AreaChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined}>
           <defs>
             {metrics.map(m => (
               <linearGradient key={`g-${m}`} id={`areaGrad-${m}`} x1="0" y1="0" x2="0" y2="1">
@@ -349,9 +377,9 @@ const ChartPanel = memo(({ panel, chartData, isEditing }) => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col">
+    <div className={`h-full w-full flex flex-col transition-colors duration-500 ${hasViolation ? 'ring-2 ring-red-500/50 bg-red-500/5 dark:bg-red-500/10 rounded-xl' : ''}`}>
       <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center text-white shadow-md shrink-0`}>
+        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center text-white shadow-md shrink-0 ${hasViolation ? 'animate-pulse' : ''}`}>
           <IconComponent size={16} />
         </div>
         <h3 className="text-sm font-semibold text-[#172b4d] dark:text-white font-heading truncate flex-1">{panel.title}</h3>
@@ -531,10 +559,26 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel }) => {
 // ═══ MAIN DASHBOARD COMPONENT ═══════════════════════════════════════════════
 // ═════════════════════════════════════════════════════════════════════════════
 const Dashboard = () => {
-  const { liveData, wsData, isConnected, isLive, isLoading: isLoadingTrend } = useTrendData();
+  const { liveData, wsData, isConnected, isLive, isLoading: isLoadingTrend, updateInterval, setUpdateInterval } = useTrendData();
   const { apiUrl } = useApi();
   const { data: tempData, liveData: oilLiveData } = useTemperatureData();
   const { confirm } = useDialog();
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isSyncHoverActive, setIsSyncHoverActive] = useState(true);
+
+  useEffect(() => {
+    const handleFullscreen = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handleFullscreen);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreen);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => console.error(err));
+    } else {
+      document.exitFullscreen();
+    }
+  };
 
   // ─── Panels & Layouts from localStorage ──────────────────────────────
   const [panels, setPanels] = useState(() => {
@@ -838,6 +882,18 @@ const Dashboard = () => {
 
         {/* Toolbar */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Interval Selector */}
+          <select 
+            value={updateInterval} 
+            onChange={(e) => setUpdateInterval(Number(e.target.value))}
+            className="px-3 py-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-[#172b4d] dark:text-white text-xs font-semibold cursor-pointer outline-none hover:bg-gray-50 dark:hover:bg-[#374151] transition-colors shadow-sm"
+          >
+            <option value={0}>Live (Real-time)</option>
+            <option value={5000}>Update 5 Detik</option>
+            <option value={30000}>Update 30 Detik</option>
+            <option value={60000}>Update 1 Menit</option>
+          </select>
+
           {/* WA Buttons */}
           <button onClick={handleTestWA} title="Test WA Notification" className="p-2 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors shadow-sm">
             <Send size={16} />
@@ -849,6 +905,17 @@ const Dashboard = () => {
           <button onClick={() => setShowExportModal(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition-colors shadow-sm">
             <Download size={14} /> Export
           </button>
+          
+          {/* TV Mode */}
+          <button onClick={toggleFullscreen} className={`p-2 rounded-xl text-white transition-colors shadow-sm ${isFullscreen ? 'bg-orange-500 hover:bg-orange-600' : 'bg-slate-800 hover:bg-slate-900'}`} title={isFullscreen ? "Exit TV Mode" : "TV Mode"}>
+            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
+          
+          {/* Sync Hover Toggle */}
+          <button onClick={() => setIsSyncHoverActive(!isSyncHoverActive)} className={`p-2 rounded-xl transition-all shadow-sm ${isSyncHoverActive ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20'}`} title={isSyncHoverActive ? "Sync Hover: On" : "Sync Hover: Off"}>
+            <MousePointer2 size={16} />
+          </button>
+
           {/* Edit Layout */}
           <button onClick={() => setIsEditing(!isEditing)} className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${isEditing ? 'bg-[#0052cc] text-white' : 'bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10'}`}>
             <Edit3 size={14} />{isEditing ? 'Done Editing' : 'Edit Layout'}
@@ -908,7 +975,7 @@ const Dashboard = () => {
                   {panel.type === 'status' ? (
                     <StatusPanel tempData={tempData} isLive={isLive} isEditing={isEditing} />
                   ) : panel.type === 'chart' ? (
-                    <ChartPanel panel={panel} chartData={getChartDataForPanel(panel)} isEditing={isEditing} />
+                    <ChartPanel panel={panel} chartData={getChartDataForPanel(panel)} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />
                   ) : (
                     <StatPanel panel={panel} latestData={latestData} isEditing={isEditing} />
                   )}
