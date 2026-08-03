@@ -1,67 +1,24 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from "react";
 import axios from 'axios';
-import {
-  AreaChart, Area, LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine,
-  PieChart, Pie, Cell, Label
-} from 'recharts';
-import {
-  Zap, Activity, Waves, Gauge, Wifi, WifiOff, Plus, X, Settings2, Trash2,
-  RefreshCw, GripVertical, Edit3, Send, LogOut, Download, Loader2,
-  ChevronDown, Check, Search, Layers, RotateCcw, Thermometer,
-  TrendingUp, BarChart3, Eye, AlertTriangle, Maximize2, Minimize2, MousePointer2,
-  BellRing, Power, FileDown, Monitor, Crosshair, LayoutGrid, PlusSquare
-} from "lucide-react";
+import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Plus, X, Settings2, Trash2, RefreshCw, GripVertical, Edit3, Send, LogOut, Download, Loader2, ChevronDown, Check, Search, Layers, RotateCcw, Thermometer, TrendingUp, BarChart3, Eye, AlertTriangle, Maximize2, Minimize2, MousePointer2, BellRing, Power, FileDown, Monitor, Crosshair, LayoutGrid, PlusSquare, Database, PieChart as PieChartIcon, FileText, Table, AlignLeft, CalendarClock, List, Rss, MessageSquareWarning, CandlestickChart, ActivitySquare, LayoutPanelLeft, BoxSelect } from 'lucide-react';
 import { useTrendData } from "../contexts/TrendDataContext";
 import { useTemperatureData } from "../contexts/TemperatureDataContext";
 import { useDialog } from "../contexts/DialogContext";
 import EnergyLoader from "../components/EnergyLoader";
 import { saveAs } from 'file-saver';
 import { useApi } from '../contexts/ApiContext';
-
 import { Responsive as ResponsiveGridLayout } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
-// ─── Metrics Catalog ─────────────────────────────────────────────────────────
-// Maps WebSocket data keys to display metadata
-const METRICS = {
-  // Electrical — from TrendDataContext wsData/liveData
-  phaseA: { label: 'Phase A Voltage', unit: 'V', color: '#ef4444', group: 'Phase Voltage', icon: Zap, source: 'electrical', thresholds: { min: 200, max: 240 } },
-  phaseB: { label: 'Phase B Voltage', unit: 'V', color: '#eab308', group: 'Phase Voltage', icon: Zap, source: 'electrical', thresholds: { min: 200, max: 240 } },
-  phaseC: { label: 'Phase C Voltage', unit: 'V', color: '#3b82f6', group: 'Phase Voltage', icon: Zap, source: 'electrical', thresholds: { min: 200, max: 240 } },
-  lineAB: { label: 'Line AB Voltage', unit: 'V', color: '#ec4899', group: 'Line Voltage', icon: Activity, source: 'electrical' },
-  lineBC: { label: 'Line BC Voltage', unit: 'V', color: '#8b5cf6', group: 'Line Voltage', icon: Activity, source: 'electrical' },
-  lineCA: { label: 'Line CA Voltage', unit: 'V', color: '#06b6d4', group: 'Line Voltage', icon: Activity, source: 'electrical' },
-  currentA: { label: 'Current A', unit: 'A', color: '#ef4444', group: 'Current', icon: Waves, source: 'electrical' },
-  currentB: { label: 'Current B', unit: 'A', color: '#eab308', group: 'Current', icon: Waves, source: 'electrical' },
-  currentC: { label: 'Current C', unit: 'A', color: '#3b82f6', group: 'Current', icon: Waves, source: 'electrical' },
-  currentN: { label: 'Current N', unit: 'A', color: '#9ca3af', group: 'Current', icon: Waves, source: 'electrical' },
-  powerActiveTotal: { label: 'Active Power', unit: 'kW', color: '#10b981', group: 'Power', icon: TrendingUp, source: 'electrical' },
-  powerReactiveTotal: { label: 'Reactive Power', unit: 'kVAR', color: '#f59e0b', group: 'Power', icon: TrendingUp, source: 'electrical' },
-  powerApparentTotal: { label: 'Apparent Power', unit: 'kVA', color: '#8b5cf6', group: 'Power', icon: TrendingUp, source: 'electrical' },
-  pfTotal: { label: 'Power Factor', unit: '', color: '#14b8a6', group: 'Power Quality', icon: Gauge, source: 'electrical', thresholds: { min: 0.85 } },
-  frequency: { label: 'Frequency', unit: 'Hz', color: '#6366f1', group: 'Power Quality', icon: Gauge, source: 'electrical', thresholds: { min: 49.5, max: 50.5 } },
-  energyActiveTotal: { label: 'Active Energy', unit: 'kWh', color: '#22c55e', group: 'Energy', icon: BarChart3, source: 'electrical' },
-  energyReactiveTotal: { label: 'Reactive Energy', unit: 'kVARh', color: '#eab308', group: 'Energy', icon: BarChart3, source: 'electrical' },
-  efficiency: { label: 'Efficiency', unit: '%', color: '#e83e8c', group: 'Performance', icon: TrendingUp, source: 'electrical' },
-  // Oil — from TemperatureDataContext
-  oil_temperature: { label: 'Oil Temperature', unit: '°C', color: '#ef4444', group: 'Oil', icon: Thermometer, source: 'oil' },
-  oil_pressure: { label: 'Oil Pressure', unit: 'Bar', color: '#3b82f6', group: 'Oil', icon: Gauge, source: 'oil' },
-};
+import { METRICS, METRIC_GROUPS } from "../config/metrics";
+import {
+  TimeSeriesPanel, StatPanel, GaugePanel, StatusPanel,
+  BarChartPanel, BarGaugePanel, TablePanel, PieChartPanel,
+  StateTimelinePanel, HeatmapPanel, StatusHistoryPanel,
+  HistogramPanel, NewsPanel, AnnotationsListPanel, CandlestickPanel
+} from "../components/visualizations";
 
-// Group metrics
-const METRIC_GROUPS = {};
-for (const [key, val] of Object.entries(METRICS)) {
-  if (!METRIC_GROUPS[val.group]) METRIC_GROUPS[val.group] = [];
-  METRIC_GROUPS[val.group].push({ key, ...val });
-}
-
-const GROUP_ICON_MAP = {
-  'Phase Voltage': Zap, 'Line Voltage': Activity, 'Current': Waves,
-  'Power': TrendingUp, 'Power Quality': Gauge, 'Energy': BarChart3,
-  'Performance': TrendingUp, 'Oil': Thermometer,
-};
 
 // ─── Panel Presets (mimics old dashboard) ────────────────────────────────────
 const DEFAULT_PANELS = [
@@ -72,12 +29,12 @@ const DEFAULT_PANELS = [
   { id: 'p_power_stat', title: 'Power', type: 'stat', metrics: ['powerActiveTotal', 'powerReactiveTotal', 'powerApparentTotal', 'pfTotal'], chartType: 'line' },
   { id: 'p_freq_stat', title: 'Frequency', type: 'stat', metrics: ['frequency'], chartType: 'line' },
   { id: 'p_energy_stat', title: 'Energy', type: 'stat', metrics: ['energyActiveTotal', 'energyReactiveTotal'], chartType: 'line' },
-  { id: 'p_uphase_chart', title: 'Phase Voltage Trend', type: 'chart', metrics: ['phaseA', 'phaseB', 'phaseC'], chartType: 'area' },
-  { id: 'p_uline_chart', title: 'Line Voltage Trend', type: 'chart', metrics: ['lineAB', 'lineBC', 'lineCA'], chartType: 'area' },
-  { id: 'p_current_chart', title: 'Current Trend', type: 'chart', metrics: ['currentA', 'currentB', 'currentC'], chartType: 'area' },
-  { id: 'p_power_chart', title: 'Power Trend', type: 'chart', metrics: ['powerActiveTotal', 'powerReactiveTotal', 'powerApparentTotal'], chartType: 'area' },
-  { id: 'p_freq_chart', title: 'Frequency Trend', type: 'chart', metrics: ['frequency'], chartType: 'area' },
-  { id: 'p_eff_chart', title: 'Efficiency Trend', type: 'chart', metrics: ['efficiency'], chartType: 'area' },
+  { id: 'p_uphase_chart', title: 'Phase Voltage Trend', type: 'areachart', metrics: ['phaseA', 'phaseB', 'phaseC'], chartType: 'area' },
+  { id: 'p_uline_chart', title: 'Line Voltage Trend', type: 'areachart', metrics: ['lineAB', 'lineBC', 'lineCA'], chartType: 'area' },
+  { id: 'p_current_chart', title: 'Current Trend', type: 'areachart', metrics: ['currentA', 'currentB', 'currentC'], chartType: 'area' },
+  { id: 'p_power_chart', title: 'Power Trend', type: 'areachart', metrics: ['powerActiveTotal', 'powerReactiveTotal', 'powerApparentTotal'], chartType: 'area' },
+  { id: 'p_freq_chart', title: 'Frequency Trend', type: 'areachart', metrics: ['frequency'], chartType: 'area' },
+  { id: 'p_eff_chart', title: 'Efficiency Trend', type: 'areachart', metrics: ['efficiency'], chartType: 'area' },
 ];
 
 const DEFAULT_GRID_LAYOUTS = {
@@ -134,372 +91,43 @@ const LAYOUTS_KEY = 'grafana_layouts_v2';
 const PROFILES_KEY = 'grafana_profiles_v3';
 const uid = () => 'p_' + Math.random().toString(36).substr(2, 9);
 
-// ─── Custom Tooltip ──────────────────────────────────────────────────────────
-const ChartTooltip = ({ active, payload, label }) => {
-  if (!active || !payload || !payload.length) return null;
-  return (
-    <div className="bg-white/95 dark:bg-[#151521]/95 backdrop-blur-xl border border-gray-200/50 dark:border-white/10 rounded-xl px-4 py-3 shadow-2xl">
-      <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider">
-        {typeof label === 'number' ? new Date(label).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : label}
-      </p>
-      {payload.map((entry, i) => {
-        const meta = METRICS[entry.dataKey];
-        return (
-          <div key={i} className="flex items-center gap-2 py-0.5">
-            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
-            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">{meta?.label || entry.name}</span>
-            <span className="text-xs font-bold text-gray-900 dark:text-white ml-auto pl-3">
-              {entry.value != null ? Number(entry.value).toFixed(2) : '—'} {meta?.unit || ''}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
 
-// ─── Stat Panel Renderer ─────────────────────────────────────────────────────
-const SvgGauge = ({ percent, value, unit, isDanger, color }) => {
-  const radius = 80;
-  const strokeWidth = 24;
-  const cx = 100;
-  const cy = 90;
-  const circumference = Math.PI * radius;
-  const dashoffset = circumference - (percent * circumference);
+const PanelRenderer = memo(({ panel, latestData, chartData, tempData, isLive, isEditing, isSyncHoverActive }) => {
+  switch (panel.type) {
+    case 'status': return <StatusPanel tempData={tempData || {}} isLive={isLive} isEditing={isEditing} />;
+    case 'areachart': return <TimeSeriesPanel panel={{...panel, chartType: 'area'}} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
+    case 'linechart': return <TimeSeriesPanel panel={{...panel, chartType: 'line'}} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
+    case 'stat': return <StatPanel panel={panel} latestData={latestData || {}} chartData={chartData} isEditing={isEditing} />;
+    case 'gauge': return <GaugePanel panel={panel} latestData={latestData || {}} isEditing={isEditing} />;
+    case 'barchart': return <BarChartPanel panel={panel} chartData={chartData} isEditing={isEditing} />;
+    case 'bargauge': return <BarGaugePanel panel={panel} latestData={latestData || {}} isEditing={isEditing} />;
+    case 'table': return <TablePanel panel={panel} latestData={latestData || {}} isEditing={isEditing} />;
+    case 'piechart': return <PieChartPanel panel={panel} latestData={latestData || {}} isEditing={isEditing} />;
+    case 'statetimeline': return <StateTimelinePanel panel={panel} chartData={chartData} isEditing={isEditing} />;
+    case 'heatmap': return <HeatmapPanel panel={panel} chartData={chartData} isEditing={isEditing} />;
+    case 'statushistory': return <StatusHistoryPanel panel={panel} chartData={chartData} isEditing={isEditing} />;
+    case 'histogram': return <HistogramPanel panel={panel} chartData={chartData} isEditing={isEditing} />;
 
-  return (
-    <svg viewBox="0 0 200 100" className="w-full h-full overflow-visible drop-shadow-sm">
-      <path
-        d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
-        fill="none"
-        stroke="rgba(150,150,150,0.15)"
-        strokeWidth={strokeWidth}
-        strokeLinecap="butt"
-      />
-      <path
-        d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
-        fill="none"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="butt"
-        strokeDasharray={circumference}
-        strokeDashoffset={dashoffset}
-        className="transition-all duration-700 ease-out"
-      />
-      <text
-        x={cx}
-        y={cy - 6}
-        textAnchor="middle"
-        dominantBaseline="baseline"
-        fontSize="34"
-        fontWeight="bold"
-        className={`font-sans tracking-tight ${isDanger ? 'fill-red-500' : 'fill-[#172b4d] dark:fill-white'}`}
-      >
-        {value.toFixed(2)}
-      </text>
-      <text
-        x={cx}
-        y={cy + 8}
-        textAnchor="middle"
-        dominantBaseline="hanging"
-        fontSize="12"
-        fontWeight="600"
-        className="fill-[#8993a4] dark:fill-[#64748b]"
-      >
-        {unit}
-      </text>
-    </svg>
-  );
-};
-
-const StatPanel = memo(({ panel, latestData, chartData, isEditing }) => {
-  const metrics = panel.metrics || [];
-  const firstMetric = METRICS[metrics[0]];
-  const IconComponent = firstMetric?.icon || Activity;
-  const gradients = {
-    'Phase Voltage': 'from-[#0052cc] to-[#4c9aff]',
-    'Line Voltage': 'from-[#00b8d9] to-[#36c9e5]',
-    'Current': 'from-[#ffab00] to-[#ffc400]',
-    'Power': 'from-[#8777d9] to-[#6554c0]',
-    'Power Quality': 'from-[#6554c0] to-[#8777d9]',
-    'Energy': 'from-[#36b37e] to-[#57d9a3]',
-    'Performance': 'from-[#e83e8c] to-[#f06292]',
-    'Oil': 'from-[#ef4444] to-[#f97316]',
-  };
-  const gradient = gradients[firstMetric?.group] || 'from-blue-500 to-indigo-600';
-  const bgTints = {
-    'Phase Voltage': 'bg-blue-500/5', 'Line Voltage': 'bg-cyan-500/5', 'Current': 'bg-amber-500/5',
-    'Power': 'bg-purple-500/5', 'Power Quality': 'bg-indigo-500/5', 'Energy': 'bg-emerald-500/5',
-    'Performance': 'bg-pink-500/5', 'Oil': 'bg-red-500/5',
-  };
-
-  if (panel.type === 'gauge') {
-    const meta = METRICS[metrics[0]];
-    const val = latestData[metrics[0]] ?? 0;
-
-    // Dynamic min/max defaults for the gauge bounds
-    let min = meta?.thresholds?.min ?? 0;
-    let max = meta?.thresholds?.max ?? (min + 100);
-    if (metrics[0] === 'frequency') { min = 45; max = 55; }
-    else if (metrics[0] === 'pfTotal') { min = 0; max = 1; }
-    else if (firstMetric?.group?.includes('Voltage')) { min = 0; max = 500; }
-    else if (firstMetric?.group === 'Current') { min = 0; max = 100; }
-    else if (firstMetric?.group === 'Power') { min = 0; max = 1000; }
-    if (val > max) max = Math.ceil(val * 1.2); // Ensure value is never strictly > max
-
-    const percent = Math.max(0, Math.min(1, (val - min) / (max - min)));
-    const tMin = meta?.thresholds?.min;
-    const tMax = meta?.thresholds?.max;
-    const isDanger = (tMin !== undefined && val < tMin) || (tMax !== undefined && val > tMax);
-    const color = isDanger ? '#ef4444' : (meta?.color || '#3b82f6');
-
-    return (
-      <div className="h-full w-full flex flex-col relative">
-        <div className={`flex items-center gap-3 mb-2 select-none z-10 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-          <h3 className="font-semibold text-[#172b4d] dark:text-white text-sm font-heading tracking-tight truncate flex-1">{panel.title}</h3>
-          {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
+    case 'news': return <NewsPanel panel={panel} latestData={latestData || {}} isEditing={isEditing} />;
+    case 'annotations': return <AnnotationsListPanel panel={panel} chartData={chartData} isEditing={isEditing} />;
+    case 'candlestick': return <CandlestickPanel panel={panel} chartData={chartData} isEditing={isEditing} />;
+    default:
+      return (
+        <div className="h-full w-full flex items-center justify-center bg-gray-50 dark:bg-white/5 rounded-xl border border-dashed border-gray-300 dark:border-white/20">
+          <span className="text-sm font-semibold text-gray-500">Unknown Panel Type: {panel.type}</span>
         </div>
-        <div className="flex-1 relative overflow-hidden flex flex-col justify-end w-full pb-4">
-          <SvgGauge percent={percent} value={val} unit={meta?.unit} isDanger={isDanger} color={color} />
-        </div>
-      </div>
-    );
+      );
   }
-
-  // panel.type === 'stat'
-  return (
-    <div className="h-full w-full flex flex-col">
-      <div className={`flex items-center gap-3 mb-3 select-none ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-        <h3 className="font-semibold text-[#172b4d] dark:text-white text-sm font-heading tracking-tight truncate flex-1">{panel.title}</h3>
-        {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
-      </div>
-
-      {metrics.length === 1 ? (
-        <div className="flex-1 flex flex-col min-h-0 relative group" style={{ containerType: 'inline-size' }}>
-          <div className="absolute inset-0 flex flex-col items-center justify-center pb-8 z-10 pointer-events-none">
-            <span className="font-bold text-[#172b4d] dark:text-white font-sans tracking-tight drop-shadow-md leading-none" style={{ fontSize: 'clamp(24px, 20cqi, 72px)' }}>
-              {(latestData[metrics[0]] ?? 0).toFixed(2)}
-            </span>
-            <span className="font-semibold text-[#8993a4] dark:text-[#64748b] mt-1" style={{ fontSize: 'clamp(10px, 5cqi, 16px)' }}>{METRICS[metrics[0]]?.unit}</span>
-          </div>
-          {chartData && chartData.length > 0 && (
-            <div className="absolute bottom-0 left-0 right-0 h-2/5 opacity-40 group-hover:opacity-80 transition-opacity">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                  <defs>
-                    <linearGradient id={`spark-${panel.id}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={METRICS[metrics[0]]?.color || '#3b82f6'} stopOpacity={0.5} />
-                      <stop offset="95%" stopColor={METRICS[metrics[0]]?.color || '#3b82f6'} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <Area type="monotone" dataKey={metrics[0]} stroke={METRICS[metrics[0]]?.color || '#3b82f6'} fill={`url(#spark-${panel.id})`} strokeWidth={2} dot={false} isAnimationActive={false} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="flex-1 flex flex-col justify-center gap-2 overflow-y-auto custom-scrollbar">
-          {metrics.map(m => {
-            const meta = METRICS[m];
-            if (!meta) return null;
-            return (
-              <div key={m} className="flex justify-between items-center px-3 py-2 rounded-xl bg-gray-50/50 dark:bg-white/[0.03] border border-gray-100/50 dark:border-white/[0.04] transition-colors hover:bg-gray-100/70 dark:hover:bg-white/[0.06]">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
-                  <span className="text-[#5e6c84] dark:text-[#94a3b8] font-medium text-xs truncate">{meta.label}</span>
-                </div>
-                <div className="flex items-baseline gap-1 shrink-0">
-                  <span className="text-base font-bold text-[#172b4d] dark:text-white font-mono">{(latestData[m] ?? 0).toFixed(2)}</span>
-                  {meta.unit && <span className="text-[10px] font-semibold text-[#8993a4] dark:text-[#64748b]">{meta.unit}</span>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-});
-
-// ─── Status Panel Renderer ───────────────────────────────────────────────────
-const StatusPanel = memo(({ tempData, isLive, isEditing }) => (
-  <div className="h-full w-full flex flex-col">
-    <div className={`flex items-center gap-3 mb-3 select-none ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/10 shrink-0">
-        <AlertTriangle size={18} />
-      </div>
-      <h3 className="font-semibold text-[#172b4d] dark:text-white text-sm font-heading tracking-tight flex-1">System Status</h3>
-      <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${isLive ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-        {isLive ? <Wifi size={12} /> : <WifiOff size={12} />}
-        {isLive ? 'Live' : 'Offline'}
-      </div>
-      {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
-    </div>
-    <div className="flex-1 flex items-center justify-center">
-      <div className="grid grid-cols-2 gap-3 w-full">
-        {[
-          { label: 'Oil Level Alarm', value: tempData.oil_level_alarm, safe: tempData.oil_level_alarm !== 0 },
-          { label: 'Oil Level Trip', value: tempData.oil_level_trip, safe: tempData.oil_level_trip !== 0 },
-        ].map(item => (
-          <div key={item.label} className="flex flex-col items-center gap-1.5">
-            <span className="text-[10px] text-[#5e6c84] dark:text-[#94a3b8] font-semibold uppercase tracking-wider text-center">{item.label}</span>
-            <div className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${item.safe ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-              <div className={`w-2 h-2 rounded-full ${item.safe ? 'bg-emerald-500' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse'}`} />
-              {item.safe ? 'CLEAR' : 'TRIGGERED'}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-));
-
-// ─── Chart Panel Renderer ────────────────────────────────────────────────────
-const ChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
-  const metrics = panel.metrics || [];
-  const firstMetric = METRICS[metrics[0]];
-  const IconComponent = firstMetric?.icon || Activity;
-  const gradients = {
-    'Phase Voltage': 'from-[#0052cc] to-[#4c9aff]', 'Line Voltage': 'from-[#00b8d9] to-[#79f2ff]',
-    'Current': 'from-[#ff5630] to-[#ff9873]', 'Power': 'from-[#8777d9] to-[#6554c0]',
-    'Power Quality': 'from-[#8950fc] to-[#a274fd]', 'Energy': 'from-[#36b37e] to-[#57d9a3]',
-    'Performance': 'from-[#e83e8c] to-[#f06292]', 'Oil': 'from-[#ef4444] to-[#f97316]',
-  };
-  const gradient = gradients[firstMetric?.group] || 'from-blue-500 to-indigo-600';
-
-  const commonXAxis = {
-    dataKey: "time", tick: { fontSize: 10, fill: '#94a3b8' }, tickLine: false,
-    axisLine: { stroke: '#e2e8f033' }, interval: 'preserveStartEnd', minTickGap: 50,
-  };
-  const commonYAxis = {
-    tick: { fontSize: 10, fill: '#94a3b8' }, tickLine: false, axisLine: false, width: 50,
-    domain: ['auto', 'auto'],
-  };
-  const gridProps = { strokeDasharray: "3 3", stroke: '#e2e8f020', vertical: false };
-
-  // Check for threshold violations
-  const latestPoint = chartData && chartData.length > 0 ? chartData[chartData.length - 1] : null;
-  const hasViolation = latestPoint && metrics.some(m => {
-    const t = METRICS[m]?.thresholds;
-    if (!t) return false;
-    const val = latestPoint[m];
-    return (t.min !== undefined && val < t.min) || (t.max !== undefined && val > t.max);
-  });
-
-  const renderChart = () => {
-    if (!chartData || chartData.length === 0) {
-      return (
-        <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-600">
-          <div className="flex flex-col items-center gap-2">
-            <BarChart3 size={28} />
-            <span className="text-xs font-medium">Waiting for data...</span>
-          </div>
-        </div>
-      );
-    }
-
-    if (panel.type === 'stat') {
-      const latestPoint = chartData[chartData.length - 1];
-      return (
-        <div className="flex flex-col h-full overflow-y-auto custom-scrollbar p-2 gap-3">
-          {metrics.map(m => (
-            <div key={m} className="flex flex-col items-center justify-center bg-gray-50 dark:bg-[#1a1a2e] rounded-xl p-3 border border-gray-100 dark:border-white/5 shadow-inner">
-              <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-1 tracking-wider">{METRICS[m]?.label}</span>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl sm:text-4xl font-black tracking-tight" style={{ color: METRICS[m]?.color || '#8884d8' }}>
-                  {latestPoint[m] !== undefined ? latestPoint[m].toFixed(2) : '--'}
-                </span>
-                <span className="text-sm font-semibold text-gray-400">{METRICS[m]?.unit}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (panel.chartType === 'bar') {
-      return (
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined}>
-            <CartesianGrid {...gridProps} />
-            <XAxis {...commonXAxis} />
-            <YAxis {...commonYAxis} />
-            <RechartsTooltip content={<ChartTooltip />} />
-            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-            {metrics.map(m => (
-              <Bar key={m} dataKey={m} name={METRICS[m]?.label || m} fill={METRICS[m]?.color || '#8884d8'} radius={[3, 3, 0, 0]} maxBarSize={16} isAnimationActive={false} />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      );
-    }
-
-    if (panel.chartType === 'line') {
-      return (
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined}>
-            <CartesianGrid {...gridProps} />
-            <XAxis {...commonXAxis} />
-            <YAxis {...commonYAxis} />
-            <RechartsTooltip content={<ChartTooltip />} />
-            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-            {metrics.map(m => (
-              <Line key={m} type="monotone" dataKey={m} name={METRICS[m]?.label || m} stroke={METRICS[m]?.color || '#8884d8'} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls isAnimationActive={false} />
-            ))}
-            {metrics.includes('frequency') && <ReferenceLine y={50.5} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: 'Limit (50.5)', fill: '#ef4444', fontSize: 10 }} />}
-          </LineChart>
-        </ResponsiveContainer>
-      );
-    }
-
-    // Default: area
-    return (
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined}>
-          <defs>
-            {metrics.map(m => (
-              <linearGradient key={`g-${m}`} id={`areaGrad-${m}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={METRICS[m]?.color || '#8884d8'} stopOpacity={0.25} />
-                <stop offset="95%" stopColor={METRICS[m]?.color || '#8884d8'} stopOpacity={0} />
-              </linearGradient>
-            ))}
-          </defs>
-          <CartesianGrid {...gridProps} />
-          <XAxis {...commonXAxis} />
-          <YAxis {...commonYAxis} />
-          <RechartsTooltip content={<ChartTooltip />} />
-          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-          {metrics.map(m => (
-            <Area key={m} type="monotone" dataKey={m} name={METRICS[m]?.label || m} stroke={METRICS[m]?.color || '#8884d8'} fill={`url(#areaGrad-${m})`} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls isAnimationActive={false} />
-          ))}
-          {metrics.includes('frequency') && <ReferenceLine y={50.5} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: 'Limit (50.5)', fill: '#ef4444', fontSize: 10 }} />}
-        </AreaChart>
-      </ResponsiveContainer>
-    );
-  };
-
-  return (
-    <div className="h-full w-full flex flex-col transition-colors duration-500">
-      <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-        <h3 className="text-sm font-semibold text-[#172b4d] dark:text-white font-heading truncate flex-1">{panel.title}</h3>
-        {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
-      </div>
-      <div className="flex-1 min-h-0">
-        {renderChart()}
-      </div>
-    </div>
-  );
 });
 
 // ─── Panel Editor Modal ──────────────────────────────────────────────────────
-const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel }) => {
+const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, getChartDataForPanel, tempData, isLive }) => {
   const [title, setTitle] = useState('');
-  const [panelType, setPanelType] = useState('chart');
+  const [panelType, setPanelType] = useState('areachart');
   const [selectedMetrics, setSelectedMetrics] = useState([]);
   const [chartType, setChartType] = useState('area');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeGroupTab, setActiveGroupTab] = useState(Object.keys(METRIC_GROUPS)[0]);
+  const [visSearchQuery, setVisSearchQuery] = useState('');
 
   useEffect(() => {
     if (editingPanel) {
@@ -508,22 +136,25 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel }) => {
       setSelectedMetrics([...(editingPanel.metrics || [])]);
       setChartType(editingPanel.chartType || 'area');
     } else {
-      setTitle(''); setPanelType('chart'); setSelectedMetrics([]); setChartType('area');
+      setTitle(''); setPanelType('areachart'); setSelectedMetrics([]); setChartType('area');
     }
     setSearchQuery('');
+    setVisSearchQuery('');
   }, [editingPanel, isOpen]);
+
+  const SINGLE_METRIC_PANELS = ['gauge', 'bargauge', 'candlestick', 'histogram'];
 
   const toggleMetric = (key) => {
     setSelectedMetrics(prev => {
       if (prev.includes(key)) return prev.filter(m => m !== key);
-      if (panelType === 'gauge') return [key]; // Only allow 1 metric for gauge, replace if new selected
+      if (SINGLE_METRIC_PANELS.includes(panelType)) return [key]; // Only allow 1 metric, replace if new selected
       return [...prev, key];
     });
   };
 
-  // Enforce single metric if user switches type to gauge after selecting multiple
+  // Enforce single metric if user switches type to a restricted panel after selecting multiple
   useEffect(() => {
-    if (panelType === 'gauge' && selectedMetrics.length > 1) {
+    if (SINGLE_METRIC_PANELS.includes(panelType) && selectedMetrics.length > 1) {
       setSelectedMetrics([selectedMetrics[0]]);
     }
   }, [panelType, selectedMetrics]);
@@ -558,175 +189,154 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel }) => {
 
   if (!isOpen) return null;
 
-  const filteredGroups = {};
-  for (const [gName, gMetrics] of Object.entries(METRIC_GROUPS)) {
-    const f = gMetrics.filter(m => m.label.toLowerCase().includes(searchQuery.toLowerCase()) || m.key.toLowerCase().includes(searchQuery.toLowerCase()) || gName.toLowerCase().includes(searchQuery.toLowerCase()));
-    if (f.length > 0) filteredGroups[gName] = f;
-  }
+  const previewPanel = {
+    id: editingPanel?.id || 'preview_panel',
+    title: title.trim() || derivedTitle,
+    type: panelType,
+    metrics: selectedMetrics,
+    chartType,
+  };
+  
+  const previewChartData = (selectedMetrics.length > 0 && getChartDataForPanel) ? getChartDataForPanel(previewPanel) : [];
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]" onClick={onClose}>
-      <div className="bg-white dark:bg-[#1a1a2e] rounded-2xl max-w-lg w-full shadow-2xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-200 dark:border-white/10 shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                <Settings2 size={18} />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-gray-900 dark:text-white">{editingPanel ? 'Edit Panel' : 'Add New Panel'}</h3>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400">Select data to display</p>
-              </div>
-            </div>
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400"><X size={18} /></button>
-          </div>
+    <div className="fixed inset-0 z-[9999] flex flex-col bg-[#f4f7fe] dark:bg-[#0b1120] animate-[fadeIn_0.2s_ease-out]">
+      {/* Top Header */}
+      <div className="h-14 px-6 border-b border-gray-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-[#1a1a2e] shrink-0">
+        <div className="flex items-center gap-4">
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-800 dark:hover:text-white flex items-center gap-2 text-sm font-semibold transition-colors">
+            <X size={18} /> Cancel
+          </button>
+          <div className="w-px h-6 bg-gray-200 dark:bg-white/10" />
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white">{editingPanel ? 'Edit Panel' : 'New Panel'}</h3>
         </div>
+        <div className="flex items-center gap-3">
+           <button onClick={onClose} className="px-4 py-1.5 rounded-lg font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 text-sm transition-colors border border-transparent hover:border-gray-200 dark:hover:border-white/10">Discard</button>
+           <button onClick={handleSave} disabled={selectedMetrics.length === 0} className="px-5 py-1.5 rounded-lg font-bold bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-50 text-sm transition-colors flex items-center gap-1.5">
+             <Check size={16} /> Apply
+           </button>
+        </div>
+      </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 custom-scrollbar">
-          {/* Title */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wider">Panel Title</label>
-            <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder={`Auto: ${derivedTitle}`} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-black/20 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+      <div className="flex flex-1 overflow-y-auto lg:overflow-hidden flex-col lg:flex-row">
+        {/* Main Left Content (Preview Top + Metrics Bottom) */}
+        <div className="contents lg:flex lg:flex-1 flex-col lg:overflow-hidden lg:border-r border-gray-200 dark:border-white/10">
+          
+          {/* Top: Preview Area */}
+          <div className="order-2 lg:order-none flex-1 p-4 lg:p-6 flex flex-col min-h-[300px] bg-gray-50/50 dark:bg-black/20">
+             <div className="mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Preview</div>
+             <div className="flex-1 bg-white dark:bg-[#151521] border border-gray-200 dark:border-white/5 shadow-sm rounded-xl p-4 overflow-hidden relative group">
+                {selectedMetrics.length === 0 ? (
+                  <div className="h-full w-full flex flex-col items-center justify-center text-gray-400">
+                    <BarChart3 size={48} className="mb-3 opacity-20" />
+                    <span className="text-sm font-medium">Select metrics below to see preview</span>
+                  </div>
+                ) : (
+                  <PanelRenderer panel={previewPanel} latestData={latestData || {}} chartData={previewChartData} tempData={tempData || {}} isLive={isLive} isEditing={false} isSyncHoverActive={false} />
+                )}
+             </div>
           </div>
 
-          {/* Panel Type */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wider">Panel Type</label>
-            <div className="flex gap-2 flex-wrap">
-              {[{ v: 'stat', l: '📊 Stat + Trend', d: 'Big Number & Sparkline' }, { v: 'chart', l: '📈 Trend Chart', d: 'Full data charts' }, { v: 'gauge', l: '⏱️ Gauge', d: 'Speedometer (PF & Hz)' }].map(t => (
-                <button key={t.v} onClick={() => setPanelType(t.v)} className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold transition-all text-left ${panelType === t.v ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/20' : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'}`}>
-                  <div className="font-bold">{t.l}</div>
-                  <div className={`text-[10px] mt-0.5 ${panelType === t.v ? 'text-blue-100' : 'text-gray-400'}`}>{t.d}</div>
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* Bottom: Metrics Selection Area */}
+          <div className="order-4 lg:order-none lg:h-[45%] min-h-[250px] p-4 lg:p-6 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#1a1a2e] flex flex-col">
+             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Database size={16} className="text-blue-500" /> Metrics Selection 
+                  <span className="text-xs bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">{selectedMetrics.length} selected</span>
+                </h4>
+                <div className="relative w-full md:w-64">
+                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                   <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search metrics..." className="w-full pl-8 pr-4 py-1.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white" />
+                </div>
+             </div>
 
-          {/* Chart Type (only for chart panels) */}
-          {panelType === 'chart' && (
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wider">Chart Type</label>
-              <div className="flex gap-2">
-                {[{ v: 'area', l: 'Area' }, { v: 'line', l: 'Line' }, { v: 'bar', l: 'Bar' }].map(ct => (
-                  <button key={ct.v} onClick={() => setChartType(ct.v)} className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold transition-all ${chartType === ct.v ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/20' : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400'}`}>
-                    {ct.l}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Metric Selection UI */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Select Metrics ({selectedMetrics.length} selected)</label>
-            </div>
-            
-            <div className="relative mb-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-              <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search metrics..." className="w-full pl-8 pr-4 py-2 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-colors" />
-            </div>
-
-            {searchQuery ? (
-              // Flat list if searching
-              <div className="space-y-3 max-h-[240px] overflow-y-auto custom-scrollbar p-1">
-                {Object.entries(filteredGroups).map(([gName, gMetrics]) => {
-                  const GIcon = GROUP_ICON_MAP[gName] || Activity;
+             <div className="max-h-[350px] lg:max-h-none flex-1 overflow-y-auto custom-scrollbar pr-2">
+                {Object.entries(METRIC_GROUPS).map(([gName, gMetrics]) => {
+                  const filtered = gMetrics.filter(m => m.label.toLowerCase().includes(searchQuery.toLowerCase()) || m.key.toLowerCase().includes(searchQuery.toLowerCase()));
+                  if (filtered.length === 0) return null;
+                  
                   return (
-                    <div key={gName}>
-                      <div className="flex items-center gap-1.5 mb-1.5">
-                        <GIcon size={12} className="text-gray-400" />
-                        <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{gName}</span>
+                    <div key={gName} className="mb-6 last:mb-0">
+                      <div className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        {gName}
+                        <div className="flex-1 h-px bg-gray-200 dark:bg-white/5" />
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                        {gMetrics.map(m => {
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                        {filtered.map(m => {
                           const sel = selectedMetrics.includes(m.key);
                           return (
-                            <button key={m.key} onClick={() => toggleMetric(m.key)} className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs transition-all ${sel ? 'bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 shadow-sm' : 'bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-white/10 hover:shadow-sm'}`}>
-                              <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${sel ? 'border-blue-500 bg-blue-500' : 'border-gray-300 dark:border-gray-600'}`}>
-                                {sel && <Check size={10} className="text-white" />}
+                            <label key={m.key} className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${sel ? 'bg-blue-50 border-blue-300 dark:bg-blue-500/10 dark:border-blue-500/30 shadow-sm' : 'bg-white border-gray-200 dark:bg-[#151521] dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/50'}`}>
+                              <div className="relative flex items-center justify-center mt-0.5">
+                                <input type="checkbox" checked={sel} onChange={() => toggleMetric(m.key)} className="peer appearance-none w-4 h-4 border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-black/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer" />
+                                <Check size={12} className="absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none" />
                               </div>
-                              <span className="font-semibold truncate">{m.label}</span>
-                              {m.unit && <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 ml-auto bg-gray-100 dark:bg-white/5 px-1.5 rounded">{m.unit}</span>}
-                            </button>
-                          );
+                              <div className="flex flex-col flex-1 min-w-0">
+                                <span className={`text-xs font-semibold truncate ${sel ? 'text-blue-900 dark:text-blue-100' : 'text-gray-700 dark:text-gray-300'}`}>{m.label}</span>
+                                {m.unit && <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{m.unit}</span>}
+                              </div>
+                            </label>
+                          )
                         })}
                       </div>
                     </div>
                   );
                 })}
-              </div>
-            ) : (
-              // Tabbed Layout if not searching
-              <div className="flex border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden h-[240px] bg-white dark:bg-[#151521]">
-                {/* Left Tabs */}
-                <div className="w-[140px] shrink-0 bg-gray-50 dark:bg-black/20 border-r border-gray-200 dark:border-white/10 overflow-y-auto custom-scrollbar">
-                  {Object.keys(METRIC_GROUPS).map(gName => {
-                    const GIcon = GROUP_ICON_MAP[gName] || Activity;
-                    const isActive = activeGroupTab === gName;
-                    const selectedInGroup = METRIC_GROUPS[gName].filter(m => selectedMetrics.includes(m.key)).length;
-                    return (
-                      <button 
-                        key={gName} 
-                        onClick={() => setActiveGroupTab(gName)} 
-                        className={`w-full flex items-center justify-between px-3 py-3 text-left transition-colors border-l-2 ${isActive ? 'bg-white dark:bg-white/5 border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.02]'}`}
-                      >
-                        <div className="flex items-center gap-2 overflow-hidden">
-                          <GIcon size={14} className={`shrink-0 ${isActive ? 'text-blue-500' : 'text-gray-400'}`} />
-                          <span className="text-[11px] font-bold uppercase tracking-wide truncate">{gName}</span>
-                        </div>
-                        {selectedInGroup > 0 && <span className="text-[9px] font-bold bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full shrink-0">{selectedInGroup}</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-                
-                {/* Right Content */}
-                <div className="flex-1 p-3 overflow-y-auto custom-scrollbar">
-                  <div className="grid grid-cols-1 gap-1.5">
-                    {(METRIC_GROUPS[activeGroupTab] || []).map(m => {
-                      const sel = selectedMetrics.includes(m.key);
-                      return (
-                        <button key={m.key} onClick={() => toggleMetric(m.key)} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-left text-xs transition-all ${sel ? 'bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 shadow-sm' : 'bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-white/10 hover:shadow-sm'}`}>
-                          <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${sel ? 'border-blue-500 bg-blue-500' : 'border-gray-300 dark:border-gray-600'}`}>
-                            {sel && <Check size={10} className="text-white" />}
-                          </div>
-                          <div className="flex-1 flex items-center gap-2 truncate">
-                            <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: m.color }} />
-                            <span className="font-semibold truncate">{m.label}</span>
-                          </div>
-                          {m.unit && <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-white/5 px-1.5 rounded ml-auto shrink-0">{m.unit}</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
+             </div>
           </div>
-
-          {/* Selected chips */}
-          {selectedMetrics.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {selectedMetrics.map(m => (
-                <span key={m} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/20">
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: METRICS[m]?.color }} />
-                  {METRICS[m]?.label || m}
-                  <button onClick={() => toggleMetric(m)} className="ml-0.5 text-blue-400 hover:text-red-500"><X size={9} /></button>
-                </span>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-200 dark:border-white/10 flex justify-end gap-3 shrink-0 bg-gray-50/50 dark:bg-black/10">
-          <button onClick={onClose} className="px-4 py-2 rounded-xl font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 text-sm">Cancel</button>
-          <button onClick={handleSave} disabled={selectedMetrics.length === 0} className="px-5 py-2 rounded-xl font-bold bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 disabled:opacity-50 text-sm flex items-center gap-2">
-            <Check size={16} />{editingPanel ? 'Save' : 'Add Panel'}
-          </button>
+        {/* Right Sidebar: Settings */}
+        <div className="contents lg:flex lg:w-80 bg-white dark:bg-[#1a1a2e] flex-col lg:overflow-hidden lg:p-6 lg:gap-8 shrink-0">
+           <div className="order-1 lg:order-none p-5 lg:p-0 bg-white dark:bg-[#1a1a2e] lg:bg-transparent border-b border-gray-200 dark:border-white/10 lg:border-b-0 shrink-0">
+             <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wider">Panel Options</label>
+             <div className="bg-gray-50 dark:bg-[#151521] p-3 rounded-xl border border-gray-200 dark:border-white/5">
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Title</label>
+                <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder={`Auto: ${derivedTitle}`} className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-black/20 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
+             </div>
+           </div>
+
+           <div className="order-3 lg:order-none p-5 lg:p-0 bg-white dark:bg-[#1a1a2e] lg:bg-transparent lg:flex lg:flex-col lg:min-h-0 lg:flex-1">
+             <div className="flex items-center justify-between mb-3 shrink-0">
+               <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Visualizations</label>
+               <div className="relative w-32 sm:w-40">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={12} />
+                  <input type="text" value={visSearchQuery} onChange={e => setVisSearchQuery(e.target.value)} placeholder="Search..." className="w-full pl-7 pr-2 py-1.5 rounded-md bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 text-xs focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white" />
+               </div>
+             </div>
+             <div className="max-h-[300px] lg:max-h-none lg:flex-1 overflow-y-auto custom-scrollbar pr-2 -mr-2">
+               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-2.5 pb-2">
+                  {[
+    { v: 'areachart', l: 'Area Chart', d: 'Filled area over time', i: Activity },
+    { v: 'linechart', l: 'Line Chart', d: 'Simple line over time', i: Activity },
+    { v: 'stat', l: 'Stat + Trend', d: 'Big number & sparkline', i: TrendingUp },
+    { v: 'gauge', l: 'Gauge', d: 'Dial for current value', i: Gauge },
+    { v: 'barchart', l: 'Bar Chart', d: 'Categorical comparison', i: BarChart3 },
+    { v: 'bargauge', l: 'Bar Gauge', d: 'Horizontal progress bar', i: LayoutPanelLeft },
+    { v: 'table', l: 'Table', d: 'Raw data in rows', i: Table },
+    { v: 'piechart', l: 'Pie Chart', d: 'Proportions & percentages', i: PieChartIcon },
+    { v: 'statetimeline', l: 'State Timeline', d: 'State changes over time', i: CalendarClock },
+    { v: 'heatmap', l: 'Heatmap', d: '2D data distribution', i: BoxSelect },
+    { v: 'statushistory', l: 'Status History', d: 'Periodic health status', i: Activity },
+    { v: 'histogram', l: 'Histogram', d: 'Value distributions', i: BarChart3 },
+    { v: 'news', l: 'News', d: 'RSS feeds & updates', i: Rss },
+    { v: 'annotations', l: 'Annotations List', d: 'Events & logs', i: MessageSquareWarning },
+    { v: 'candlestick', l: 'Candlestick', d: 'OHLC financial data', i: CandlestickChart }
+  ].filter(t => t.l.toLowerCase().includes(visSearchQuery.toLowerCase()) || t.d.toLowerCase().includes(visSearchQuery.toLowerCase())).map(t => (
+                    <div key={t.v} className={`rounded-xl border transition-all flex flex-col overflow-hidden ${panelType === t.v ? 'bg-blue-50 border-blue-500 dark:bg-blue-500/10 dark:border-blue-500 shadow-sm' : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#151521] hover:border-blue-300 dark:hover:border-blue-500/50'}`}>
+                      <button onClick={() => setPanelType(t.v)} className={`flex items-start gap-3 p-3 w-full text-left ${panelType === t.v ? 'text-blue-800 dark:text-blue-200' : 'text-gray-700 dark:text-gray-300'}`}>
+                        <div className={`mt-0.5 p-1.5 rounded-lg ${panelType === t.v ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-white/5 text-gray-500'}`}>
+                          <t.i size={16} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-sm leading-none mb-1.5">{t.l}</span>
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400">{t.d}</span>
+                        </div>
+                      </button>
+                    </div>
+                  ))}
+               </div>
+             </div>
+           </div>
         </div>
       </div>
     </div>
@@ -1365,8 +975,8 @@ const Dashboard = () => {
           </div>
         ) : (
           <ResponsiveGridLayout
-            className="layout"
             width={containerWidth}
+            className="layout"
             layouts={lockedLayouts}
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
             cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
@@ -1394,13 +1004,7 @@ const Dashboard = () => {
                   </div>
 
                   {/* Panel content */}
-                  {panel.type === 'status' ? (
-                    <StatusPanel tempData={tempData} isLive={isLive} isEditing={isEditing} />
-                  ) : panel.type === 'chart' ? (
-                    <ChartPanel panel={panel} chartData={getChartDataForPanel(panel)} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />
-                  ) : (
-                    <StatPanel panel={panel} latestData={latestData} chartData={getChartDataForPanel(panel)} isEditing={isEditing} />
-                  )}
+                  <PanelRenderer panel={panel} latestData={latestData} chartData={getChartDataForPanel(panel)} tempData={tempData} isLive={isLive} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />
                 </div>
               </div>
             ))}
@@ -1414,6 +1018,10 @@ const Dashboard = () => {
         onClose={() => { setEditorOpen(false); setEditingPanel(null); }}
         onSave={handleSavePanel}
         editingPanel={editingPanel}
+        latestData={latestData}
+        getChartDataForPanel={getChartDataForPanel}
+        tempData={tempData}
+        isLive={isLive}
       />
 
       {/* ─── Export Excel Modal (preserved) ─── */}
