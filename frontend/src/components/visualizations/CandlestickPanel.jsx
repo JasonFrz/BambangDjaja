@@ -63,17 +63,18 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing }) => {
            <div className="h-full flex items-center justify-center text-gray-500 text-xs">Waiting for data...</div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
+            <ComposedChart data={data} margin={{ top: 10, right: 10, bottom: 0, left: -20 }} barCategoryGap={1}>
               <CartesianGrid strokeDasharray="3 3" stroke="#94a3b830" vertical={false} />
-              <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={{ stroke: '#e2e8f033' }} tickLine={false} minTickGap={30} />
+              <XAxis dataKey="time" xAxisId="body" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={{ stroke: '#e2e8f033' }} tickLine={false} minTickGap={30} />
+              <XAxis dataKey="time" xAxisId="wick" hide />
               <YAxis yAxisId="price" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => v.toFixed(1)} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: '#94a3b820' }} />
               
-              <Bar yAxisId="price" dataKey="wick" maxBarSize={2} isAnimationActive={false}>
+              <Bar xAxisId="wick" yAxisId="price" dataKey="wick" barSize={2} isAnimationActive={true} animationDuration={300} animationEasing="ease-out">
                  {data.map((entry, index) => <Cell key={`wick-${index}`} fill={entry.color} />)}
               </Bar>
               
-              <Bar yAxisId="price" dataKey="body" maxBarSize={12} isAnimationActive={false}>
+              <Bar xAxisId="body" yAxisId="price" dataKey="body" isAnimationActive={true} animationDuration={300} animationEasing="ease-out">
                  {data.map((entry, index) => <Cell key={`body-${index}`} fill={entry.color} />)}
               </Bar>
             </ComposedChart>
