@@ -306,6 +306,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
                       <option value="inferno" className="bg-white dark:bg-[#151521] text-gray-900 dark:text-white">Inferno</option>
                       <option value="matrix" className="bg-white dark:bg-[#151521] text-gray-900 dark:text-white">Matrix</option>
                       <option value="classic" className="bg-white dark:bg-[#151521] text-gray-900 dark:text-white">Classic Red</option>
+                      <option value="soft" className="bg-white dark:bg-[#151521] text-gray-900 dark:text-white">Soft Pastel</option>
                     </select>
                   </div>
                 )}
@@ -629,7 +630,17 @@ const Dashboard = () => {
   // ─── Get chart data for a panel ──────────────────────────────────────
   const getChartDataForPanel = useCallback((panel) => {
     const hasOil = panel.metrics.some(m => METRICS[m]?.source === 'oil');
-    if (hasOil) return oilChartData;
+    const hasElec = panel.metrics.some(m => METRICS[m]?.source !== 'oil');
+    
+    if (hasOil && hasElec) {
+      // Merge by index since they are polled simultaneously
+      return chartData.map((d, i) => ({
+        ...d,
+        ...(oilChartData[i] || {})
+      }));
+    }
+    
+    if (hasOil && !hasElec) return oilChartData;
     return chartData;
   }, [chartData, oilChartData]);
 

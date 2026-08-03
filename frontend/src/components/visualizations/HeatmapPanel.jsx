@@ -18,6 +18,10 @@ const COLOR_SCHEMES = {
   classic: {
     label: "Classic Red",
     getColor: (val) => `rgba(239, 68, 68, ${0.1 + (val * 0.9)})` // Red opacity
+  },
+  soft: {
+    label: "Soft Pastel",
+    getColor: (val) => `hsl(${220 - (val * 160)}, 70%, 75%)` // Soft blue to soft yellow/orange
   }
 };
 
@@ -35,14 +39,30 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
     return metrics.map(m => {
       const row = [];
       const meta = METRICS[m];
-      const maxVal = meta?.thresholds?.max || 100; // rough normalization
+      // Step 1: Collect valid values to find min/max
+      const validValues = [];
+      for(let i = 0; i < timeSegments; i++) {
+        const point = chartData[i * step];
+        if (point && point[m] !== undefined && point[m] !== null) {
+          validValues.push(Number(point[m]));
+        }
+      }
+      
+      const rowMin = validValues.length > 0 ? Math.min(...validValues) : 0;
+      const rowMax = validValues.length > 0 ? Math.max(...validValues) : 100;
+      const range = rowMax - rowMin;
       
       for(let i = 0; i < timeSegments; i++) {
         const point = chartData[i * step];
         if (!point) continue;
-        const val = point[m] || 0;
-        const intensity = Math.min(1, Math.max(0, val / (maxVal * 1.5)));
-        row.push({ time: point.time, val, intensity });
+        const rawVal = point[m];
+        if (rawVal === undefined || rawVal === null) {
+          row.push({ time: point.time, val: null, intensity: 0 });
+        } else {
+          const val = Number(rawVal);
+          const intensity = range === 0 ? 0.5 : Math.max(0, Math.min(1, (val - rowMin) / range));
+          row.push({ time: point.time, val, intensity });
+        }
       }
       return { key: m, label: meta?.label || m, data: row };
     });
@@ -62,11 +82,11 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
           {heatmapData.map(r => (
             <div key={r.key} className="flex-1 flex gap-[2px]">
               {r.data.map((d, i) => {
-                const color = d.intensity > 0 ? COLOR_SCHEMES[colorScheme].getColor(d.intensity) : 'transparent';
+                const color = d.val !== null ? COLOR_SCHEMES[colorScheme].getColor(d.intensity) : 'transparent';
                 return (
                   <div key={i} className="flex-1 h-full rounded-[2px] transition-colors hover:ring-2 hover:ring-white/80 cursor-crosshair border border-gray-100 dark:border-white/5" 
                        style={{ backgroundColor: color }} 
-                       title={`${d.time}\n${r.label}: ${d.val.toFixed(2)}`} />
+                       title={`${d.time}\n${r.label}: ${d.val !== null ? d.val.toFixed(2) : 'No Data'}`} />
                 );
               })}
             </div>
