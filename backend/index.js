@@ -19,6 +19,7 @@ app.use(express.json());
 app.set("io", io);
 
 const activeSubscriptions = new Map();
+const roomIntervals = new Map(); // stores polling interval per room
 
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
@@ -36,6 +37,17 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("set_poll_interval", (interval) => {
+    const ms = parseInt(interval, 10);
+    // Find which trafo room this socket belongs to
+    for (const roomName of socket.rooms) {
+      if (roomName.startsWith("trafo_")) {
+        roomIntervals.set(roomName, ms >= 0 ? ms : 5000);
+        console.log(`Room ${roomName} poll interval set to ${ms}ms`);
+      }
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
     for (const roomName of socket.rooms) {
@@ -43,6 +55,7 @@ io.on("connection", (socket) => {
         const room = io.sockets.adapter.rooms.get(roomName);
         if (!room || room.size === 0) {
           activeSubscriptions.delete(roomName);
+          roomIntervals.delete(roomName);
           console.log(`Removed ${roomName} from active subscriptions`);
         }
       }
@@ -55,6 +68,7 @@ io.on("connection", (socket) => {
         const room = io.sockets.adapter.rooms.get(roomName);
         if (room && room.size === 1) {
           activeSubscriptions.delete(roomName);
+          roomIntervals.delete(roomName);
           console.log(`Removed ${roomName} from active subscriptions as last client is leaving`);
         }
       }
@@ -91,7 +105,7 @@ app.use("/api/whatsapp", whatsappRoutes);
 
 server.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
-  startRealtimePoller(io, activeSubscriptions);
+  startRealtimePoller(io, activeSubscriptions, roomIntervals);
 
   setTimeout(() => {
     initWhatsApp();

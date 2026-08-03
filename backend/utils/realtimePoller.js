@@ -6,11 +6,13 @@ const emailClient = require('./emailClient');
 const waCooldowns = new Map(); 
 const COOLDOWN_MS = 5 * 60 * 1000; 
 
-const startRealtimePoller = (io, activeSubscriptions) => {
+const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
   
   const lastSeenElectrical = {};
   const lastSeenOil = {};
+  const lastEmitTime = {}; // tracks last emit time per room
 
+  // Base tick every 1 second — actual emit respects per-room interval
   setInterval(async () => {
     try {
       
@@ -27,7 +29,18 @@ const startRealtimePoller = (io, activeSubscriptions) => {
         }
       }
 
+      const now = Date.now();
+
       for (const { trafoId, dbName, roomName } of activeTrafos) {
+        // Check if enough time has passed for this room's interval
+        const interval = roomIntervals.get(roomName) ?? 5000; // default 5s
+        const lastEmit = lastEmitTime[roomName] || 0;
+        
+        // interval 0 = real-time, always emit
+        if (interval > 0 && now - lastEmit < interval) {
+          continue; // skip this room, interval not elapsed yet
+        }
+
         try {
           const db = await getDbConnection(dbName);
 
@@ -40,6 +53,7 @@ const startRealtimePoller = (io, activeSubscriptions) => {
             const lastId = lastSeenElectrical[roomName];
             if (lastId !== latestElectrical.id) {
               lastSeenElectrical[roomName] = latestElectrical.id;
+              lastEmitTime[roomName] = now;
               io.to(roomName).emit("meter", {
                 phaseA: parseFloat(latestElectrical.phase_a_v) || 0,
                 phaseB: parseFloat(latestElectrical.phase_b_v) || 0,
@@ -76,9 +90,9 @@ const startRealtimePoller = (io, activeSubscriptions) => {
 
               const currentFreq = parseFloat(latestElectrical.frequency) || 0;
               if (currentFreq > 52.5 && whatsappClient.waReady) {
-                const now = Date.now();
+                const alertNow = Date.now();
                 const lastSent = waCooldowns.get(roomName) || 0;
-                if (now - lastSent > COOLDOWN_MS) {
+                if (alertNow - lastSent > COOLDOWN_MS) {
                   
                   try {
                     const [columnsInfo] = await db.execute("SHOW COLUMNS FROM users");
@@ -108,7 +122,7 @@ const startRealtimePoller = (io, activeSubscriptions) => {
                         }
                       }
                     }
-                    waCooldowns.set(roomName, now);
+                    waCooldowns.set(roomName, alertNow);
                   } catch (waErr) {
                     console.error('Gagal mengirim WA/Email Alert:', waErr.message);
                   }
@@ -144,7 +158,7 @@ const startRealtimePoller = (io, activeSubscriptions) => {
     } catch (error) {
       console.error("Realtime poller error:", error);
     }
-  }, 5000); 
+  }, 1000); // Base tick every 1s; per-room interval controls actual emission
 };
 
 module.exports = startRealtimePoller;

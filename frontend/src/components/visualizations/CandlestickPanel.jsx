@@ -25,8 +25,8 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing }) => {
   const data = useMemo(() => {
     if (!chartData || chartData.length === 0 || !metric) return [];
     
-    // Group chartData into buckets of 5 points for OHLC
-    const bucketSize = 5;
+    // Group chartData into buckets of 2 points for OHLC to create more candles (denser)
+    const bucketSize = 2;
     const result = [];
     
     for (let i = 0; i < chartData.length; i += bucketSize) {
@@ -63,7 +63,7 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing }) => {
            <div className="h-full flex items-center justify-center text-gray-500 text-xs">Waiting for data...</div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 10, right: 10, bottom: 0, left: -20 }} barCategoryGap={1}>
+            <ComposedChart data={data} margin={{ top: 10, right: 10, bottom: 0, left: -20 }} barCategoryGap="15%">
               <CartesianGrid strokeDasharray="3 3" stroke="#94a3b830" vertical={false} />
               <XAxis dataKey="time" xAxisId="body" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={{ stroke: '#e2e8f033' }} tickLine={false} minTickGap={30} />
               <XAxis dataKey="time" xAxisId="wick" hide />

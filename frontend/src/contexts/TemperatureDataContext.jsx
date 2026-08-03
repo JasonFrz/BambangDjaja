@@ -16,7 +16,7 @@ export const TemperatureDataProvider = ({ children }) => {
   
   const [updateInterval, setUpdateInterval] = useState(() => {
     const saved = localStorage.getItem('updateInterval');
-    return saved ? parseInt(saved, 10) : 5000;
+    return saved !== null ? parseInt(saved, 10) : 5000;
   });
 
   // Keep updateInterval in sync if changed elsewhere
@@ -46,12 +46,7 @@ export const TemperatureDataProvider = ({ children }) => {
   });
 
   const lastDataRef = useRef(null);
-  const lastUpdateRef = useRef(0);
-  const intervalRef = useRef(updateInterval);
-
-  useEffect(() => {
-    intervalRef.current = updateInterval;
-  }, [updateInterval]);
+  const socketRef = useRef(null);
 
   useEffect(() => {
     const trafoId = sessionStorage.getItem('selectedTrafoId');
@@ -103,6 +98,8 @@ export const TemperatureDataProvider = ({ children }) => {
       reconnectionDelayMax: 5000,
     });
 
+    socketRef.current = socket;
+
     socket.on("connect", () => {
       setIsConnected(true);
       const trafoId = sessionStorage.getItem('selectedTrafoId') || '1';
@@ -110,16 +107,12 @@ export const TemperatureDataProvider = ({ children }) => {
       if (trafoId) {
         socket.emit("subscribe_transformer", { trafoId, dbName });
       }
+      // Send interval preference to backend
+      socket.emit("set_poll_interval", updateInterval);
     });
 
     socket.on("oil_sensor", (msg) => {
       if (!msg) return;
-
-      const now = Date.now();
-      if (intervalRef.current > 0 && now - lastUpdateRef.current < intervalRef.current) {
-        return;
-      }
-      lastUpdateRef.current = now;
       
       const newTemp = msg.oil_temperature !== undefined ? msg.oil_temperature : 0;
       const newPress = msg.oil_pressure !== undefined ? msg.oil_pressure : 0;
@@ -154,16 +147,6 @@ export const TemperatureDataProvider = ({ children }) => {
           oil_level_trip: msg.oil_level_trip !== undefined ? (msg.oil_level_trip == 1 ? 1 : 0) : (lastDataRef.current ? lastDataRef.current.oil_level_trip : 0),
           _receivedAt: receiptTime
         };
-
-        if (lastDataRef.current) {
-          const last = lastDataRef.current;
-          if (last.oil_temperature === newPoint.oil_temperature && 
-              last.oil_pressure === newPoint.oil_pressure &&
-              last.oil_level === newPoint.oil_level) {
-             return;
-          }
-        }
-
         lastDataRef.current = newPoint;
 
         setLiveData((prev) => {
@@ -189,11 +172,18 @@ export const TemperatureDataProvider = ({ children }) => {
     };
   }, [apiUrl]);
 
+  // When interval changes, notify backend immediately
+  useEffect(() => {
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit("set_poll_interval", updateInterval);
+    }
+  }, [updateInterval]);
+
   useEffect(() => {
     const checkLive = () => {
       if (lastDataRef.current && lastDataRef.current._receivedAt) {
         const diffMs = Date.now() - lastDataRef.current._receivedAt;
-        const isDataRecent = diffMs < 15000; // 15 detik
+        const isDataRecent = diffMs < Math.max(15000, updateInterval * 3);
         
         // Kita juga perlu mengecek apakah socket masih connected
         setIsLive(isConnected && isDataRecent);

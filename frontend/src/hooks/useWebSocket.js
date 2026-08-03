@@ -4,12 +4,7 @@ import { io } from "socket.io-client";
 export const useWebSocket = (url, updateInterval = 0) => {
   const [data, setData] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const lastUpdateRef = useRef(0);
-  const intervalRef = useRef(updateInterval);
-
-  useEffect(() => {
-    intervalRef.current = updateInterval;
-  }, [updateInterval]);
+  const socketRef = useRef(null);
 
   useEffect(() => {
     
@@ -21,6 +16,8 @@ export const useWebSocket = (url, updateInterval = 0) => {
       reconnectionDelayMax: 5000,
     });
 
+    socketRef.current = socket;
+
     socket.on("connect", () => {
       setIsConnected(true);
       console.log("Connected to Pilot SPM33 backend");
@@ -30,16 +27,13 @@ export const useWebSocket = (url, updateInterval = 0) => {
       if (trafoId) {
         socket.emit("subscribe_transformer", { trafoId, dbName });
       }
+
+      // Send initial interval preference to backend
+      socket.emit("set_poll_interval", updateInterval);
     });
 
     socket.on("meter", (msg) => {
       if (!msg) return;
-
-      const now = Date.now();
-      if (intervalRef.current > 0 && now - lastUpdateRef.current < intervalRef.current) {
-        return;
-      }
-      lastUpdateRef.current = now;
 
       if (msg.modbus_connected === false && msg.phaseA === undefined) {
         setData({
@@ -69,6 +63,13 @@ export const useWebSocket = (url, updateInterval = 0) => {
       socket.disconnect();
     };
   }, [url]);
+
+  // When interval changes, notify backend immediately
+  useEffect(() => {
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit("set_poll_interval", updateInterval);
+    }
+  }, [updateInterval]);
 
   return { data, isConnected };
 };
