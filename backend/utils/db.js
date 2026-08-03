@@ -18,6 +18,7 @@ async function getDbConnection(dbName) {
     user: process.env.AIVEN_DB_USER,
     password: process.env.AIVEN_DB_PASSWORD,
     database: dbName,
+    timezone: 'Z',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0

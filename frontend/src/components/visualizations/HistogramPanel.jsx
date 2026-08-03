@@ -46,7 +46,7 @@ export const HistogramPanel = memo(({ panel, chartData, isEditing, isSyncHoverAc
            <div className="h-full flex items-center justify-center text-xs text-gray-400">Waiting for data...</div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={histogramData} margin={{ top: 15, right: 15, bottom: -5, left: -20 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined}>
+            <BarChart data={histogramData} margin={{ top: 15, right: 15, bottom: -5, left: -20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f020" vertical={false} />
               <XAxis dataKey="bin" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} minTickGap={20} />
               <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
