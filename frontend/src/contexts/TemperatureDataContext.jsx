@@ -14,6 +14,28 @@ export const TemperatureDataProvider = ({ children }) => {
   const [isLive, setIsLive] = useState(false);
   const [liveData, setLiveData] = useState([]);
   
+  const [updateInterval, setUpdateInterval] = useState(() => {
+    const saved = localStorage.getItem('updateInterval');
+    return saved ? parseInt(saved, 10) : 5000;
+  });
+
+  // Keep updateInterval in sync if changed elsewhere
+  useEffect(() => {
+    const handleStorage = () => {
+      const saved = localStorage.getItem('updateInterval');
+      if (saved) setUpdateInterval(parseInt(saved, 10));
+    };
+    const handleCustom = (e) => {
+      if (e.detail) setUpdateInterval(parseInt(e.detail, 10));
+    };
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('intervalChanged', handleCustom);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('intervalChanged', handleCustom);
+    };
+  }, []);
+  
   const [data, setData] = useState({
     oil_temperature: 0.0,
     oil_pressure: 0.0,
@@ -24,6 +46,12 @@ export const TemperatureDataProvider = ({ children }) => {
   });
 
   const lastDataRef = useRef(null);
+  const lastUpdateRef = useRef(0);
+  const intervalRef = useRef(updateInterval);
+
+  useEffect(() => {
+    intervalRef.current = updateInterval;
+  }, [updateInterval]);
 
   useEffect(() => {
     const trafoId = sessionStorage.getItem('selectedTrafoId');
@@ -83,6 +111,12 @@ export const TemperatureDataProvider = ({ children }) => {
 
     socket.on("oil_sensor", (msg) => {
       if (!msg) return;
+
+      const now = Date.now();
+      if (intervalRef.current > 0 && now - lastUpdateRef.current < intervalRef.current) {
+        return;
+      }
+      lastUpdateRef.current = now;
       
       const newTemp = msg.oil_temperature !== undefined ? msg.oil_temperature : 0;
       const newPress = msg.oil_pressure !== undefined ? msg.oil_pressure : 0;

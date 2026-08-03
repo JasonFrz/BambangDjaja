@@ -109,18 +109,15 @@ router.get("/meter", extractDb, async (req, res) => {
   const { start, end } = req.query;
   try {
     const db = await getDbConnection(req.dbName);
-    
-    let query = 'SELECT * FROM electrical_readings';
-    const params = [];
+    let rows;
     
     if (start && end) {
-      query += ' WHERE timestamp >= ? AND timestamp <= ?';
-      params.push(start, end);
+      const query = 'SELECT * FROM electrical_readings WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC LIMIT 1000';
+      [rows] = await db.execute(query, [start, end]);
+    } else {
+      const query = 'SELECT * FROM (SELECT * FROM electrical_readings ORDER BY timestamp DESC LIMIT 60) sub ORDER BY timestamp ASC';
+      [rows] = await db.execute(query);
     }
-    
-    query += ' ORDER BY timestamp ASC LIMIT 1000';
-    
-    const [rows] = await db.execute(query, params);
     
     const rowsWithEfficiency = rows.map(row => ({
       ...row,
@@ -138,18 +135,16 @@ router.get("/oil", extractDb, async (req, res) => {
   const { start, end } = req.query;
   try {
     const db = await getDbConnection(req.dbName);
-    
-    let query = 'SELECT * FROM oil_readings';
-    const params = [];
+    let rows;
     
     if (start && end) {
-      query += ' WHERE timestamp >= ? AND timestamp <= ?';
-      params.push(start, end);
+      const query = 'SELECT * FROM oil_readings WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC LIMIT 1000';
+      [rows] = await db.execute(query, [start, end]);
+    } else {
+      const query = 'SELECT * FROM (SELECT * FROM oil_readings ORDER BY timestamp DESC LIMIT 60) sub ORDER BY timestamp ASC';
+      [rows] = await db.execute(query);
     }
     
-    query += ' ORDER BY timestamp ASC LIMIT 1000';
-    
-    const [rows] = await db.execute(query, params);
     res.status(200).json(rows);
   } catch (error) {
     console.error(error);

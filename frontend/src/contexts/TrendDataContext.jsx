@@ -17,6 +17,7 @@ export const TrendDataProvider = ({ children }) => {
   
   useEffect(() => {
     localStorage.setItem('updateInterval', updateInterval.toString());
+    window.dispatchEvent(new CustomEvent('intervalChanged', { detail: updateInterval }));
   }, [updateInterval]);
 
   const { data: wsData, isConnected } = useWebSocket(apiUrl, updateInterval);
