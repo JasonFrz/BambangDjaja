@@ -633,11 +633,19 @@ const Dashboard = () => {
     const hasElec = panel.metrics.some(m => METRICS[m]?.source !== 'oil');
     
     if (hasOil && hasElec) {
-      // Merge by index since they are polled simultaneously
-      return chartData.map((d, i) => ({
-        ...d,
-        ...(oilChartData[i] || {})
-      }));
+      // Align arrays by the end (latest data) to prevent time mismatches when lengths differ
+      const maxLen = Math.max(chartData.length, oilChartData.length);
+      const merged = [];
+      for (let i = 1; i <= maxLen; i++) {
+        const dElec = chartData[chartData.length - i] || {};
+        const dOil = oilChartData[oilChartData.length - i] || {};
+        merged.unshift({
+          ...dElec,
+          ...dOil,
+          time: dElec.time || dOil.time
+        });
+      }
+      return merged;
     }
     
     if (hasOil && !hasElec) return oilChartData;
