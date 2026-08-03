@@ -49,9 +49,8 @@ export const TemperatureDataProvider = ({ children }) => {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    const trafoId = sessionStorage.getItem('selectedTrafoId');
     const dbName = sessionStorage.getItem('company_name');
-    if (!trafoId || !dbName) return;
+    if (!dbName) return;
 
     axios.get(`${apiUrl}/api/trends/oil`, {
       headers: { 
