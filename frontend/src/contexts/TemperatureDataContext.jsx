@@ -47,7 +47,8 @@ export const TemperatureDataProvider = ({ children }) => {
         };
       });
       if (historical.length > 0) {
-        lastDataRef.current = historical[historical.length - 1];
+        const receiptTime = Date.now();
+        lastDataRef.current = { ...historical[historical.length - 1], _receivedAt: receiptTime };
         setLiveData(historical);
 
         const latest = historical[historical.length - 1];
@@ -102,6 +103,7 @@ export const TemperatureDataProvider = ({ children }) => {
       });
 
       if (connected) {
+        const receiptTime = Date.now();
         const dataDate = msg.timestamp ? new Date(msg.timestamp) : new Date();
         const timeStr = dataDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' });
         
@@ -112,7 +114,8 @@ export const TemperatureDataProvider = ({ children }) => {
           oil_pressure: newPress,
           oil_level: newLevel,
           oil_level_alarm: msg.oil_level_alarm !== undefined ? (msg.oil_level_alarm == 1 ? 1 : 0) : (lastDataRef.current ? lastDataRef.current.oil_level_alarm : 0),
-          oil_level_trip: msg.oil_level_trip !== undefined ? (msg.oil_level_trip == 1 ? 1 : 0) : (lastDataRef.current ? lastDataRef.current.oil_level_trip : 0)
+          oil_level_trip: msg.oil_level_trip !== undefined ? (msg.oil_level_trip == 1 ? 1 : 0) : (lastDataRef.current ? lastDataRef.current.oil_level_trip : 0),
+          _receivedAt: receiptTime
         };
 
         if (lastDataRef.current) {
@@ -151,10 +154,9 @@ export const TemperatureDataProvider = ({ children }) => {
 
   useEffect(() => {
     const checkLive = () => {
-      if (lastDataRef.current && lastDataRef.current.timestamp) {
-        const lastDataTime = new Date(lastDataRef.current.timestamp);
-        const diffMs = Date.now() - lastDataTime.getTime();
-        const isDataRecent = diffMs < 120000; // 2 menit
+      if (lastDataRef.current && lastDataRef.current._receivedAt) {
+        const diffMs = Date.now() - lastDataRef.current._receivedAt;
+        const isDataRecent = diffMs < 15000; // 15 detik
         
         // Kita juga perlu mengecek apakah socket masih connected
         setIsLive(isConnected && isDataRecent);

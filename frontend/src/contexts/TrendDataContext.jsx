@@ -10,7 +10,15 @@ export const useTrendData = () => useContext(TrendDataContext);
 export const TrendDataProvider = ({ children }) => {
   const [liveData, setLiveData] = useState([]);
   const { apiUrl } = useApi();
-  const [updateInterval, setUpdateInterval] = useState(5000); 
+  const [updateInterval, setUpdateInterval] = useState(() => {
+    const saved = localStorage.getItem('updateInterval');
+    return saved ? parseInt(saved, 10) : 5000;
+  });
+  
+  useEffect(() => {
+    localStorage.setItem('updateInterval', updateInterval.toString());
+  }, [updateInterval]);
+
   const { data: wsData, isConnected } = useWebSocket(apiUrl, updateInterval);
   const [isLive, setIsLive] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,7 +72,8 @@ export const TrendDataProvider = ({ children }) => {
         };
       });
       if (historical.length > 0) {
-        lastDataRef.current = historical[historical.length - 1];
+        const receiptTime = Date.now();
+        lastDataRef.current = { ...historical[historical.length - 1], _receivedAt: receiptTime };
         setLiveData(historical);
       }
     })
@@ -78,10 +87,12 @@ export const TrendDataProvider = ({ children }) => {
     const dataDate = wsData.timestamp ? new Date(wsData.timestamp) : new Date();
     const timeStr = dataDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' });
 
+    const receiptTime = Date.now();
     const newPoint = {
       ...wsData,
       time: timeStr,
       timestamp: dataDate.toISOString(),
+      _receivedAt: receiptTime,
     };
 
     if (lastDataRef.current) {
@@ -106,10 +117,9 @@ export const TrendDataProvider = ({ children }) => {
 
   useEffect(() => {
     const checkLive = () => {
-      if (lastDataRef.current && lastDataRef.current.timestamp) {
-        const lastDataTime = new Date(lastDataRef.current.timestamp);
-        const diffMs = Date.now() - lastDataTime.getTime();
-        const isDataRecent = diffMs < 120000; // 2 menit
+      if (lastDataRef.current && lastDataRef.current._receivedAt) {
+        const diffMs = Date.now() - lastDataRef.current._receivedAt;
+        const isDataRecent = diffMs < Math.max(15000, updateInterval * 3); // Toleransi 3x interval atau minimal 15 detik
         setIsLive(isConnected && isDataRecent && (!wsData || wsData.modbus_connected !== false));
       } else {
         setIsLive(false);
