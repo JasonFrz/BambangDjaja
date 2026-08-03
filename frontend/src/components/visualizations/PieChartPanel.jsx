@@ -26,7 +26,7 @@ export const PieChartPanel = memo(({ panel, latestData, isEditing }) => {
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-              <Pie data={renderData} cx="50%" cy="50%" innerRadius="50%" outerRadius="80%" paddingAngle={2} dataKey="renderValue" stroke="none" minAngle={15}>
+              <Pie data={renderData} cx="50%" cy="50%" innerRadius="50%" outerRadius="80%" paddingAngle={2} dataKey="renderValue" stroke="none" minAngle={15} isAnimationActive={false}>
                 {renderData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}

@@ -82,10 +82,20 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
        xPos = 70;
     }
     
+    let yPos = rect.top - parentRect.top - 10;
+    let transform = 'translate(-50%, -100%)';
+    
+    // If tooltip is too close to the top, render it below the cursor instead
+    if (yPos < 70) {
+      yPos = rect.bottom - parentRect.top + 10;
+      transform = 'translate(-50%, 0)';
+    }
+    
     setTooltip({
       show: true,
       x: xPos,
-      y: rect.top - parentRect.top - 10,
+      y: yPos,
+      transform,
       time: d.time,
       label: r.label,
       val: d.val,
@@ -134,7 +144,7 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
           style={{
             left: `${tooltip.x}px`,
             top: `${tooltip.y}px`,
-            transform: 'translate(-50%, -100%)'
+            transform: tooltip.transform || 'translate(-50%, -100%)'
           }}
         >
           <span className="text-gray-500 dark:text-gray-400 text-[11px] font-bold mb-1.5 uppercase tracking-wider border-b border-gray-200 dark:border-white/10 pb-1.5">
