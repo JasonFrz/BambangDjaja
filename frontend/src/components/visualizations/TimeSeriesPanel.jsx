@@ -57,7 +57,7 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
     if (panel.chartType === 'bar') {
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined}>
+          <BarChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined} syncMethod="value">
             <CartesianGrid {...gridProps} />
             <XAxis {...commonXAxis} />
             <YAxis {...commonYAxis} />
@@ -74,7 +74,7 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
     if (panel.chartType === 'line') {
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined}>
+          <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined} syncMethod="value">
             <CartesianGrid {...gridProps} />
             <XAxis {...commonXAxis} />
             <YAxis {...commonYAxis} />
@@ -92,7 +92,7 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
     // Default: area
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined}>
+        <AreaChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined} syncMethod="value">
           <defs>
             {metrics.map(m => (
               <linearGradient key={`g-${m}`} id={`areaGrad-${m}`} x1="0" y1="0" x2="0" y2="1">

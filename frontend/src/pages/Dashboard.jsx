@@ -99,18 +99,18 @@ const PanelRenderer = memo(({ panel, latestData, chartData, tempData, isLive, is
     case 'linechart': return <TimeSeriesPanel panel={{...panel, chartType: 'line'}} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
     case 'stat': return <StatPanel panel={panel} latestData={latestData || {}} chartData={chartData} isEditing={isEditing} />;
     case 'gauge': return <GaugePanel panel={panel} latestData={latestData || {}} isEditing={isEditing} />;
-    case 'barchart': return <BarChartPanel panel={panel} chartData={chartData} isEditing={isEditing} />;
+    case 'barchart': return <BarChartPanel panel={panel} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
     case 'bargauge': return <BarGaugePanel panel={panel} latestData={latestData || {}} isEditing={isEditing} />;
     case 'table': return <TablePanel panel={panel} latestData={latestData || {}} isEditing={isEditing} />;
     case 'piechart': return <PieChartPanel panel={panel} latestData={latestData || {}} isEditing={isEditing} />;
-    case 'statetimeline': return <StateTimelinePanel panel={panel} chartData={chartData} isEditing={isEditing} />;
-    case 'heatmap': return <HeatmapPanel panel={panel} chartData={chartData} isEditing={isEditing} />;
-    case 'statushistory': return <StatusHistoryPanel panel={panel} chartData={chartData} isEditing={isEditing} />;
-    case 'histogram': return <HistogramPanel panel={panel} chartData={chartData} isEditing={isEditing} />;
+    case 'statetimeline': return <StateTimelinePanel panel={panel} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
+    case 'heatmap': return <HeatmapPanel panel={panel} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
+    case 'statushistory': return <StatusHistoryPanel panel={panel} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
+    case 'histogram': return <HistogramPanel panel={panel} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
 
     case 'news': return <NewsPanel panel={panel} latestData={latestData || {}} isEditing={isEditing} />;
     case 'annotations': return <AnnotationsListPanel panel={panel} chartData={chartData} isEditing={isEditing} />;
-    case 'candlestick': return <CandlestickPanel panel={panel} chartData={chartData} isEditing={isEditing} />;
+    case 'candlestick': return <CandlestickPanel panel={panel} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
     case 'oilstatus': return <OilStatusPanel panel={panel} tempData={tempData || {}} isEditing={isEditing} />;
     default:
       return (

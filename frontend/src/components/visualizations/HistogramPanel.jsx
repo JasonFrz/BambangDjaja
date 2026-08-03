@@ -3,35 +3,37 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Toolti
 import { GripVertical } from "lucide-react";
 import { METRICS } from "../../config/metrics";
 
-export const HistogramPanel = memo(({ panel, chartData, isEditing }) => {
+export const HistogramPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
   const metric = panel.metrics?.[0]; // Restrict to 1 metric
+  const buckets = panel.buckets || 10;
   
   const histogramData = useMemo(() => {
     if (!chartData || chartData.length === 0 || !metric) return [];
-    const values = chartData.map(d => d[metric]).filter(v => v !== undefined);
+    
+    // Extract values
+    const values = chartData.map(d => d[metric]).filter(v => v !== undefined && v !== null);
     if (values.length === 0) return [];
     
     const min = Math.min(...values);
     const max = Math.max(...values);
-    const binCount = 15;
-    const binSize = (max - min) / binCount;
-    if (binSize === 0) return [{ bin: `${min.toFixed(1)}`, count: values.length }];
     
-    const bins = Array.from({ length: binCount }).map((_, i) => ({
-      binMin: min + i * binSize,
-      binMax: min + (i + 1) * binSize,
-      bin: `${(min + i * binSize).toFixed(1)}-${(min + (i + 1) * binSize).toFixed(1)}`,
+    // Create buckets
+    const binSize = (max - min) / buckets || 1;
+    const bins = Array.from({length: buckets}, (_, i) => ({
+      rangeStart: min + (i * binSize),
+      rangeEnd: min + ((i + 1) * binSize),
+      bin: `${(min + (i * binSize)).toFixed(1)} - ${(min + ((i + 1) * binSize)).toFixed(1)}`,
       count: 0
     }));
     
+    // Fill buckets
     values.forEach(v => {
-      let bIdx = Math.floor((v - min) / binSize);
-      if (bIdx >= binCount) bIdx = binCount - 1;
-      bins[bIdx].count++;
+      const binIdx = Math.min(Math.floor((v - min) / binSize), buckets - 1);
+      if (bins[binIdx]) bins[binIdx].count++;
     });
     
     return bins;
-  }, [chartData, metric]);
+  }, [chartData, metric, buckets]);
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -44,7 +46,7 @@ export const HistogramPanel = memo(({ panel, chartData, isEditing }) => {
            <div className="h-full flex items-center justify-center text-xs text-gray-400">Waiting for data...</div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={histogramData} margin={{ top: 15, right: 15, bottom: -5, left: -20 }}>
+            <BarChart data={histogramData} margin={{ top: 15, right: 15, bottom: -5, left: -20 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f020" vertical={false} />
               <XAxis dataKey="bin" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} minTickGap={20} />
               <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />

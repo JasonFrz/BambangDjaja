@@ -19,7 +19,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-export const CandlestickPanel = memo(({ panel, chartData, isEditing }) => {
+export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
   const metric = panel.metrics?.[0]; // Candlestick is restricted to 1 metric
 
   const data = useMemo(() => {
@@ -63,8 +63,8 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing }) => {
            <div className="h-full flex items-center justify-center text-gray-500 text-xs">Waiting for data...</div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 10, right: 10, bottom: 0, left: -20 }} barCategoryGap="15%">
-              <CartesianGrid strokeDasharray="3 3" stroke="#94a3b830" vertical={false} />
+            <ComposedChart data={data} margin={{ top: 10, right: 10, bottom: 0, left: -20 }} barCategoryGap="15%" syncId={isSyncHoverActive ? "dashboardSync" : undefined} syncMethod="value">
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-gray-200 dark:text-white/10" />
               <XAxis dataKey="time" xAxisId="body" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={{ stroke: '#e2e8f033' }} tickLine={false} minTickGap={30} />
               <XAxis dataKey="time" xAxisId="wick" hide />
               <YAxis yAxisId="price" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => v.toFixed(1)} />
