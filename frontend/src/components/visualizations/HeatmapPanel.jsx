@@ -23,7 +23,7 @@ const COLOR_SCHEMES = {
 
 export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
   const metrics = panel.metrics || [];
-  const [colorScheme, setColorScheme] = useState('spectral');
+  const colorScheme = panel.colorScheme || 'spectral';
   
   const heatmapData = useMemo(() => {
     if (!chartData || chartData.length === 0 || metrics.length === 0) return [];
@@ -52,23 +52,6 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
     <div className="h-full w-full flex flex-col bg-white dark:bg-black transition-colors duration-500 rounded-xl border border-gray-200 dark:border-white/5 overflow-hidden">
       <div className={`flex items-center gap-3 mb-2 select-none shrink-0 p-3 pb-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
         <h3 className="text-sm font-semibold text-[#172b4d] dark:text-white font-heading truncate flex-1">{panel.title}</h3>
-        
-        {/* Color Scheme Selector */}
-        {isEditing && (
-          <div className="relative group flex items-center">
-             <Palette size={14} className="text-gray-400 group-hover:text-blue-500 cursor-pointer" />
-             <select 
-                value={colorScheme} 
-                onChange={(e) => setColorScheme(e.target.value)}
-                className="opacity-0 group-hover:opacity-100 absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-md text-xs shadow-lg transition-opacity outline-none text-gray-700 dark:text-gray-300 z-10 p-1 cursor-pointer"
-             >
-                {Object.entries(COLOR_SCHEMES).map(([key, scheme]) => (
-                  <option key={key} value={key}>{scheme.label}</option>
-                ))}
-             </select>
-          </div>
-        )}
-
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
       <div className="flex-1 flex overflow-hidden pl-3 pb-3">

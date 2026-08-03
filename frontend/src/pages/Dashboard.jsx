@@ -126,6 +126,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
   const [panelType, setPanelType] = useState('areachart');
   const [selectedMetrics, setSelectedMetrics] = useState([]);
   const [chartType, setChartType] = useState('area');
+  const [colorScheme, setColorScheme] = useState('spectral');
   const [searchQuery, setSearchQuery] = useState('');
   const [visSearchQuery, setVisSearchQuery] = useState('');
 
@@ -135,8 +136,9 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
       setPanelType(editingPanel.type || 'chart');
       setSelectedMetrics([...(editingPanel.metrics || [])]);
       setChartType(editingPanel.chartType || 'area');
+      setColorScheme(editingPanel.colorScheme || 'spectral');
     } else {
-      setTitle(''); setPanelType('areachart'); setSelectedMetrics([]); setChartType('area');
+      setTitle(''); setPanelType('areachart'); setSelectedMetrics([]); setChartType('area'); setColorScheme('spectral');
     }
     setSearchQuery('');
     setVisSearchQuery('');
@@ -183,6 +185,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
       type: panelType,
       metrics: selectedMetrics,
       chartType,
+      colorScheme,
     });
     onClose();
   };
@@ -195,6 +198,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     type: panelType,
     metrics: selectedMetrics,
     chartType,
+    colorScheme,
   };
   
   const previewChartData = (selectedMetrics.length > 0 && getChartDataForPanel) ? getChartDataForPanel(previewPanel) : [];
@@ -289,9 +293,22 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
         <div className="contents lg:flex lg:w-80 bg-white dark:bg-[#1a1a2e] flex-col lg:overflow-hidden lg:p-6 lg:gap-8 shrink-0">
            <div className="order-1 lg:order-none p-5 lg:p-0 bg-white dark:bg-[#1a1a2e] lg:bg-transparent border-b border-gray-200 dark:border-white/10 lg:border-b-0 shrink-0">
              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wider">Panel Options</label>
-             <div className="bg-gray-50 dark:bg-[#151521] p-3 rounded-xl border border-gray-200 dark:border-white/5">
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Title</label>
-                <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder={`Auto: ${derivedTitle}`} className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-black/20 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
+             <div className="bg-gray-50 dark:bg-[#151521] p-3 rounded-xl border border-gray-200 dark:border-white/5 flex flex-col gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Title</label>
+                  <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder={`Auto: ${derivedTitle}`} className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-black/20 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
+                </div>
+                {panelType === 'heatmap' && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Color Scheme</label>
+                    <select value={colorScheme} onChange={e => setColorScheme(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-black/20 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow cursor-pointer">
+                      <option value="spectral" className="bg-white dark:bg-[#151521] text-gray-900 dark:text-white">Spectral</option>
+                      <option value="inferno" className="bg-white dark:bg-[#151521] text-gray-900 dark:text-white">Inferno</option>
+                      <option value="matrix" className="bg-white dark:bg-[#151521] text-gray-900 dark:text-white">Matrix</option>
+                      <option value="classic" className="bg-white dark:bg-[#151521] text-gray-900 dark:text-white">Classic Red</option>
+                    </select>
+                  </div>
+                )}
              </div>
            </div>
 
