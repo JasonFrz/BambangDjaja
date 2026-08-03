@@ -85,11 +85,11 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHover
               <YAxis yAxisId="price" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => v.toFixed(1)} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: '#94a3b820' }} />
               
-              <Bar xAxisId="wick" yAxisId="price" dataKey="wick" barSize={2} isAnimationActive={true} animationDuration={300} animationEasing="ease-out">
+              <Bar xAxisId="wick" yAxisId="price" dataKey="wick" barSize={2} isAnimationActive={false}>
                  {data.map((entry, index) => <Cell key={`wick-${index}`} fill={entry.color} />)}
               </Bar>
               
-              <Bar xAxisId="body" yAxisId="price" dataKey="body" isAnimationActive={true} animationDuration={300} animationEasing="ease-out">
+              <Bar xAxisId="body" yAxisId="price" dataKey="body" isAnimationActive={false}>
                  {data.map((entry, index) => <Cell key={`body-${index}`} fill={entry.color} />)}
               </Bar>
             </ComposedChart>
