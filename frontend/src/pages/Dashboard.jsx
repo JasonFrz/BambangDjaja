@@ -982,10 +982,11 @@ const Dashboard = () => {
             onChange={(e) => setUpdateInterval(Number(e.target.value))}
             className="px-3 py-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-[#172b4d] dark:text-white text-xs font-semibold cursor-pointer outline-none hover:bg-gray-50 dark:hover:bg-[#374151] transition-colors shadow-sm"
           >
-            <option value={0}>Live (Real-time)</option>
-            <option value={5000}>Update 5 Detik</option>
-            <option value={30000}>Update 30 Detik</option>
-            <option value={60000}>Update 1 Menit</option>
+            <option value={0}>Real time</option>
+            <option value={2000}>2 Sec</option>
+            <option value={5000}>5 Sec</option>
+            <option value={30000}>30 Sec</option>
+            <option value={60000}>1 Min</option>
           </select>
 
           {!isFullscreen && (
