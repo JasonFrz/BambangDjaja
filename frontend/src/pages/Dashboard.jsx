@@ -669,16 +669,47 @@ const Dashboard = () => {
   }, []);
 
   // ─── Generate layout for a new panel ─────────────────────────────────
-  const generateLayoutForPanel = useCallback((panelId, type, currentLayouts = {}) => {
-    const isChart = type === 'chart';
+  const findEmptyPosition = (layout, w, h, cols) => {
+    if (!layout || layout.length === 0) return { x: 0, y: 0 };
+    
+    let maxY = 0;
+    layout.forEach(item => {
+      if (item.y + item.h > maxY) maxY = item.y + item.h;
+    });
 
-    // Set y: 0 to place new panels at the top. 
-    // react-grid-layout will automatically push other panels down.
-    return {
-      lg: { i: panelId, x: 0, y: 0, w: isChart ? 6 : 3, h: isChart ? 5 : 4, minW: 2, minH: isChart ? 4 : 2 },
-      md: { i: panelId, x: 0, y: 0, w: isChart ? 10 : 5, h: isChart ? 5 : 4, minW: 2, minH: isChart ? 4 : 2 },
-      sm: { i: panelId, x: 0, y: 0, w: 6, h: isChart ? 5 : 4, minW: 2, minH: isChart ? 4 : 2 },
-    };
+    for (let y = 0; y <= maxY; y++) {
+      for (let x = 0; x <= cols - w; x++) {
+        const hasCollision = layout.some(item => {
+          return !(
+            item.x + item.w <= x || 
+            x + w <= item.x ||      
+            item.y + item.h <= y || 
+            y + h <= item.y         
+          );
+        });
+        if (!hasCollision) return { x, y };
+      }
+    }
+    return { x: 0, y: maxY };
+  };
+
+  const generateLayoutForPanel = useCallback((panelId, type, currentLayouts = {}) => {
+    const isSmallPanel = type === 'stat' || type === 'gauge' || type === 'oilstatus';
+    
+    const layouts = {};
+    
+    const bps = [
+      { bp: 'lg', cols: 12, w: isSmallPanel ? 3 : 6, h: isSmallPanel ? 4 : 5, minW: 2, minH: isSmallPanel ? 2 : 4 },
+      { bp: 'md', cols: 10, w: isSmallPanel ? 3 : 5, h: isSmallPanel ? 4 : 5, minW: 2, minH: isSmallPanel ? 2 : 4 },
+      { bp: 'sm', cols: 6, w: isSmallPanel ? 3 : 6, h: isSmallPanel ? 4 : 5, minW: 2, minH: isSmallPanel ? 2 : 4 }
+    ];
+
+    bps.forEach(({ bp, cols, w, h, minW, minH }) => {
+      const { x, y } = findEmptyPosition(currentLayouts[bp] || [], w, h, cols);
+      layouts[bp] = { i: panelId, x, y, w, h, minW, minH };
+    });
+
+    return layouts;
   }, []);
 
   // ─── Panel CRUD ──────────────────────────────────────────────────────
