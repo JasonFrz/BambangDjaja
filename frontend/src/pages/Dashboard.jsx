@@ -981,12 +981,13 @@ const Dashboard = () => {
             value={updateInterval}
             onChange={(e) => setUpdateInterval(Number(e.target.value))}
             className="px-3 py-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-[#172b4d] dark:text-white text-xs font-semibold cursor-pointer outline-none hover:bg-gray-50 dark:hover:bg-[#374151] transition-colors shadow-sm"
+            style={{ colorScheme: 'dark light' }}
           >
-            <option value={0}>Real time</option>
-            <option value={2000}>2 Sec</option>
-            <option value={5000}>5 Sec</option>
-            <option value={30000}>30 Sec</option>
-            <option value={60000}>1 Min</option>
+            <option value={0} className="bg-white dark:bg-[#1f2937] text-[#172b4d] dark:text-white">Real time</option>
+            <option value={2000} className="bg-white dark:bg-[#1f2937] text-[#172b4d] dark:text-white">2 Sec</option>
+            <option value={5000} className="bg-white dark:bg-[#1f2937] text-[#172b4d] dark:text-white">5 Sec</option>
+            <option value={30000} className="bg-white dark:bg-[#1f2937] text-[#172b4d] dark:text-white">30 Sec</option>
+            <option value={60000} className="bg-white dark:bg-[#1f2937] text-[#172b4d] dark:text-white">1 Min</option>
           </select>
 
           {!isFullscreen && (
@@ -1122,8 +1123,11 @@ const Dashboard = () => {
                 <label className="text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8] uppercase tracking-wider">Interval (Optional)</label>
                 <div className="flex gap-2">
                   <input type="number" placeholder="e.g. 5" value={exportInterval} onChange={e => setExportInterval(e.target.value)} min="1" className="w-full px-4 py-2.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none focus:border-green-500" />
-                  <select value={exportIntervalUnit} onChange={e => setExportIntervalUnit(e.target.value)} className="w-1/3 px-3 py-2.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none cursor-pointer">
-                    <option value="second">Seconds</option><option value="minute">Minutes</option><option value="hour">Hours</option><option value="day">Days</option>
+                  <select value={exportIntervalUnit} onChange={e => setExportIntervalUnit(e.target.value)} className="w-1/3 px-3 py-2.5 rounded-lg border border-[#dfe1e6] dark:border-white/10 bg-gray-50/50 dark:bg-[#151521] text-[#172b4d] dark:text-white outline-none cursor-pointer" style={{ colorScheme: 'dark light' }}>
+                    <option value="second" className="bg-white dark:bg-[#1a1a2e] text-[#172b4d] dark:text-white">Seconds</option>
+                    <option value="minute" className="bg-white dark:bg-[#1a1a2e] text-[#172b4d] dark:text-white">Minutes</option>
+                    <option value="hour" className="bg-white dark:bg-[#1a1a2e] text-[#172b4d] dark:text-white">Hours</option>
+                    <option value="day" className="bg-white dark:bg-[#1a1a2e] text-[#172b4d] dark:text-white">Days</option>
                   </select>
                 </div>
                 <span className="text-[10px] text-gray-500 mt-0.5">Leave blank to export all raw data.</span>
