@@ -1,0 +1,45 @@
+import React, { memo } from 'react';
+import { GripVertical, AlertTriangle, ShieldCheck, Siren } from "lucide-react";
+
+export const OilStatusPanel = memo(({ panel, tempData, isEditing }) => {
+  const latestData = tempData || {};
+  const trip = Number(latestData.oil_level_trip);
+  const alarm = Number(latestData.oil_level_alarm);
+
+  let statusText = "UNKNOWN";
+  let colorClass = "bg-gray-100 text-gray-500 border-gray-200";
+  let darkColorClass = "dark:bg-white/5 dark:text-gray-400 dark:border-white/10";
+  let Icon = AlertTriangle;
+
+  if (trip === 1 && alarm === 1) {
+    statusText = "SAFE";
+    colorClass = "bg-emerald-50 text-emerald-600 border-emerald-200";
+    darkColorClass = "dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20";
+    Icon = ShieldCheck;
+  } else if (trip === 1 && alarm === 0) {
+    statusText = "ALARM";
+    colorClass = "bg-amber-50 text-amber-600 border-amber-200";
+    darkColorClass = "dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20";
+    Icon = AlertTriangle;
+  } else if (trip === 0 && alarm === 0) {
+    statusText = "TRIP";
+    colorClass = "bg-red-50 text-red-600 border-red-200";
+    darkColorClass = "dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20";
+    Icon = Siren;
+  }
+
+  return (
+    <div className="h-full w-full flex flex-col bg-white dark:bg-[#1a1a2e] transition-colors duration-500 rounded-xl border border-gray-200 dark:border-white/5 overflow-hidden">
+      <div className={`flex items-center gap-3 mb-2 select-none shrink-0 p-3 pb-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
+        <h3 className="text-sm font-semibold text-[#172b4d] dark:text-white font-heading truncate flex-1">{panel.title || 'Oil Status'}</h3>
+        {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
+      </div>
+      <div className="flex-1 flex items-center justify-center p-4 pt-2">
+        <div className={`w-full h-full flex flex-col items-center justify-center rounded-2xl border ${colorClass} ${darkColorClass} transition-all duration-300`}>
+           <Icon size={48} className="mb-2 opacity-80" />
+           <span className="text-3xl font-bold font-mono tracking-widest">{statusText}</span>
+        </div>
+      </div>
+    </div>
+  );
+});

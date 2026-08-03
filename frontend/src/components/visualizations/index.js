@@ -13,3 +13,4 @@ export * from './HistogramPanel';
 export * from './NewsPanel';
 export * from './AnnotationsListPanel';
 export * from './CandlestickPanel';
+export * from './OilStatusPanel';

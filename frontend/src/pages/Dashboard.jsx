@@ -16,7 +16,7 @@ import {
   TimeSeriesPanel, StatPanel, GaugePanel, StatusPanel,
   BarChartPanel, BarGaugePanel, TablePanel, PieChartPanel,
   StateTimelinePanel, HeatmapPanel, StatusHistoryPanel,
-  HistogramPanel, NewsPanel, AnnotationsListPanel, CandlestickPanel
+  HistogramPanel, NewsPanel, AnnotationsListPanel, CandlestickPanel, OilStatusPanel
 } from "../components/visualizations";
 
 
@@ -111,6 +111,7 @@ const PanelRenderer = memo(({ panel, latestData, chartData, tempData, isLive, is
     case 'news': return <NewsPanel panel={panel} latestData={latestData || {}} isEditing={isEditing} />;
     case 'annotations': return <AnnotationsListPanel panel={panel} chartData={chartData} isEditing={isEditing} />;
     case 'candlestick': return <CandlestickPanel panel={panel} chartData={chartData} isEditing={isEditing} />;
+    case 'oilstatus': return <OilStatusPanel panel={panel} tempData={tempData || {}} isEditing={isEditing} />;
     default:
       return (
         <div className="h-full w-full flex items-center justify-center bg-gray-50 dark:bg-white/5 rounded-xl border border-dashed border-gray-300 dark:border-white/20">
@@ -145,6 +146,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
   }, [editingPanel, isOpen]);
 
   const SINGLE_METRIC_PANELS = ['gauge', 'bargauge', 'candlestick', 'histogram'];
+  const NO_METRIC_PANELS = ['oilstatus'];
 
   const toggleMetric = (key) => {
     setSelectedMetrics(prev => {
@@ -161,8 +163,8 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     }
   }, [panelType, selectedMetrics]);
 
-  // Compute dynamic auto-title
   const derivedTitle = useMemo(() => {
+    if (panelType === 'oilstatus') return 'Oil Status';
     if (selectedMetrics.length === 0) return 'Custom Panel';
     if (selectedMetrics.length === 1) return METRICS[selectedMetrics[0]]?.label || selectedMetrics[0];
 
@@ -174,10 +176,10 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     if (allVoltages) return 'Voltage Overview';
 
     return 'Mixed Metrics Overview';
-  }, [selectedMetrics]);
+  }, [selectedMetrics, panelType]);
 
   const handleSave = () => {
-    if (selectedMetrics.length === 0) return;
+    if (selectedMetrics.length === 0 && !NO_METRIC_PANELS.includes(panelType)) return;
 
     onSave({
       id: editingPanel?.id || uid(),
@@ -216,7 +218,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
         </div>
         <div className="flex items-center gap-3">
            <button onClick={onClose} className="px-4 py-1.5 rounded-lg font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 text-sm transition-colors border border-transparent hover:border-gray-200 dark:hover:border-white/10">Discard</button>
-           <button onClick={handleSave} disabled={selectedMetrics.length === 0} className="px-5 py-1.5 rounded-lg font-bold bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-50 text-sm transition-colors flex items-center gap-1.5">
+           <button onClick={handleSave} disabled={selectedMetrics.length === 0 && !NO_METRIC_PANELS.includes(panelType)} className="px-5 py-1.5 rounded-lg font-bold bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-50 text-sm transition-colors flex items-center gap-1.5">
              <Check size={16} /> Apply
            </button>
         </div>
@@ -230,7 +232,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
           <div className="order-2 lg:order-none flex-1 p-4 lg:p-6 flex flex-col min-h-[300px] bg-gray-50/50 dark:bg-black/20">
              <div className="mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Preview</div>
              <div className="flex-1 bg-white dark:bg-[#151521] border border-gray-200 dark:border-white/5 shadow-sm rounded-xl p-4 overflow-hidden relative group">
-                {selectedMetrics.length === 0 ? (
+                {(selectedMetrics.length === 0 && !NO_METRIC_PANELS.includes(panelType)) ? (
                   <div className="h-full w-full flex flex-col items-center justify-center text-gray-400">
                     <BarChart3 size={48} className="mb-3 opacity-20" />
                     <span className="text-sm font-medium">Select metrics below to see preview</span>
@@ -242,8 +244,9 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
           </div>
 
           {/* Bottom: Metrics Selection Area */}
-          <div className="order-4 lg:order-none lg:h-[45%] min-h-[250px] p-4 lg:p-6 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#1a1a2e] flex flex-col">
-             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+          {!NO_METRIC_PANELS.includes(panelType) && (
+            <div className="order-4 lg:order-none lg:h-[45%] min-h-[250px] p-4 lg:p-6 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#1a1a2e] flex flex-col">
+               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
                 <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <Database size={16} className="text-blue-500" /> Metrics Selection 
                   <span className="text-xs bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">{selectedMetrics.length} selected</span>
@@ -287,6 +290,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
                 })}
              </div>
           </div>
+          )}
         </div>
 
         {/* Right Sidebar: Settings */}
@@ -338,7 +342,8 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     { v: 'histogram', l: 'Histogram', d: 'Value distributions', i: BarChart3 },
     { v: 'news', l: 'News', d: 'RSS feeds & updates', i: Rss },
     { v: 'annotations', l: 'Annotations List', d: 'Events & logs', i: MessageSquareWarning },
-    { v: 'candlestick', l: 'Candlestick', d: 'OHLC financial data', i: CandlestickChart }
+    { v: 'candlestick', l: 'Candlestick', d: 'OHLC financial data', i: CandlestickChart },
+    { v: 'oilstatus', l: 'Oil Status', d: 'Oil Trip & Alarm Status', i: AlertTriangle }
   ].filter(t => t.l.toLowerCase().includes(visSearchQuery.toLowerCase()) || t.d.toLowerCase().includes(visSearchQuery.toLowerCase())).map(t => (
                     <div key={t.v} className={`rounded-xl border transition-all flex flex-col overflow-hidden ${panelType === t.v ? 'bg-blue-50 border-blue-500 dark:bg-blue-500/10 dark:border-blue-500 shadow-sm' : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#151521] hover:border-blue-300 dark:hover:border-blue-500/50'}`}>
                       <button onClick={() => setPanelType(t.v)} className={`flex items-start gap-3 p-3 w-full text-left ${panelType === t.v ? 'text-blue-800 dark:text-blue-200' : 'text-gray-700 dark:text-gray-300'}`}>
