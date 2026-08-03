@@ -59,7 +59,10 @@ export const TemperatureDataProvider = ({ children }) => {
     if (!trafoId || !dbName) return;
 
     axios.get(`${apiUrl}/api/trends/oil`, {
-      headers: { 'X-DB-Name': dbName }
+      headers: { 
+        'X-DB-Name': dbName,
+        'ngrok-skip-browser-warning': '69420'
+      }
     })
     .then(res => {
       const historical = res.data.map(reading => {
