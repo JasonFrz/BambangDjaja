@@ -1066,7 +1066,7 @@ const Dashboard = () => {
           >
             {panels.map(panel => (
               <div key={panel.id} className="flex">
-                <div className={`bg-white dark:bg-[#151521] rounded-none p-4 shadow-sm border transition-all h-full w-full flex flex-col relative group overflow-hidden ${isEditing ? 'border-blue-200 dark:border-blue-500/20 ring-1 ring-blue-100 dark:ring-blue-500/10' : 'border-transparent dark:border-white/5 hover:shadow-md'}`}>
+                <div className={`bg-white dark:bg-[#181b1f] rounded-none p-3 shadow-sm border transition-all h-full w-full flex flex-col relative group overflow-hidden ${isEditing ? 'border-blue-200 dark:border-blue-500/20 ring-1 ring-blue-100 dark:ring-blue-500/10' : 'border-[#e5e7eb] dark:border-[#22252b] hover:border-[#d1d5db] dark:hover:border-[#32363e]'}`}>
                   {/* Panel action buttons (visible on hover) */}
                   <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-50">
                     {panel.type !== 'status' && (

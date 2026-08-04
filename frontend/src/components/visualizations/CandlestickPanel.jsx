@@ -9,7 +9,7 @@ const CustomTooltip = ({ active, payload, label }) => {
     const td = data.tooltipData || data;
     if (td.open === undefined) return null;
     return (
-      <div className="bg-white/95 dark:bg-[#151521]/95 backdrop-blur-xl border border-gray-200/50 dark:border-white/10 p-3 rounded-xl shadow-2xl flex flex-col gap-1 min-w-[120px]">
+      <div className="bg-white dark:bg-[#111217] border border-gray-200 dark:border-[#32363e] p-3 shadow-2xl flex flex-col gap-1 min-w-[120px]">
         <span className="text-gray-500 dark:text-gray-400 text-[11px] font-bold mb-1.5 uppercase tracking-wider border-b border-gray-200 dark:border-white/10 pb-1.5">{label}</span>
         <div className="flex justify-between text-xs py-0.5"><span className="text-gray-600 dark:text-gray-300 font-medium">Open:</span> <span className="text-gray-900 dark:text-white font-bold font-mono ml-3">{td.open.toFixed(2)}</span></div>
         <div className="flex justify-between text-xs py-0.5"><span className="text-gray-600 dark:text-gray-300 font-medium">High:</span> <span className="text-gray-900 dark:text-white font-bold font-mono ml-3">{td.high !== undefined ? td.high.toFixed(2) : td.wick?.[1]?.toFixed(2)}</span></div>
@@ -70,7 +70,7 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHover
   return (
     <div className="h-full w-full flex flex-col transition-colors duration-500 rounded-none overflow-hidden">
       <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-        <h3 className="text-sm font-semibold text-[#172b4d] dark:text-white font-heading truncate flex-1">{panel.title}</h3>
+        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 font-sans text-center truncate flex-1 tracking-wide">{panel.title}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
       <div className="flex-1 min-h-0 pb-2 relative">

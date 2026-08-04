@@ -7,7 +7,7 @@ export const StatusPanel = memo(({ tempData, isLive, isEditing }) => (
       <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/10 shrink-0">
         <AlertTriangle size={18} />
       </div>
-      <h3 className="font-semibold text-[#172b4d] dark:text-white text-sm font-heading tracking-tight flex-1">System Status</h3>
+      <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 font-sans text-center truncate flex-1 tracking-wide">System Status</h3>
       <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${isLive ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
         {isLive ? <Wifi size={12} /> : <WifiOff size={12} />}
         {isLive ? 'Live' : 'Offline'}

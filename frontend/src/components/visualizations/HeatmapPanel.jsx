@@ -110,7 +110,7 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
   return (
     <div className="h-full w-full flex flex-col transition-colors duration-500 rounded-none overflow-hidden heatmap-container relative">
       <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-        <h3 className="text-sm font-semibold text-[#172b4d] dark:text-white font-heading truncate flex-1">{panel.title}</h3>
+        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 font-sans text-center truncate flex-1 tracking-wide">{panel.title}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
       <div className="flex-1 flex overflow-hidden pl-3 pb-3">
@@ -140,7 +140,7 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
       {/* Custom Tooltip */}
       {tooltip.show && (
         <div
-          className="absolute pointer-events-none z-50 bg-white/95 dark:bg-[#151521]/95 backdrop-blur-xl border border-gray-200/50 dark:border-white/10 p-3 rounded-xl shadow-2xl flex flex-col gap-1 min-w-[120px]"
+          className="absolute pointer-events-none z-50 bg-white dark:bg-[#111217] border border-gray-200 dark:border-[#32363e] p-3 rounded-sm shadow-2xl flex flex-col gap-1 min-w-[120px]"
           style={{
             left: `${tooltip.x}px`,
             top: `${tooltip.y}px`,

@@ -50,10 +50,10 @@ const MainLayout = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#f4f7fe] dark:bg-[#0b1120] transition-colors duration-300 overflow-hidden">
+    <div className="flex flex-col h-screen w-full bg-[#f4f7fe] dark:bg-[#111217] transition-colors duration-300 overflow-hidden">
 
       {!isFullscreen && (
-      <header className="h-[70px] px-6 md:px-8 flex justify-between items-center border-b border-[#dfe1e6] dark:border-white/10 bg-white/80 dark:bg-[#151521]/80 backdrop-blur-md z-30 shrink-0 relative">
+      <header className="h-[70px] px-6 md:px-8 flex justify-between items-center border-b border-gray-200 dark:border-[#22252b] bg-white dark:bg-[#111217] z-30 shrink-0 relative">
         <Link to="/" className="flex items-center gap-3 group">
           <img src="/tmu-logo.png" alt="Logo" className="w-auto h-7 md:h-8 group-hover:opacity-80 transition-opacity" />
           <h1 className="text-lg md:text-xl font-bold tracking-tight font-heading text-[#172b4d] dark:text-white">

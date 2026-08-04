@@ -9,7 +9,7 @@ import { METRICS } from "../../config/metrics";
 export const ChartTooltip = ({ active, payload, label }) => {
   if (!active || !payload || !payload.length) return null;
   return (
-    <div className="bg-white/95 dark:bg-[#151521]/95 backdrop-blur-xl border border-gray-200/50 dark:border-white/10 rounded-xl px-4 py-3 shadow-2xl">
+    <div className="bg-white dark:bg-[#111217] border border-gray-200 dark:border-[#32363e] rounded-sm px-4 py-3 shadow-2xl">
       <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider">
         {typeof label === 'number' ? new Date(label).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : label}
       </p>
@@ -118,7 +118,7 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
   return (
     <div className="h-full w-full flex flex-col transition-colors duration-500">
       <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-        <h3 className="text-sm font-semibold text-[#172b4d] dark:text-white font-heading truncate flex-1">{panel.title}</h3>
+        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 font-sans text-center truncate flex-1 tracking-wide">{panel.title}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
       <div className="flex-1 min-h-0">
