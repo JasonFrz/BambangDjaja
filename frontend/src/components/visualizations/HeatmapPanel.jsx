@@ -28,31 +28,31 @@ const COLOR_SCHEMES = {
 export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
   const metrics = panel.metrics || [];
   const colorScheme = panel.colorScheme || 'spectral';
-  
+
   const heatmapData = useMemo(() => {
     if (!chartData || chartData.length === 0 || metrics.length === 0) return [];
-    
+
     // Y-axis = metrics, X-axis = time segments
     const timeSegments = Math.min(24, chartData.length);
     const step = Math.ceil(chartData.length / timeSegments);
-    
+
     return metrics.map(m => {
       const row = [];
       const meta = METRICS[m];
       // Step 1: Collect valid values to find min/max
       const validValues = [];
-      for(let i = 0; i < timeSegments; i++) {
+      for (let i = 0; i < timeSegments; i++) {
         const point = chartData[i * step];
         if (point && point[m] !== undefined && point[m] !== null) {
           validValues.push(Number(point[m]));
         }
       }
-      
+
       const rowMin = validValues.length > 0 ? Math.min(...validValues) : 0;
       const rowMax = validValues.length > 0 ? Math.max(...validValues) : 100;
       const range = rowMax - rowMin;
-      
-      for(let i = 0; i < timeSegments; i++) {
+
+      for (let i = 0; i < timeSegments; i++) {
         const point = chartData[i * step];
         if (!point) continue;
         const rawVal = point[m];
@@ -73,24 +73,24 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
   const handleMouseEnter = (e, d, r) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const parentRect = e.currentTarget.closest('.heatmap-container').getBoundingClientRect();
-    
+
     let xPos = rect.left - parentRect.left + (rect.width / 2);
     // Tooltip is approx 140px wide, so it needs 70px on each side.
     if (xPos + 70 > parentRect.width) {
-       xPos = parentRect.width - 70;
+      xPos = parentRect.width - 70;
     } else if (xPos - 70 < 0) {
-       xPos = 70;
+      xPos = 70;
     }
-    
+
     let yPos = rect.top - parentRect.top - 10;
     let transform = 'translate(-50%, -100%)';
-    
+
     // If tooltip is too close to the top, render it below the cursor instead
     if (yPos < 70) {
       yPos = rect.bottom - parentRect.top + 10;
       transform = 'translate(-50%, 0)';
     }
-    
+
     setTooltip({
       show: true,
       x: xPos,
@@ -108,8 +108,8 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-white dark:bg-black transition-colors duration-500 rounded-xl border border-gray-200 dark:border-white/5 overflow-hidden heatmap-container relative">
-      <div className={`flex items-center gap-3 mb-2 select-none shrink-0 p-3 pb-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
+    <div className="h-full w-full flex flex-col transition-colors duration-500 rounded-none overflow-hidden heatmap-container relative">
+      <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
         <h3 className="text-sm font-semibold text-[#172b4d] dark:text-white font-heading truncate flex-1">{panel.title}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
@@ -123,12 +123,12 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
               {r.data.map((d, i) => {
                 const color = d.val !== null ? COLOR_SCHEMES[colorScheme].getColor(d.intensity) : 'transparent';
                 return (
-                  <div key={i} 
-                       className="flex-1 h-full rounded-[2px] transition-colors hover:ring-2 hover:ring-white/80 cursor-crosshair border border-gray-100 dark:border-white/5" 
-                       style={{ backgroundColor: color }} 
-                       onMouseEnter={(e) => handleMouseEnter(e, d, r)}
-                       onMouseLeave={handleMouseLeave}
-                       />
+                  <div key={i}
+                    className="flex-1 h-full rounded-[2px] transition-colors hover:ring-2 hover:ring-white/80 cursor-crosshair border border-gray-100 dark:border-white/5"
+                    style={{ backgroundColor: color }}
+                    onMouseEnter={(e) => handleMouseEnter(e, d, r)}
+                    onMouseLeave={handleMouseLeave}
+                  />
                 );
               })}
             </div>
@@ -136,10 +136,10 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
           {heatmapData.length === 0 && <div className="text-xs text-gray-400 mt-4">Waiting for data...</div>}
         </div>
       </div>
-      
+
       {/* Custom Tooltip */}
       {tooltip.show && (
-        <div 
+        <div
           className="absolute pointer-events-none z-50 bg-white/95 dark:bg-[#151521]/95 backdrop-blur-xl border border-gray-200/50 dark:border-white/10 p-3 rounded-xl shadow-2xl flex flex-col gap-1 min-w-[120px]"
           style={{
             left: `${tooltip.x}px`,

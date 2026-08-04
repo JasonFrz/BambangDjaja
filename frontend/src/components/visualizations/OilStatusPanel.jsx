@@ -31,13 +31,13 @@ export const OilStatusPanel = memo(({ panel, tempData, isEditing }) => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col bg-white dark:bg-[#1a1a2e] transition-colors duration-500 rounded-xl border border-gray-200 dark:border-white/5 overflow-hidden">
-      <div className={`flex items-center gap-3 mb-2 select-none shrink-0 p-3 pb-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
+    <div className="h-full w-full flex flex-col transition-colors duration-500 rounded-none overflow-hidden">
+      <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
         <h3 className="text-sm font-semibold text-[#172b4d] dark:text-white font-heading truncate flex-1">{panel.title || 'Oil Status'}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
-      <div className="flex-1 flex items-center justify-center p-4 pt-2">
-        <div className={`w-full h-full flex flex-col items-center justify-center rounded-2xl border ${colorClass} ${darkColorClass} transition-all duration-300`}>
+      <div className="flex-1 flex items-center justify-center pt-2">
+        <div className={`w-full h-full flex flex-col items-center justify-center rounded-none border ${colorClass} ${darkColorClass} transition-all duration-300`}>
            <Icon size={48} className="mb-2 opacity-80" />
            <span className="text-3xl font-bold font-mono tracking-widest">{statusText}</span>
         </div>
