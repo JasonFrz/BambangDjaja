@@ -11,21 +11,23 @@ export const OilStatusPanel = memo(({ panel, tempData, isEditing }) => {
   let darkColorClass = "dark:bg-white/5 dark:text-gray-400 dark:border-white/10";
   let Icon = AlertTriangle;
 
-  if (trip === 1 && alarm === 1) {
-    statusText = "SAFE";
-    colorClass = "bg-emerald-50 text-emerald-600 border-emerald-200";
-    darkColorClass = "dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20";
-    Icon = ShieldCheck;
-  } else if (trip === 1 && alarm === 0) {
-    statusText = "ALARM";
-    colorClass = "bg-amber-50 text-amber-600 border-amber-200";
-    darkColorClass = "dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20";
-    Icon = AlertTriangle;
-  } else if (trip === 0 && alarm === 0) {
+  if (Number.isNaN(trip) || Number.isNaN(alarm)) {
+    // Keep UNKNOWN
+  } else if (trip === 0) {
     statusText = "TRIP";
     colorClass = "bg-red-50 text-red-600 border-red-200";
     darkColorClass = "dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20";
     Icon = Siren;
+  } else if (alarm === 0) {
+    statusText = "ALARM";
+    colorClass = "bg-amber-50 text-amber-600 border-amber-200";
+    darkColorClass = "dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20";
+    Icon = AlertTriangle;
+  } else {
+    statusText = "SAFE";
+    colorClass = "bg-emerald-50 text-emerald-600 border-emerald-200";
+    darkColorClass = "dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20";
+    Icon = ShieldCheck;
   }
 
   return (
