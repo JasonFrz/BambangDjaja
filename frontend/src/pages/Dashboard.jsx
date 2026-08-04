@@ -1059,7 +1059,7 @@ const Dashboard = () => {
             rowHeight={50}
             onLayoutChange={handleLayoutChange}
             draggableHandle=".drag-handle"
-            margin={[12, 12]}
+            margin={[8, 8]}
             isDraggable={isEditing}
             isResizable={isEditing}
             compactType="vertical"

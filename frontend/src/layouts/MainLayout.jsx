@@ -244,7 +244,7 @@ const MainLayout = () => {
         )}
 
         <div className="flex-1 overflow-y-auto flex flex-col relative pb-16 md:pb-0">
-          <main className="flex-1 flex flex-col p-4 md:p-8">
+          <main className="flex-1 flex flex-col p-2">
             <Outlet />
           </main>
     
