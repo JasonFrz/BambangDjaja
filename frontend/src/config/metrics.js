@@ -24,7 +24,7 @@ export const METRICS = {
   energyReactiveTotal: { label: 'Reactive Energy', unit: 'kVARh', color: '#eab308', group: 'Energy', icon: BarChart3, source: 'electrical' },
   efficiency: { label: 'Efficiency', unit: '%', color: '#e83e8c', group: 'Performance', icon: TrendingUp, source: 'electrical' },
   // Oil — from TemperatureDataContext
-  oil_temperature: { label: 'Oil Temperature', unit: '°C', color: '#ef4444', group: 'Oil', icon: Thermometer, source: 'oil' },
+  oil_temperature: { label: 'Oil Temperature', unit: '°C', color: '#f97316', group: 'Oil', icon: Thermometer, source: 'oil' },
   oil_pressure: { label: 'Oil Pressure', unit: 'Bar', color: '#3b82f6', group: 'Oil', icon: Gauge, source: 'oil' },
 };
 
