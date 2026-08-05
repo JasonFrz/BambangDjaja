@@ -14,7 +14,6 @@ import { TrendDataProvider } from './contexts/TrendDataContext';
 import { TemperatureDataProvider } from './contexts/TemperatureDataContext';
 import { ApiProvider } from './contexts/ApiContext';
 import { DialogProvider } from './contexts/DialogContext';
-import NetworkBadge from './components/NetworkBadge';
 
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 
@@ -58,7 +57,6 @@ function App() {
 
                 </Route>
               </Routes>
-              <NetworkBadge />
             </BrowserRouter>
           </TemperatureDataProvider>
         </TrendDataProvider>

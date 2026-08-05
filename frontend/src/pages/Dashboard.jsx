@@ -877,7 +877,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div ref={containerRef} className={`flex flex-col gap-4 animate-[fadeIn_0.3s_ease-out] w-full ${isFullscreen ? 'p-6 bg-[#f4f7fe] dark:bg-[#0b1120] min-h-screen' : ''}`}>
+    <div ref={containerRef} className={`flex flex-col gap-4 animate-[fadeIn_0.3s_ease-out] w-full ${isFullscreen ? 'p-2 bg-[#f4f7fe] dark:bg-[#111217] min-h-screen' : ''}`}>
       {/* ─── Header ─── */}
       <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between w-full gap-4">
 
