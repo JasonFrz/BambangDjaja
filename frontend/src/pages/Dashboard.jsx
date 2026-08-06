@@ -470,58 +470,76 @@ const Dashboard = () => {
   };
 
   // ─── Workspace / Profiles State ──────────────────────────────────────────────
-  const [profilesState, setProfilesState] = useState(() => {
-    try {
-      const stored = localStorage.getItem(PROFILES_KEY);
-      if (stored) return JSON.parse(stored);
-
-      // Migration from v2
-      let defaultPanels = null;
-      let defaultLayouts = DEFAULT_GRID_LAYOUTS;
-      try {
-        const sP = localStorage.getItem(PANELS_KEY);
-        if (sP) defaultPanels = JSON.parse(sP);
-      } catch { }
-      try {
-        const sL = localStorage.getItem(LAYOUTS_KEY);
-        if (sL) {
-          const parsed = JSON.parse(sL);
-          Object.keys(parsed).forEach(bp => {
-            if (parsed[bp]) parsed[bp] = parsed[bp].map(({ static: _s, ...rest }) => rest);
-          });
-          defaultLayouts = parsed;
-        }
-      } catch { }
-
-      const initialProfiles = {
-        activeProfileId: 'default',
-        profiles: {
-          default: {
-            id: 'default',
-            name: 'Main Dashboard',
-            panels: defaultPanels,
-            layouts: defaultLayouts
-          }
-        }
-      };
-
-      localStorage.setItem(PROFILES_KEY, JSON.stringify(initialProfiles));
-      return initialProfiles;
-    } catch {
-      return {
-        activeProfileId: 'default',
-        profiles: {
-          default: { id: 'default', name: 'Main Dashboard', panels: null, layouts: DEFAULT_GRID_LAYOUTS }
-        }
-      };
+  const [profilesState, setProfilesState] = useState({
+    activeProfileId: 'default',
+    profiles: {
+      default: { id: 'default', name: 'Main Dashboard', panels: null, layouts: DEFAULT_GRID_LAYOUTS, isEditable: false }
     }
   });
+  const [isLayoutsLoading, setIsLayoutsLoading] = useState(true);
+
+  // Fetch layouts on mount
+  useEffect(() => {
+    const fetchLayouts = async () => {
+      try {
+        const username = sessionStorage.getItem('username');
+        const role = sessionStorage.getItem('role');
+        const companyName = sessionStorage.getItem('company_name');
+        
+        if (!username || !companyName) {
+          setIsLayoutsLoading(false);
+          return;
+        }
+
+        const response = await fetch(`${apiUrl}/api/layouts`, {
+          headers: {
+            'x-role': role
+          }
+        });
+        
+        if (response.ok) {
+          const layouts = await response.json();
+          if (layouts && layouts.length > 0) {
+            const newProfiles = {};
+            let activeId = 'default';
+            layouts.forEach(layout => {
+              newProfiles[layout.id] = {
+                id: layout.id,
+                name: layout.layout_name,
+                panels: layout.layout_data.panels || [],
+                layouts: layout.layout_data.layouts || {},
+                isEditable: layout.id !== 'default'
+              };
+              if (layout.is_active) {
+                activeId = layout.id;
+              }
+            });
+            
+            if (!newProfiles['default']) {
+              newProfiles['default'] = { id: 'default', name: 'Main Dashboard', panels: null, layouts: DEFAULT_GRID_LAYOUTS, isEditable: false };
+            }
+
+            setProfilesState({
+              activeProfileId: activeId,
+              profiles: newProfiles
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch layouts:", err);
+      } finally {
+        setIsLayoutsLoading(false);
+      }
+    };
+    
+    fetchLayouts();
+  }, [apiUrl]);
 
   const activeProfile = profilesState.profiles[profilesState.activeProfileId] || profilesState.profiles['default'];
   const [panels, setPanels] = useState(activeProfile.panels);
   const [gridLayouts, setGridLayouts] = useState(activeProfile.layouts);
 
-  // Sync state when profile is switched
+  // Sync state when profile is switched or profiles are updated from API
   useEffect(() => {
     const prof = profilesState.profiles[profilesState.activeProfileId];
     if (prof) {
@@ -529,7 +547,7 @@ const Dashboard = () => {
       setGridLayouts(prof.layouts);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profilesState.activeProfileId]);
+  }, [profilesState.activeProfileId, profilesState.profiles]);
 
   const [isEditing, setIsEditing] = useState(false);
   const isEditingRef = useRef(false);
@@ -581,36 +599,110 @@ const Dashboard = () => {
     return () => observer.disconnect();
   }, [isLoadingTrend, panels]);
 
+  // ─── API Helpers for Layouts ─────────────────────────────────────────
+  const saveLayoutToApi = async (layoutId, layoutName, layoutData, isActive) => {
+    try {
+      const username = sessionStorage.getItem('username');
+      const role = sessionStorage.getItem('role');
+      const companyName = sessionStorage.getItem('company_name');
+      if (!username || !companyName) return;
+
+      await fetch(`${apiUrl}/api/layouts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-role': role
+        },
+        body: JSON.stringify({
+          id: layoutId,
+          layout_name: layoutName,
+          layout_data: layoutData,
+          is_active: isActive
+        })
+      });
+    } catch (e) {
+      console.error("Failed to save layout to DB:", e);
+    }
+  };
+
+  const deleteLayoutFromApi = async (layoutId) => {
+    try {
+      const username = sessionStorage.getItem('username');
+      const role = sessionStorage.getItem('role');
+      const companyName = sessionStorage.getItem('company_name');
+      if (!username || !companyName) return;
+
+      await fetch(`${apiUrl}/api/layouts/${layoutId}`, {
+        method: 'DELETE',
+        headers: {
+          'x-role': role
+        }
+      });
+    } catch (e) {
+      console.error("Failed to delete layout from DB:", e);
+    }
+  };
+
+  const setActiveLayoutInApi = async (layoutId) => {
+    try {
+      const username = sessionStorage.getItem('username');
+      const role = sessionStorage.getItem('role');
+      const companyName = sessionStorage.getItem('company_name');
+      if (!username || !companyName) return;
+
+      await fetch(`${apiUrl}/api/layouts/active`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-role': role
+        },
+        body: JSON.stringify({ id: layoutId })
+      });
+    } catch (e) {
+      console.error("Failed to set active layout in DB:", e);
+    }
+  };
+
   // ─── Persist to Active Profile ───────────────────────────────────────
   const isInitialMount = useRef(true);
+  const saveTimeoutRef = useRef(null);
+
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
-    setProfilesState(prev => {
-      const activeId = prev.activeProfileId;
-      const currentProf = prev.profiles[activeId];
-      if (!currentProf) return prev;
+    
+    // Debounce the save to prevent spamming the backend during resize/drag
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      const activeId = profilesState.activeProfileId;
+      const currentProf = profilesState.profiles[activeId];
+      if (!currentProf) return;
 
       // Prevent redundant saves if identical
-      if (currentProf.panels === panels && currentProf.layouts === gridLayouts) return prev;
+      if (currentProf.panels === panels && currentProf.layouts === gridLayouts) return;
 
-      const nextState = {
-        ...prev,
-        profiles: {
-          ...prev.profiles,
-          [activeId]: {
-            ...currentProf,
-            panels: panels,
-            layouts: gridLayouts
+      setProfilesState(prev => {
+        const pActiveId = prev.activeProfileId;
+        const pCurrentProf = prev.profiles[pActiveId];
+        if (!pCurrentProf) return prev;
+        return {
+          ...prev,
+          profiles: {
+            ...prev.profiles,
+            [pActiveId]: {
+              ...pCurrentProf,
+              panels: panels,
+              layouts: gridLayouts
+            }
           }
-        }
-      };
-      localStorage.setItem(PROFILES_KEY, JSON.stringify(nextState));
-      return nextState;
-    });
-  }, [panels, gridLayouts]);
+        };
+      });
+      
+      saveLayoutToApi(activeId, currentProf.name, { panels, layouts: gridLayouts }, true);
+    }, 1000);
+  }, [panels, gridLayouts, profilesState]);
 
   // Profile Management Functions
   const handleCreateProfile = async () => {
@@ -618,8 +710,12 @@ const Dashboard = () => {
     if (!name || name.trim() === '') return;
 
     const newId = 'p_' + Math.random().toString(36).substr(2, 9);
+    
+    // Save to API first
+    saveLayoutToApi(newId, name.trim(), { panels: panels ? [...panels] : null, layouts: gridLayouts }, true);
+
     setProfilesState(prev => {
-      const newState = {
+      return {
         ...prev,
         activeProfileId: newId,
         profiles: {
@@ -628,12 +724,11 @@ const Dashboard = () => {
             id: newId,
             name: name.trim(),
             panels: panels ? [...panels] : null,
-            layouts: JSON.parse(JSON.stringify(gridLayouts))
+            layouts: JSON.parse(JSON.stringify(gridLayouts)),
+            isEditable: true
           }
         }
       };
-      localStorage.setItem(PROFILES_KEY, JSON.stringify(newState));
-      return newState;
     });
   };
 
@@ -645,16 +740,19 @@ const Dashboard = () => {
 
     const isConfirmed = await confirm(`Are you sure you want to delete profile "${profilesState.profiles[profilesState.activeProfileId]?.name}"?`, { title: 'Delete Profile' });
     if (isConfirmed) {
+      const deletedId = profilesState.activeProfileId;
+      
+      // Call API
+      deleteLayoutFromApi(deletedId).then(() => setActiveLayoutInApi('default'));
+
       setProfilesState(prev => {
         const newProfiles = { ...prev.profiles };
         delete newProfiles[prev.activeProfileId];
-        const newState = {
+        return {
           ...prev,
           activeProfileId: 'default',
           profiles: newProfiles
         };
-        localStorage.setItem(PROFILES_KEY, JSON.stringify(newState));
-        return newState;
       });
     }
   };
@@ -893,6 +991,15 @@ const Dashboard = () => {
     return locked;
   }, [gridLayouts, isEditing]);
 
+  // ─── Loading Screen ───────────────
+  if (isLayoutsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] animate-[fadeIn_0.3s_ease-out]">
+        <EnergyLoader text="Loading Dashboard..." />
+      </div>
+    );
+  }
+
   // ─── Onboarding screen (first visit — panels is null) ───────────────
   if (panels === null) {
     return (
@@ -997,7 +1104,7 @@ const Dashboard = () => {
                         onClick={() => {
                           setProfilesState(prev => {
                             const newState = { ...prev, activeProfileId: p.id };
-                            localStorage.setItem(PROFILES_KEY, JSON.stringify(newState));
+                            setActiveLayoutInApi(p.id);
                             return newState;
                           });
                           setIsProfileDropdownOpen(false);
@@ -1098,7 +1205,7 @@ const Dashboard = () => {
 
       {/* ─── Grid ─── */}
       <div className={`transition-all ${isEditing ? 'ring-2 ring-blue-500/30 rounded-xl p-1 bg-blue-500/5 dark:bg-blue-500/10' : ''}`}>
-        {panels.length === 0 ? (
+        {!panels || panels.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <BarChart3 size={48} className="text-gray-300 dark:text-gray-700 mb-4" />
             <p className="text-gray-500 dark:text-gray-400 font-medium mb-4">Dashboard is empty. Add your first panel!</p>

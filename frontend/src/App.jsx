@@ -14,6 +14,7 @@ import { TrendDataProvider } from './contexts/TrendDataContext';
 import { TemperatureDataProvider } from './contexts/TemperatureDataContext';
 import { ApiProvider } from './contexts/ApiContext';
 import { DialogProvider } from './contexts/DialogContext';
+import EnergyLoader from './components/EnergyLoader';
 
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 

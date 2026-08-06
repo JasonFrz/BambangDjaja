@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { Activity, BarChart3, GripVertical } from "lucide-react";
 import { METRICS } from "../../config/metrics";
+import EnergyLoader from "../../components/EnergyLoader";
 
 export const ChartTooltip = ({ active, payload, label }) => {
   if (!active || !payload || !payload.length) return null;
@@ -45,11 +46,8 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
   const renderChart = () => {
     if (!chartData || chartData.length === 0) {
       return (
-        <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-600">
-          <div className="flex flex-col items-center gap-2">
-            <BarChart3 size={28} />
-            <span className="text-xs font-medium">Waiting for data...</span>
-          </div>
+        <div className="flex items-center justify-center h-full">
+          <EnergyLoader size="small" text="Loading data..." />
         </div>
       );
     }

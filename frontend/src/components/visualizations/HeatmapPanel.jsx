@@ -1,6 +1,7 @@
 import React, { memo, useMemo, useState } from 'react';
 import { GripVertical, Palette } from "lucide-react";
 import { METRICS } from "../../config/metrics";
+import EnergyLoader from "../../components/EnergyLoader";
 
 const COLOR_SCHEMES = {
   spectral: {
@@ -133,7 +134,11 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
               })}
             </div>
           ))}
-          {heatmapData.length === 0 && <div className="text-xs text-gray-400 mt-4">Waiting for data...</div>}
+          {heatmapData.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <EnergyLoader size="small" text="Loading data..." />
+            </div>
+          )}
         </div>
       </div>
 

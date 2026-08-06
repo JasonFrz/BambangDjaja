@@ -2,6 +2,7 @@ import React, { memo, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
 import { GripVertical } from "lucide-react";
 import { METRICS } from "../../config/metrics";
+import EnergyLoader from "../../components/EnergyLoader";
 
 export const HistogramPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
   const metric = panel.metrics?.[0]; // Restrict to 1 metric
@@ -43,7 +44,9 @@ export const HistogramPanel = memo(({ panel, chartData, isEditing, isSyncHoverAc
       </div>
       <div className="flex-1 min-h-0">
         {!metric || histogramData.length === 0 ? (
-           <div className="h-full flex items-center justify-center text-xs text-gray-400">Waiting for data...</div>
+           <div className="h-full flex items-center justify-center">
+             <EnergyLoader size="small" text="Loading data..." />
+           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={histogramData} margin={{ top: 15, right: 15, bottom: -5, left: -20 }}>
