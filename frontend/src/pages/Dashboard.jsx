@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from "react";
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Plus, X, Settings2, Trash2, RefreshCw, GripVertical, Edit3, Send, LogOut, Download, Loader2, ChevronDown, Check, Search, Layers, RotateCcw, Thermometer, TrendingUp, BarChart3, Eye, AlertTriangle, Maximize2, Minimize2, MousePointer2, BellRing, Power, FileDown, Monitor, Crosshair, LayoutGrid, PlusSquare, Database, PieChart as PieChartIcon, FileText, Table, AlignLeft, CalendarClock, List, Rss, MessageSquareWarning, CandlestickChart, ActivitySquare, LayoutPanelLeft, BoxSelect } from 'lucide-react';
 import { useTrendData } from "../contexts/TrendDataContext";
@@ -133,6 +134,13 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
   const [searchQuery, setSearchQuery] = useState('');
   const [visSearchQuery, setVisSearchQuery] = useState('');
 
+  const DRAFT_KEY = 'grafana_panel_editor_draft';
+
+  const handleResetDraft = () => {
+    localStorage.removeItem(DRAFT_KEY);
+    setTitle(''); setPanelType('areachart'); setSelectedMetrics([]); setChartType('area'); setColorScheme('spectral');
+  };
+
   useEffect(() => {
     if (editingPanel) {
       setTitle(editingPanel.title);
@@ -141,11 +149,42 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
       setChartType(editingPanel.chartType || 'area');
       setColorScheme(editingPanel.colorScheme || 'spectral');
     } else {
-      setTitle(''); setPanelType('areachart'); setSelectedMetrics([]); setChartType('area'); setColorScheme('spectral');
+      const draft = localStorage.getItem(DRAFT_KEY);
+      if (draft) {
+        try {
+          const parsed = JSON.parse(draft);
+          setTitle(parsed.title || '');
+          setPanelType(parsed.panelType || 'areachart');
+          setSelectedMetrics(parsed.selectedMetrics || []);
+          setChartType(parsed.chartType || 'area');
+          setColorScheme(parsed.colorScheme || 'spectral');
+        } catch (e) {
+          setTitle(''); setPanelType('areachart'); setSelectedMetrics([]); setChartType('area'); setColorScheme('spectral');
+        }
+      } else {
+        setTitle(''); setPanelType('areachart'); setSelectedMetrics([]); setChartType('area'); setColorScheme('spectral');
+      }
     }
     setSearchQuery('');
     setVisSearchQuery('');
   }, [editingPanel, isOpen]);
+
+  useEffect(() => {
+    if (!editingPanel && isOpen) {
+      const draft = { title, panelType, selectedMetrics, chartType, colorScheme };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    }
+  }, [title, panelType, selectedMetrics, chartType, colorScheme, editingPanel, isOpen]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const SINGLE_METRIC_PANELS = ['gauge', 'bargauge', 'candlestick', 'histogram'];
   const NO_METRIC_PANELS = ['oilstatus'];
@@ -183,6 +222,10 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
   const handleSave = () => {
     if (selectedMetrics.length === 0 && !NO_METRIC_PANELS.includes(panelType)) return;
 
+    if (!editingPanel) {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+
     onSave({
       id: editingPanel?.id || uid(),
       title: title.trim() || derivedTitle,
@@ -219,6 +262,9 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
           <h3 className="text-sm font-bold text-gray-900 dark:text-white">{editingPanel ? 'Edit Panel' : 'New Panel'}</h3>
         </div>
         <div className="flex items-center gap-3">
+           {!editingPanel && (
+             <button onClick={handleResetDraft} className="px-4 py-1.5 rounded-lg font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 text-sm transition-colors border border-transparent">Reset</button>
+           )}
            <button onClick={onClose} className="px-4 py-1.5 rounded-lg font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 text-sm transition-colors border border-transparent hover:border-gray-200 dark:hover:border-white/10">Discard</button>
            <button onClick={handleSave} disabled={selectedMetrics.length === 0 && !NO_METRIC_PANELS.includes(panelType)} className="px-5 py-1.5 rounded-lg font-bold bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-50 text-sm transition-colors flex items-center gap-1.5">
              <Check size={16} /> Apply
@@ -489,7 +535,18 @@ const Dashboard = () => {
   const isEditingRef = useRef(false);
   useEffect(() => { isEditingRef.current = isEditing; }, [isEditing]);
 
-  const [editorOpen, setEditorOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editorOpen = searchParams.get('add-panel') === 'true';
+  const setEditorOpen = useCallback((isOpen) => {
+    setSearchParams(prev => {
+      if (isOpen) {
+        prev.set('add-panel', 'true');
+      } else {
+        prev.delete('add-panel');
+      }
+      return prev;
+    }, { replace: true });
+  }, [setSearchParams]);
   const [editingPanel, setEditingPanel] = useState(null);
 
   // Export modal state
