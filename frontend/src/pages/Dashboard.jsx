@@ -1038,7 +1038,6 @@ const Dashboard = () => {
     if (isNew) {
       skipLayoutChangeRef.current = true;
       setLayoutGeneration(g => g + 1);
-      setIsEditing(true);
       
       scrollToTop();
       setTimeout(() => {
