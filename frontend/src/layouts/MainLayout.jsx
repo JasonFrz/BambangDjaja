@@ -46,6 +46,7 @@ const MainLayout = () => {
     sessionStorage.removeItem('username');
     sessionStorage.removeItem('role');
     sessionStorage.removeItem('company_name');
+    sessionStorage.removeItem('selectedTrafoId');
     window.location.href = '/login';
   };
 

@@ -59,7 +59,19 @@ export const useWebSocket = (url, updateInterval = 0) => {
       setIsConnected(false);
     });
 
+    const handleTrafoChange = () => {
+      if (socket.connected) {
+        const trafoId = sessionStorage.getItem('selectedTrafoId') || '1';
+        const dbName = sessionStorage.getItem('company_name');
+        if (trafoId && dbName) {
+          socket.emit("subscribe_transformer", { trafoId, dbName });
+        }
+      }
+    };
+    window.addEventListener("trafoChanged", handleTrafoChange);
+
     return () => {
+      window.removeEventListener("trafoChanged", handleTrafoChange);
       socket.disconnect();
     };
   }, [url]);

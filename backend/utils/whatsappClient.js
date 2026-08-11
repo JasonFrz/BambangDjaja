@@ -98,7 +98,6 @@ const sendWhatsAppMessage = async (phone, text) => {
 const logoutWhatsApp = async () => {
   try {
     if (waClient) {
-      // Logout will unlink the device from the phone just like WA Web
       await waClient.logout().catch(() => { });
       await waClient.destroy().catch(() => { });
       waClient = null;

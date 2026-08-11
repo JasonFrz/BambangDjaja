@@ -493,7 +493,9 @@ const Dashboard = () => {
 
         const response = await fetch(`${apiUrl}/api/layouts`, {
           headers: {
-            'x-role': role
+            'X-Username': username,
+            'X-Company-Name': companyName,
+            'X-Role': role
           }
         });
         
@@ -611,7 +613,9 @@ const Dashboard = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-role': role
+          'X-Username': username,
+          'X-Company-Name': companyName,
+          'X-Role': role
         },
         body: JSON.stringify({
           id: layoutId,
@@ -635,7 +639,9 @@ const Dashboard = () => {
       await fetch(`${apiUrl}/api/layouts/${layoutId}`, {
         method: 'DELETE',
         headers: {
-          'x-role': role
+          'X-Username': username,
+          'X-Company-Name': companyName,
+          'X-Role': role
         }
       });
     } catch (e) {
@@ -654,7 +660,9 @@ const Dashboard = () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-role': role
+          'X-Username': username,
+          'X-Company-Name': companyName,
+          'X-Role': role
         },
         body: JSON.stringify({ id: layoutId })
       });
@@ -814,12 +822,60 @@ const Dashboard = () => {
     return chartData;
   }, [chartData, oilChartData]);
 
+  // ─── Compact layout vertically to Y:0 (Eliminates all empty Y gaps) ───
+  const compactLayout = (layout, cols = 12) => {
+    if (!layout || layout.length === 0) return [];
+
+    const sorted = [...layout].sort((a, b) => {
+      if (a.y !== b.y) return a.y - b.y;
+      return a.x - b.x;
+    });
+
+    const compacted = [];
+
+    for (const item of sorted) {
+      let bestY = 0;
+      while (true) {
+        const hasCollision = compacted.some(other => {
+          return !(
+            other.x + other.w <= item.x ||
+            item.x + item.w <= other.x ||
+            other.y + other.h <= bestY ||
+            bestY + item.h <= other.y
+          );
+        });
+
+        if (!hasCollision) break;
+        bestY++;
+      }
+
+      compacted.push({
+        ...item,
+        y: bestY
+      });
+    }
+
+    return compacted;
+  };
+
   // ─── Grid layout change handler ──────────────────────────────────────
+  const skipLayoutChangeRef = useRef(false);
+  const [layoutGeneration, setLayoutGeneration] = useState(0);
+
   const handleLayoutChange = useCallback((currentLayout, allLayouts) => {
+    if (skipLayoutChangeRef.current) return;
+
+    const colsMap = { lg: 12, md: 10, sm: 6, xs: 2, xxs: 1 };
+
     setGridLayouts(prev => {
+      const prevHasItems = Object.values(prev).some(bp => bp && bp.length > 0);
+      const newHasItems = Object.values(allLayouts).some(bp => bp && bp.length > 0);
+      if (prevHasItems && !newHasItems) return prev;
+
       const cleaned = { ...prev };
       Object.keys(allLayouts).forEach(bp => {
-        cleaned[bp] = (allLayouts[bp] || []).map(({ static: _s, ...rest }) => rest);
+        const raw = (allLayouts[bp] || []).map(({ static: _s, ...rest }) => rest);
+        cleaned[bp] = compactLayout(raw, colsMap[bp] || 12);
       });
       return cleaned;
     });
@@ -829,14 +885,16 @@ const Dashboard = () => {
   const findEmptyPosition = (layout, w, h, cols) => {
     if (!layout || layout.length === 0) return { x: 0, y: 0 };
     
+    const compacted = compactLayout(layout, cols);
+    
     let maxY = 0;
-    layout.forEach(item => {
+    compacted.forEach(item => {
       if (item.y + item.h > maxY) maxY = item.y + item.h;
     });
 
     for (let y = 0; y <= maxY; y++) {
       for (let x = 0; x <= cols - w; x++) {
-        const hasCollision = layout.some(item => {
+        const hasCollision = compacted.some(item => {
           return !(
             item.x + item.w <= x || 
             x + w <= item.x ||      
@@ -858,7 +916,9 @@ const Dashboard = () => {
     const bps = [
       { bp: 'lg', cols: 12, w: isSmallPanel ? 3 : 6, h: isSmallPanel ? 4 : 5, minW: 2, minH: isSmallPanel ? 2 : 4 },
       { bp: 'md', cols: 10, w: isSmallPanel ? 3 : 5, h: isSmallPanel ? 4 : 5, minW: 2, minH: isSmallPanel ? 2 : 4 },
-      { bp: 'sm', cols: 6, w: isSmallPanel ? 3 : 6, h: isSmallPanel ? 4 : 5, minW: 2, minH: isSmallPanel ? 2 : 4 }
+      { bp: 'sm', cols: 6, w: isSmallPanel ? 3 : 6, h: isSmallPanel ? 4 : 5, minW: 2, minH: isSmallPanel ? 2 : 4 },
+      { bp: 'xs', cols: 2, w: 2, h: isSmallPanel ? 4 : 5, minW: 1, minH: 2 },
+      { bp: 'xxs', cols: 1, w: 1, h: isSmallPanel ? 4 : 5, minW: 1, minH: 2 }
     ];
 
     bps.forEach(({ bp, cols, w, h, minW, minH }) => {
@@ -869,8 +929,24 @@ const Dashboard = () => {
     return layouts;
   }, []);
 
+  const scrollToTop = useCallback(() => {
+    if (containerRef.current) {
+      const scrollParent = containerRef.current.closest('.overflow-y-auto') || containerRef.current.parentElement;
+      if (scrollParent) {
+        scrollParent.scrollTo({ top: 0, behavior: 'smooth' });
+        scrollParent.scrollTop = 0;
+      }
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, []);
+
   // ─── Panel CRUD ──────────────────────────────────────────────────────
   const handleSavePanel = (panelConfig) => {
+    const isNew = !panels?.find(p => p.id === panelConfig.id);
+    const existingPanels = (panels || []).filter(p => p.id !== panelConfig.id);
+
     setPanels(prev => {
       const existing = (prev || []).find(p => p.id === panelConfig.id);
       if (existing) {
@@ -879,25 +955,110 @@ const Dashboard = () => {
       return [...(prev || []), panelConfig];
     });
 
-    // Add layout for new panel
     setGridLayouts(prev => {
-      const hasLayout = Object.values(prev).some(bp => bp.some(l => l.i === panelConfig.id));
-      if (hasLayout) return prev;
-      const newL = generateLayoutForPanel(panelConfig.id, panelConfig.type, prev);
-      const updated = {};
-      Object.keys(prev).forEach(bp => {
-        updated[bp] = [...(prev[bp] || []), newL[bp] || newL.lg];
+      const isSmall = panelConfig.type === 'stat' || panelConfig.type === 'gauge' || panelConfig.type === 'oilstatus';
+
+      // ─── IF PERTAMA KALI ADD PANEL (0 panel sebelumnya) ───
+      // Langsung kunci di posisi paling atas kiri (x:0, y:0) tanpa cek ghost items
+      if (existingPanels.length === 0) {
+        return {
+          lg: [{ i: panelConfig.id, x: 0, y: 0, w: isSmall ? 3 : 6, h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 }],
+          md: [{ i: panelConfig.id, x: 0, y: 0, w: isSmall ? 3 : 5, h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 }],
+          sm: [{ i: panelConfig.id, x: 0, y: 0, w: isSmall ? 3 : 6, h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 }],
+          xs: [{ i: panelConfig.id, x: 0, y: 0, w: 2, h: isSmall ? 4 : 5, minW: 1, minH: 2 }],
+          xxs: [{ i: panelConfig.id, x: 0, y: 0, w: 1, h: isSmall ? 4 : 5, minW: 1, minH: 2 }]
+        };
+      }
+
+      // ─── IF PANEL KEDUA (1 panel sebelumnya) ───
+      // Tempatkan di samping panel 1 (x:6, y:0) jika muat, atau di bawahnya
+      if (existingPanels.length === 1) {
+        const firstId = existingPanels[0].id;
+        const firstLg = (prev.lg || []).find(l => l.i === firstId) || { x: 0, y: 0, w: 6, h: 5 };
+        const startX = (firstLg.x === 0 && firstLg.w <= 6) ? firstLg.w : 0;
+        const startY = startX === 0 ? (firstLg.y + firstLg.h) : firstLg.y;
+
+        const secondLayout = {
+          lg: [
+            ...((prev.lg || []).filter(l => l.i === firstId)),
+            { i: panelConfig.id, x: startX, y: startY, w: isSmall ? 3 : 6, h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 }
+          ],
+          md: [
+            ...((prev.md || []).filter(l => l.i === firstId)),
+            { i: panelConfig.id, x: startX === 0 ? 0 : 5, y: startY, w: isSmall ? 3 : 5, h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 }
+          ],
+          sm: [
+            ...((prev.sm || []).filter(l => l.i === firstId)),
+            { i: panelConfig.id, x: 0, y: (prev.sm || [])[0]?.h || 5, w: isSmall ? 3 : 6, h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 }
+          ],
+          xs: [
+            ...((prev.xs || []).filter(l => l.i === firstId)),
+            { i: panelConfig.id, x: 0, y: (prev.xs || [])[0]?.h || 5, w: 2, h: isSmall ? 4 : 5, minW: 1, minH: 2 }
+          ],
+          xxs: [
+            ...((prev.xxs || []).filter(l => l.i === firstId)),
+            { i: panelConfig.id, x: 0, y: (prev.xxs || [])[0]?.h || 5, w: 1, h: isSmall ? 4 : 5, minW: 1, minH: 2 }
+          ]
+        };
+
+        const colsMap = { lg: 12, md: 10, sm: 6, xs: 2, xxs: 1 };
+        const updated = {};
+        Object.keys(secondLayout).forEach(bp => {
+          updated[bp] = compactLayout(secondLayout[bp], colsMap[bp]);
+        });
+        return updated;
+      }
+
+      // ─── UNTUK PANEL KE-3 DAN SETERUSNYA ───
+      const existingPanelIds = new Set(existingPanels.map(p => p.id));
+      existingPanelIds.add(panelConfig.id);
+
+      const bpsList = ['lg', 'md', 'sm', 'xs', 'xxs'];
+      const colsMap = { lg: 12, md: 10, sm: 6, xs: 2, xxs: 1 };
+      const cleanedPrev = {};
+      
+      bpsList.forEach(bp => {
+        cleanedPrev[bp] = (prev[bp] || []).filter(l => existingPanelIds.has(l.i));
       });
+      
+      const newL = generateLayoutForPanel(panelConfig.id, panelConfig.type, cleanedPrev);
+      
+      const updated = {};
+      bpsList.forEach(bp => {
+        const rawList = [...(cleanedPrev[bp] || [])];
+        if (!rawList.some(l => l.i === panelConfig.id)) {
+          rawList.push(newL[bp] || newL.lg);
+        }
+        updated[bp] = compactLayout(rawList, colsMap[bp]);
+      });
+      
       return updated;
     });
+
+    if (isNew) {
+      skipLayoutChangeRef.current = true;
+      setLayoutGeneration(g => g + 1);
+      setIsEditing(true);
+      
+      scrollToTop();
+      setTimeout(() => {
+        scrollToTop();
+      }, 100);
+      setTimeout(() => {
+        skipLayoutChangeRef.current = false;
+        scrollToTop();
+      }, 500);
+    }
   };
 
   const handleDeletePanel = (panelId) => {
     setPanels(prev => (prev || []).filter(p => p.id !== panelId));
     setGridLayouts(prev => {
+      const colsMap = { lg: 12, md: 10, sm: 6, xs: 2, xxs: 1 };
       const updated = {};
       Object.keys(prev).forEach(bp => {
-        updated[bp] = (prev[bp] || []).filter(l => l.i !== panelId);
+        const filtered = (prev[bp] || []).filter(l => l.i !== panelId);
+        updated[bp] = compactLayout(filtered, colsMap[bp] || 12);
       });
       return updated;
     });
@@ -1020,7 +1181,11 @@ const Dashboard = () => {
             ⚡ Load Default Dashboard
           </button>
           <button
-            onClick={() => { setPanels([]); setEditorOpen(true); }}
+            onClick={() => { 
+              setPanels([]); 
+              setGridLayouts({ lg: [], md: [], sm: [], xs: [], xxs: [] }); 
+              setEditorOpen(true); 
+            }}
             className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[#172b4d] dark:text-gray-300 font-bold hover:bg-gray-50 dark:hover:bg-white/10 transition-colors shadow-sm text-sm"
           >
             <Plus size={18} />
@@ -1205,7 +1370,8 @@ const Dashboard = () => {
 
       {/* ─── Grid ─── */}
       <div className={`transition-all ${isEditing ? 'ring-2 ring-blue-500/30 rounded-xl p-1 bg-blue-500/5 dark:bg-blue-500/10' : ''}`}>
-        {!panels || panels.length === 0 ? (
+        {/* Empty state overlay */}
+        {(!panels || panels.length === 0) && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <BarChart3 size={48} className="text-gray-300 dark:text-gray-700 mb-4" />
             <p className="text-gray-500 dark:text-gray-400 font-medium mb-4">Dashboard is empty. Add your first panel!</p>
@@ -1213,43 +1379,43 @@ const Dashboard = () => {
               <Plus size={16} className="inline mr-1" /> Add Panel
             </button>
           </div>
-        ) : (
-          <ResponsiveGridLayout
-            width={containerWidth}
-            className="layout"
-            layouts={lockedLayouts}
-            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-            cols={{ lg: 12, md: 10, sm: 6, xs: 2, xxs: 1 }}
-            rowHeight={50}
-            onLayoutChange={handleLayoutChange}
-            draggableHandle=".drag-handle"
-            margin={[8, 8]}
-            isDraggable={isEditing}
-            isResizable={isEditing}
-            compactType="vertical"
-          >
-            {panels.map(panel => (
-              <div key={panel.id} className="flex">
-                <div className={`bg-white dark:bg-[#181b1f] rounded-none p-3 shadow-sm border transition-all h-full w-full flex flex-col relative group overflow-hidden ${isEditing ? 'border-blue-200 dark:border-blue-500/20 ring-1 ring-blue-100 dark:ring-blue-500/10' : 'border-[#e5e7eb] dark:border-[#22252b] hover:border-[#d1d5db] dark:hover:border-[#32363e]'}`}>
-                  {/* Panel action buttons (visible on hover) */}
-                  <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-50">
-                    {panel.type !== 'status' && (
-                      <button onClick={() => handleEditPanel(panel)} className="p-1.5 rounded-lg bg-white/80 dark:bg-black/40 backdrop-blur-sm hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-blue-500 transition-colors shadow-sm" title="Edit Panel">
-                        <Settings2 size={13} />
-                      </button>
-                    )}
-                    <button onClick={() => handleDeletePanel(panel.id)} className="p-1.5 rounded-lg bg-white/80 dark:bg-black/40 backdrop-blur-sm hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors shadow-sm" title="Delete Panel">
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-
-                  {/* Panel content */}
-                  <PanelRenderer panel={panel} latestData={latestData} chartData={getChartDataForPanel(panel)} tempData={tempData} isLive={isLive} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />
-                </div>
-              </div>
-            ))}
-          </ResponsiveGridLayout>
         )}
+        {/* Always-mounted RGL — never destroy/recreate on first panel add */}
+        <ResponsiveGridLayout
+          width={containerWidth}
+          className="layout"
+          layouts={lockedLayouts}
+          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+          cols={{ lg: 12, md: 10, sm: 6, xs: 2, xxs: 1 }}
+          rowHeight={50}
+          onLayoutChange={handleLayoutChange}
+          draggableHandle=".drag-handle"
+          margin={[8, 8]}
+          isDraggable={isEditing}
+          isResizable={isEditing}
+          compactType="vertical"
+        >
+          {(panels || []).map(panel => (
+            <div key={panel.id} className="flex">
+              <div className={`bg-white dark:bg-[#181b1f] rounded-none p-3 shadow-sm border transition-all h-full w-full flex flex-col relative group overflow-hidden ${isEditing ? 'border-blue-200 dark:border-blue-500/20 ring-1 ring-blue-100 dark:ring-blue-500/10' : 'border-[#e5e7eb] dark:border-[#22252b] hover:border-[#d1d5db] dark:hover:border-[#32363e]'}`}>
+                {/* Panel action buttons (visible on hover) */}
+                <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                  {panel.type !== 'status' && (
+                    <button onClick={() => handleEditPanel(panel)} className="p-1.5 rounded-lg bg-white/80 dark:bg-black/40 backdrop-blur-sm hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-blue-500 transition-colors shadow-sm" title="Edit Panel">
+                      <Settings2 size={13} />
+                    </button>
+                  )}
+                  <button onClick={() => handleDeletePanel(panel.id)} className="p-1.5 rounded-lg bg-white/80 dark:bg-black/40 backdrop-blur-sm hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors shadow-sm" title="Delete Panel">
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+
+                {/* Panel content */}
+                <PanelRenderer panel={panel} latestData={latestData} chartData={getChartDataForPanel(panel)} tempData={tempData} isLive={isLive} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />
+              </div>
+            </div>
+          ))}
+        </ResponsiveGridLayout>
       </div>
 
       {/* ─── Panel Editor Modal ─── */}

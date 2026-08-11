@@ -25,11 +25,23 @@ io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
 
   socket.on("subscribe_transformer", (data) => {
-
     const trafoId = data.trafoId || data;
     const dbName = data.dbName;
 
     if (trafoId && dbName) {
+      // Leave previous trafo rooms to prevent multiple subscriptions from one client
+      for (const room of socket.rooms) {
+        if (room.startsWith("trafo_")) {
+          socket.leave(room);
+          const roomData = io.sockets.adapter.rooms.get(room);
+          if (!roomData || roomData.size === 0) {
+            activeSubscriptions.delete(room);
+            roomIntervals.delete(room);
+            console.log(`Removed ${room} from active subscriptions as client switched trafo`);
+          }
+        }
+      }
+
       const roomName = `trafo_${dbName}_${trafoId}`;
       socket.join(roomName);
       activeSubscriptions.set(roomName, dbName);

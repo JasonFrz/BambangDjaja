@@ -51,6 +51,7 @@ const TransformerSelection = () => {
     setIsTransitioning(true);
     
     sessionStorage.setItem('selectedTrafoId', trafo.id);
+    window.dispatchEvent(new Event('trafoChanged'));
     
     setTimeout(() => {
       navigate('/dashboard');
