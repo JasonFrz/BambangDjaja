@@ -22,7 +22,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
-  const metric = panel.metrics?.[0]; // Candlestick is restricted to 1 metric
+  const metric = panel.metrics?.[0]; 
 
   const data = useMemo(() => {
     if (!chartData || chartData.length === 0 || !metric) return [];
@@ -56,10 +56,9 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHover
             tooltipData: { open, close, high: maxVal, low: minVal }
           });
         } else {
-          // Pad with empty data but same time to maintain index alignment for sync hover
           result.push({ 
             time: d.time,
-            tooltipData: { open, close, high: maxVal, low: minVal } // keep tooltip data so it shows on hover!
+            tooltipData: { open, close, high: maxVal, low: minVal }
           });
         }
       });

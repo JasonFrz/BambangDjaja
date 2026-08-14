@@ -241,25 +241,53 @@ router.get("/export", extractDb, async (req, res) => {
     sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0052CC' } };
     sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
 
-    const elecQuery = `
-      SELECT 
-        *, 
-        power_active_total_kw as power_active_total,
-        power_reactive_total_kvar as power_reactive_total,
-        power_apparent_total_kva as power_apparent_total
-      FROM electrical_readings
-      WHERE timestamp >= ? AND timestamp <= ?
-      ORDER BY timestamp ASC
-    `;
-    const [elecRows] = await db.execute(elecQuery, [start, end]);
+    let elecQuery = '';
+    let elecParams = [];
 
-    let lastElecTs = null;
+    if (intervalMs) {
+      const intv = intervalMs / 1000;
+      elecQuery = `
+        SELECT 
+          FROM_UNIXTIME(UNIX_TIMESTAMP(MIN(timestamp)) DIV ? * ?) AS timestamp,
+          AVG(phase_a_v) as phase_a_v,
+          AVG(phase_b_v) as phase_b_v,
+          AVG(phase_c_v) as phase_c_v,
+          AVG(line_ab_v) as line_ab_v,
+          AVG(line_bc_v) as line_bc_v,
+          AVG(line_ca_v) as line_ca_v,
+          AVG(current_a) as current_a,
+          AVG(current_b) as current_b,
+          AVG(current_c) as current_c,
+          AVG(power_active_total_kw) as power_active_total,
+          AVG(power_reactive_total_kvar) as power_reactive_total,
+          AVG(power_apparent_total_kva) as power_apparent_total,
+          AVG(pf_total) as pf_total,
+          AVG(frequency) as frequency,
+          AVG(energy_active_total) as energy_active_total,
+          AVG(energy_reactive_total) as energy_reactive_total
+        FROM electrical_readings
+        WHERE timestamp >= ? AND timestamp <= ?
+        GROUP BY UNIX_TIMESTAMP(timestamp) DIV ?
+        ORDER BY MIN(timestamp) ASC
+      `;
+      elecParams = [intv, intv, start, end, intv];
+    } else {
+      elecQuery = `
+        SELECT 
+          *, 
+          power_active_total_kw as power_active_total,
+          power_reactive_total_kvar as power_reactive_total,
+          power_apparent_total_kva as power_apparent_total
+        FROM electrical_readings
+        WHERE timestamp >= ? AND timestamp <= ?
+        ORDER BY timestamp ASC
+      `;
+      elecParams = [start, end];
+    }
+
+    const [elecRows] = await db.execute(elecQuery, elecParams);
+
     for (const row of elecRows) {
-      const currentTs = new Date(row.timestamp).getTime();
-      if (intervalMs && lastElecTs && (currentTs - lastElecTs < intervalMs)) {
-        continue;
-      }
-      lastElecTs = currentTs;
       
       sheet.addRow({
         time: new Date(row.timestamp).toLocaleString('id-ID'),
@@ -297,20 +325,36 @@ router.get("/export", extractDb, async (req, res) => {
     oilSheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF6600' } };
     oilSheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
 
-    const oilQuery = `
-      SELECT * FROM oil_readings
-      WHERE timestamp >= ? AND timestamp <= ?
-      ORDER BY timestamp ASC
-    `;
-    const [oilRows] = await db.execute(oilQuery, [start, end]);
+    let oilQuery = '';
+    let oilParams = [];
 
-    let lastOilTs = null;
+    if (intervalMs) {
+      const intv = intervalMs / 1000;
+      oilQuery = `
+        SELECT 
+          FROM_UNIXTIME(UNIX_TIMESTAMP(MIN(timestamp)) DIV ? * ?) AS timestamp,
+          AVG(oil_temperature) as oil_temperature,
+          AVG(oil_pressure) as oil_pressure,
+          ROUND(AVG(oil_level_alarm)) as oil_level_alarm,
+          ROUND(AVG(oil_level_trip)) as oil_level_trip
+        FROM oil_readings
+        WHERE timestamp >= ? AND timestamp <= ?
+        GROUP BY UNIX_TIMESTAMP(timestamp) DIV ?
+        ORDER BY MIN(timestamp) ASC
+      `;
+      oilParams = [intv, intv, start, end, intv];
+    } else {
+      oilQuery = `
+        SELECT * FROM oil_readings
+        WHERE timestamp >= ? AND timestamp <= ?
+        ORDER BY timestamp ASC
+      `;
+      oilParams = [start, end];
+    }
+
+    const [oilRows] = await db.execute(oilQuery, oilParams);
+
     for (const row of oilRows) {
-      const currentTs = new Date(row.timestamp).getTime();
-      if (intervalMs && lastOilTs && (currentTs - lastOilTs < intervalMs)) {
-        continue;
-      }
-      lastOilTs = currentTs;
 
       oilSheet.addRow({
         time: new Date(row.timestamp).toLocaleString('id-ID'),

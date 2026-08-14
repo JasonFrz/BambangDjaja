@@ -5,22 +5,18 @@ export const AnnotationsListPanel = memo(({ panel, chartData, isEditing }) => {
   const annotations = useMemo(() => {
     if (!chartData || chartData.length === 0) return [];
     const list = [];
-    // Scan recent chart data for significant events
     const recent = chartData.slice(-20);
     
-    // Check phase A voltage spike
     if (recent.some(d => d['PhaseAVoltage'] > 240)) {
        list.push({ t: "Overvoltage detected on Phase A", user: "system", time: recent[recent.length-1]?.time, c: "bg-red-500" });
     } else if (recent.some(d => d['PhaseAVoltage'] < 200)) {
        list.push({ t: "Undervoltage detected on Phase A", user: "system", time: recent[recent.length-1]?.time, c: "bg-amber-500" });
     }
     
-    // Check Temperature
     if (recent.some(d => d['OilTemp'] > 80)) {
        list.push({ t: "Oil Temperature Critical", user: "sensor_mon", time: recent[recent.length-1]?.time, c: "bg-red-500" });
     }
     
-    // Always add some standard logs
     list.push({ t: "Automated scan completed", user: "system", time: chartData[chartData.length-5]?.time || "Recent", c: "bg-blue-500" });
     list.push({ t: "System initialized", user: "admin", time: chartData[0]?.time || "Startup", c: "bg-emerald-500" });
     
