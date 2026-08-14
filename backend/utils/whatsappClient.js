@@ -106,7 +106,11 @@ const logoutWhatsApp = async () => {
 
     const fs = require('fs');
     if (fs.existsSync('./wa_session')) {
-      fs.rmSync('./wa_session', { recursive: true, force: true });
+      try {
+        await fs.promises.rm('./wa_session', { recursive: true, force: true, maxRetries: 5, retryDelay: 1000 });
+      } catch (err) {
+        console.warn('⚠️ Could not completely remove wa_session directory (might be locked):', err.message);
+      }
     }
 
     setTimeout(() => {

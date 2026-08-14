@@ -51,9 +51,25 @@ const DEFAULT_GRID_LAYOUTS = {
     { i: 'p_uphase_chart', x: 0, y: 0, w: 6, h: 4, minW: 2, minH: 3 },
     { i: 'p_oilstatus', x: 0, y: 4, w: 6, h: 3, minW: 2, minH: 2 },
     { i: 'p_uline_chart', x: 0, y: 7, w: 6, h: 4, minW: 2, minH: 3 },
-    { i: 'p_freq_gauge', x: 0, y: 11, w: 6, h: 3, minW: 2, minH: 3 },
-    { i: 'p_phasea_candle', x: 0, y: 14, w: 6, h: 4, minW: 2, minH: 3 },
-    { i: 'p_mixed_metrics', x: 0, y: 18, w: 6, h: 4, minW: 2, minH: 3 },
+    { i: 'p_freq_gauge', x: 0, y: 11, w: 6, h: 4, minW: 2, minH: 3 },
+    { i: 'p_phasea_candle', x: 0, y: 15, w: 6, h: 4, minW: 2, minH: 3 },
+    { i: 'p_mixed_metrics', x: 0, y: 19, w: 6, h: 4, minW: 2, minH: 3 },
+  ],
+  xs: [
+    { i: 'p_uphase_chart', x: 0, y: 0, w: 2, h: 4, minW: 1, minH: 3 },
+    { i: 'p_oilstatus', x: 0, y: 4, w: 2, h: 3, minW: 1, minH: 2 },
+    { i: 'p_uline_chart', x: 0, y: 7, w: 2, h: 4, minW: 1, minH: 3 },
+    { i: 'p_freq_gauge', x: 0, y: 11, w: 2, h: 4, minW: 1, minH: 3 },
+    { i: 'p_phasea_candle', x: 0, y: 15, w: 2, h: 4, minW: 1, minH: 3 },
+    { i: 'p_mixed_metrics', x: 0, y: 19, w: 2, h: 4, minW: 1, minH: 3 },
+  ],
+  xxs: [
+    { i: 'p_uphase_chart', x: 0, y: 0, w: 1, h: 4, minW: 1, minH: 3 },
+    { i: 'p_oilstatus', x: 0, y: 4, w: 1, h: 3, minW: 1, minH: 2 },
+    { i: 'p_uline_chart', x: 0, y: 7, w: 1, h: 4, minW: 1, minH: 3 },
+    { i: 'p_freq_gauge', x: 0, y: 11, w: 1, h: 4, minW: 1, minH: 3 },
+    { i: 'p_phasea_candle', x: 0, y: 15, w: 1, h: 4, minW: 1, minH: 3 },
+    { i: 'p_mixed_metrics', x: 0, y: 19, w: 1, h: 4, minW: 1, minH: 3 },
   ],
 };
 
@@ -1099,11 +1115,24 @@ const Dashboard = () => {
     } catch (e) { console.error("WA test failed:", e); }
   };
 
+  const [waLogoutMessage, setWaLogoutMessage] = useState({ text: '', type: '' });
+
   const handleLogoutWA = async () => {
     setIsLoggingOut(true);
-    try { await axios.post(`${apiUrl}/api/whatsapp/logout`); setShowLogoutModal(false); }
-    catch (e) { console.error("WA logout failed:", e); }
-    finally { setIsLoggingOut(false); }
+    setWaLogoutMessage({ text: '', type: '' });
+    try { 
+      await axios.post(`${apiUrl}/api/whatsapp/logout`);
+      setWaLogoutMessage({ text: 'WhatsApp berhasil dilogout!', type: 'success' });
+      setTimeout(() => {
+        setShowLogoutModal(false);
+        setWaLogoutMessage({ text: '', type: '' });
+      }, 2000);
+    } catch (e) { 
+      console.error("WA logout failed:", e); 
+      setWaLogoutMessage({ text: 'Gagal logout WhatsApp. Coba lagi.', type: 'error' });
+    } finally { 
+      setIsLoggingOut(false); 
+    }
   };
 
   const isFreqSafe = (latestData.frequency || 0) <= 52.5;
@@ -1464,7 +1493,14 @@ const Dashboard = () => {
               <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center text-red-600 dark:text-red-400"><LogOut size={20} /></div>
               <h3 className="text-lg font-bold text-[#172b4d] dark:text-white">WhatsApp Logout</h3>
             </div>
-            <div className="p-5 text-sm text-[#5e6c84] dark:text-[#94a3b8]">Are you sure? You will need to scan the QR code again to reactivate the WhatsApp bot.</div>
+            <div className="p-5 text-sm text-[#5e6c84] dark:text-[#94a3b8]">
+              Are you sure? You will need to scan the QR code again to reactivate the WhatsApp bot.
+              {waLogoutMessage.text && (
+                <div className={`mt-4 p-3 rounded-lg font-bold text-center ${waLogoutMessage.type === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                  {waLogoutMessage.text}
+                </div>
+              )}
+            </div>
             <div className="p-4 border-t border-gray-100 dark:border-white/10 flex justify-end gap-3 bg-gray-50/50 dark:bg-white/5">
               <button onClick={() => setShowLogoutModal(false)} disabled={isLoggingOut} className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl disabled:opacity-50">Cancel</button>
               <button onClick={handleLogoutWA} disabled={isLoggingOut} className="px-5 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white text-sm font-bold rounded-xl flex items-center gap-2 shadow-lg shadow-red-500/20">
