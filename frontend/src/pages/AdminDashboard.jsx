@@ -91,7 +91,14 @@ const AdminDashboard = () => {
   const [dbToDelete, setDbToDelete] = useState('');
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  const [showRenameDbModal, setShowRenameDbModal] = useState(false);
+  const [dbToRename, setDbToRename] = useState('');
+  const [newDbName, setNewDbName] = useState('');
+  const [isRenaming, setIsRenaming] = useState(false);
+  
   const [isLoggingOutWA, setIsLoggingOutWA] = useState(false);
+  const [isReloadingWA, setIsReloadingWA] = useState(false);
 
   useEffect(() => {
     if (sessionStorage.getItem('admin') !== 'true') {
@@ -209,6 +216,16 @@ const AdminDashboard = () => {
     } catch (err) {}
   };
 
+  const handleManualWAReload = async () => {
+    setIsReloadingWA(true);
+    try {
+      await fetchWAStatus();
+      await new Promise(resolve => setTimeout(resolve, 800));
+    } finally {
+      setIsReloadingWA(false);
+    }
+  };
+
   const handleLogoutWA = async () => {
     setIsLoggingOutWA(true);
     try {
@@ -230,13 +247,28 @@ const AdminDashboard = () => {
       setShowDeleteModal(false);
       setDbToDelete('');
       setDeleteConfirmation('');
-      setSelectedDb(null);
+      if (selectedDb === dbToDelete) setSelectedDb(null);
       fetchDatabases();
-      if (activeTab === 'overview') fetchStats();
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to delete database');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleRenameDb = async () => {
+    if (!newDbName.trim() || newDbName === dbToRename) return;
+    setIsRenaming(true);
+    try {
+      await axiosInstance.put(`/api/admin/databases/${dbToRename}`, { newDbName });
+      setDbToRename('');
+      setNewDbName('');
+      if (selectedDb === dbToRename) setSelectedDb(newDbName);
+      fetchDatabases();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to rename database');
+    } finally {
+      setIsRenaming(false);
     }
   };
 
@@ -358,6 +390,19 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 bg-[#1a1a24] pb-[72px] md:pb-0">
+        {/* Mobile Header */}
+        <div className="md:hidden flex items-center justify-between p-4 bg-[#151521] border-b border-white/5 shrink-0 z-20 sticky top-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
+              <Server size={16} />
+            </div>
+            <h1 className="font-bold text-base tracking-tight">Admin panel</h1>
+          </div>
+          <button onClick={handleLogout} className="p-2 text-red-400 hover:text-red-300 transition-colors rounded-lg bg-red-900/20 hover:bg-red-900/30" title="Logout">
+            <LogOut size={18} />
+          </button>
+        </div>
+
         <div className="flex-1 overflow-auto custom-scrollbar relative">
           
           {/* TAB: OVERVIEW */}
@@ -514,15 +559,49 @@ const AdminDashboard = () => {
                   <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
                     {databases.filter(d => d.toLowerCase().includes(searchTermDb.toLowerCase())).map(db => (
                       <div key={db} className="bg-white/5 rounded-xl overflow-hidden border border-white/5">
-                        <button 
-                          onClick={() => fetchTables(db)}
-                          className={`w-full text-left px-4 py-3 flex items-center justify-between transition-colors ${selectedDb === db ? 'bg-white/5' : 'hover:bg-white/5'}`}
-                        >
-                          <div>
-                            <p className="font-bold text-sm">{db}</p>
-                            <p className="text-xs text-gray-500">{selectedDb === db ? tables.length : '?'} tables</p>
+                        <div className={`w-full text-left flex items-center justify-between transition-colors ${selectedDb === db ? 'bg-white/5' : 'hover:bg-white/5'}`}>
+                          {dbToRename === db ? (
+                            <div className="flex-1 px-4 py-3 flex items-center">
+                              <input 
+                                type="text"
+                                value={newDbName}
+                                onChange={e => setNewDbName(e.target.value)}
+                                className="w-full bg-black/40 border border-white/20 rounded-lg px-3 py-1.5 text-sm font-bold outline-none text-white focus:border-blue-500/50 transition-colors"
+                                autoFocus
+                                onKeyDown={e => { if (e.key === 'Enter') handleRenameDb(); else if (e.key === 'Escape') setDbToRename(''); }}
+                              />
+                            </div>
+                          ) : (
+                            <button 
+                              onClick={() => fetchTables(db)}
+                              className="flex-1 px-4 py-3 text-left"
+                            >
+                              <p className="font-bold text-sm">{db}</p>
+                              <p className="text-xs text-gray-500">{selectedDb === db ? tables.length : '?'} tables</p>
+                            </button>
+                          )}
+                          <div className="px-2 flex items-center gap-1 shrink-0">
+                            {dbToRename === db ? (
+                              <>
+                                <button onClick={handleRenameDb} disabled={isRenaming || !newDbName.trim() || newDbName === db} className="p-2 text-green-400 hover:text-green-300 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50" title="Save">
+                                  {isRenaming ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                </button>
+                                <button onClick={() => setDbToRename('')} disabled={isRenaming} className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50" title="Cancel">
+                                  <X size={14} />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={(e) => { e.stopPropagation(); setDbToRename(db); setNewDbName(db); }} className="p-2 text-gray-400 hover:text-blue-400 rounded-lg hover:bg-white/10 transition-colors" title="Rename Database">
+                                  <Edit2 size={14} />
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); setDbToDelete(db); setShowDeleteModal(true); }} className="p-2 text-gray-400 hover:text-red-400 rounded-lg hover:bg-white/10 transition-colors" title="Delete Database">
+                                  <Trash2 size={14} />
+                                </button>
+                              </>
+                            )}
                           </div>
-                        </button>
+                        </div>
                         {selectedDb === db && (
                           <div className="bg-black/20 p-2 space-y-1 border-t border-white/5">
                             {isLoadingTables ? <EnergyLoader size="small" /> : tables.map(table => (
@@ -649,12 +728,45 @@ const AdminDashboard = () => {
                             <div className="w-12 h-12 bg-[#0a0a0f] border border-white/5 text-blue-400 rounded-xl flex items-center justify-center shadow-inner">
                               <Database size={22} />
                             </div>
-                            <div className="text-left">
-                              <p className="font-bold text-lg mb-0.5">{db}</p>
+                            <div className="text-left w-full pr-4">
+                              {dbToRename === db ? (
+                                <input 
+                                  type="text"
+                                  value={newDbName}
+                                  onChange={e => setNewDbName(e.target.value)}
+                                  onClick={e => e.stopPropagation()}
+                                  className="w-full bg-black/40 border border-white/20 rounded-lg px-3 py-1.5 text-sm font-bold outline-none text-white focus:border-blue-500/50 mb-0.5 transition-colors"
+                                  autoFocus
+                                  onKeyDown={e => { if (e.key === 'Enter') handleRenameDb(); else if (e.key === 'Escape') setDbToRename(''); }}
+                                />
+                              ) : (
+                                <p className="font-bold text-lg mb-0.5">{db}</p>
+                              )}
                               <p className="text-gray-400 text-sm">Active database</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-4 shrink-0">
+                            <div className="flex items-center gap-2 mr-2">
+                              {dbToRename === db ? (
+                                <>
+                                  <button onClick={(e) => { e.stopPropagation(); handleRenameDb(); }} disabled={isRenaming || !newDbName.trim() || newDbName === db} className="p-2 text-green-400 hover:text-green-300 bg-white/5 rounded-lg active:bg-white/10 transition-colors disabled:opacity-50">
+                                    {isRenaming ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); setDbToRename(''); }} disabled={isRenaming} className="p-2 text-gray-400 hover:text-white bg-white/5 rounded-lg active:bg-white/10 transition-colors disabled:opacity-50">
+                                    <X size={16} />
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button onClick={(e) => { e.stopPropagation(); setDbToRename(db); setNewDbName(db); }} className="p-2 text-gray-400 hover:text-blue-400 bg-white/5 rounded-lg active:bg-white/10 transition-colors">
+                                    <Edit2 size={16} />
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); setDbToDelete(db); setShowDeleteModal(true); }} className="p-2 text-gray-400 hover:text-red-400 bg-white/5 rounded-lg active:bg-white/10 transition-colors">
+                                    <Trash2 size={16} />
+                                  </button>
+                                </>
+                              )}
+                            </div>
                             <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
                             <ChevronRight size={18} className="text-gray-500" />
                           </div>
@@ -752,6 +864,44 @@ const AdminDashboard = () => {
                   </>
                 )}
               </div>
+
+              {/* DELETE DB MODAL */}
+              {showDeleteModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                  <div className="bg-[#151521] border border-red-900/50 p-6 md:p-8 rounded-3xl max-w-md w-full shadow-[0_0_40px_rgba(220,38,38,0.15)] animate-[slideUpFade_0.3s_ease-out]">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3 text-red-500">
+                        <AlertTriangle size={28} />
+                        <h3 className="text-xl font-bold">Delete Database</h3>
+                      </div>
+                      <button onClick={() => { setShowDeleteModal(false); setDeleteConfirmation(''); }} className="text-gray-400 hover:text-white transition-colors"><X size={24} /></button>
+                    </div>
+                    <p className="text-gray-300 text-sm mb-6 leading-relaxed">
+                      You are about to permanently delete <span className="font-bold text-white bg-red-900/30 px-2 py-0.5 rounded">{dbToRename || dbToDelete}</span> and all its tables. This action cannot be undone.
+                    </p>
+                    <div className="mb-8">
+                      <label className="block text-sm text-gray-400 mb-2">Type the database name to confirm:</label>
+                      <input 
+                        type="text" 
+                        value={deleteConfirmation}
+                        onChange={e => setDeleteConfirmation(e.target.value)}
+                        placeholder={dbToDelete}
+                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none text-white focus:border-red-500/50 transition-colors"
+                      />
+                    </div>
+                    <div className="flex gap-3">
+                      <button onClick={() => { setShowDeleteModal(false); setDeleteConfirmation(''); }} className="flex-1 py-3 rounded-xl font-bold bg-white/5 hover:bg-white/10 transition-colors text-white">Cancel</button>
+                      <button 
+                        onClick={handleDeleteDb} 
+                        disabled={isDeleting || deleteConfirmation !== dbToDelete}
+                        className="flex-1 py-3 rounded-xl font-bold bg-red-600 hover:bg-red-700 transition-colors text-white disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {isDeleting ? <RefreshCw className="animate-spin" size={18} /> : <Trash2 size={18} />} Delete Data
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -953,21 +1103,26 @@ const AdminDashboard = () => {
                    <p className="text-gray-400 mb-8 md:mb-10 text-sm md:text-base">Open WhatsApp on your phone, go to Linked Devices, then scan the code below.</p>
                    
                    <div className="bg-[#151521] border border-white/10 p-6 md:p-8 rounded-3xl flex items-center justify-center shadow-2xl mb-8 mx-auto w-64 h-64 md:w-80 md:h-80 relative overflow-hidden">
-                     {waStatus.state === 'NEEDS_SCAN' && waStatus.qr ? (
-                       <div className="bg-white p-4 rounded-2xl relative z-10">
-                         <QRCodeSVG value={waStatus.qr} size={220} className="w-full h-full max-w-[240px] max-h-[240px]" />
-                       </div>
-                     ) : (
-                       <div className="flex flex-col items-center justify-center text-gray-500 z-10">
-                         <RefreshCw className="animate-spin mb-4" size={32} />
-                         <p>Loading Client...</p>
-                       </div>
-                     )}
-                   </div>
+                      {isReloadingWA ? (
+                        <div className="flex flex-col items-center justify-center text-gray-500 z-10 animate-[fadeIn_0.2s_ease-out]">
+                          <RefreshCw className="animate-spin mb-4" size={32} />
+                          <p>Generating new code...</p>
+                        </div>
+                      ) : waStatus.state === 'NEEDS_SCAN' && waStatus.qr ? (
+                        <div className="bg-white p-4 rounded-2xl relative z-10 animate-[fadeIn_0.5s_ease-out]">
+                          <QRCodeSVG value={waStatus.qr} size={220} className="w-full h-full max-w-[240px] max-h-[240px]" />
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-gray-500 z-10">
+                          <RefreshCw className="animate-spin mb-4" size={32} />
+                          <p>Loading Client...</p>
+                        </div>
+                      )}
+                    </div>
 
-                   <button onClick={fetchWAStatus} className="px-6 py-3 border border-white/10 hover:bg-white/5 rounded-xl font-bold flex items-center justify-center gap-2 w-full transition-colors">
-                     <RefreshCw size={18} /> Reload code
-                   </button>
+                    <button onClick={handleManualWAReload} disabled={isReloadingWA} className="px-6 py-3 border border-white/10 hover:bg-white/5 rounded-xl font-bold flex items-center justify-center gap-2 w-full transition-colors disabled:opacity-50">
+                      <RefreshCw size={18} className={isReloadingWA ? "animate-spin" : ""} /> {isReloadingWA ? 'Reloading...' : 'Reload code'}
+                    </button>
                  </div>
                ) : (
                  <div className="text-center w-full max-w-lg">

@@ -79,6 +79,18 @@ router.put('/', checkUser, async (req, res) => {
       updates.push('email = ?');
       params.push(email);
     }
+    
+    // Validasi username
+    let newUsername = req.username;
+    if (req.body.username !== undefined && req.body.username.trim() !== '' && req.body.username.trim() !== req.username) {
+      newUsername = req.body.username.trim();
+      const [existingUsername] = await req.db.execute('SELECT id FROM users WHERE username = ? LIMIT 1', [newUsername]);
+      if (existingUsername.length > 0) {
+        return res.status(400).json({ error: 'Username is already taken' });
+      }
+      updates.push('username = ?');
+      params.push(newUsername);
+    }
 
     if (password) {
         if (columns.includes('password_hash')) {
@@ -99,7 +111,7 @@ router.put('/', checkUser, async (req, res) => {
       await req.db.execute(query, params);
     }
 
-    res.json({ message: 'Profile updated successfully' });
+    res.json({ message: 'Profile updated successfully', newUsername });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error: ' + error.message });

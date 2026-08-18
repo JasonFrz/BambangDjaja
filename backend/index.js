@@ -31,7 +31,11 @@ const limiter = rateLimit({
 // Apply rate limiter global (atau bisa ditaruh di app.use("/api", limiter) saja)
 app.use("/api/", limiter);
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.CLOUD_URL || "*",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
 app.use(express.json());
 app.set("io", io);
 
@@ -117,25 +121,32 @@ const superuserUsersRoutes = require("./routes/superuser_users");
 const profileRoutes = require("./routes/profile");
 const analyticsRoutes = require("./routes/analytics");
 const layoutsRoutes = require("./routes/layouts");
+const settingsRoutes = require("./routes/settings");
+const { verifyToken } = require("./utils/authMiddleware");
 
-app.use("/api", authRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/trends", trendRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/superuser-users", superuserUsersRoutes);
-app.use("/api/profile", profileRoutes);
-app.use("/api/analytics", analyticsRoutes);
-app.use("/api/layouts", layoutsRoutes);
-
+app.use("/api", authRoutes); // /api/login is inside here, so it remains unprotected
+app.use("/api/users", verifyToken, userRoutes);
+app.use("/api/trends", verifyToken, trendRoutes);
+app.use("/api/admin", verifyToken, adminRoutes);
+app.use("/api/superuser-users", verifyToken, superuserUsersRoutes);
+app.use("/api/profile", verifyToken, profileRoutes);
+app.use("/api/analytics", verifyToken, analyticsRoutes);
+app.use("/api/layouts", verifyToken, layoutsRoutes);
+app.use("/api/settings", verifyToken, settingsRoutes);
 
 const startRealtimePoller = require("./utils/realtimePoller");
 const { initWhatsApp } = require("./utils/whatsappClient");
 const whatsappRoutes = require("./routes/whatsappRoutes");
+const autoAddIndexes = require("./utils/autoIndex");
 
-app.use("/api/whatsapp", whatsappRoutes);
+app.use("/api/whatsapp", verifyToken, whatsappRoutes);
 
 server.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
+  
+  // Otomatis tambahkan index di database baru saat server menyala
+  autoAddIndexes();
+  
   startRealtimePoller(io, activeSubscriptions, roomIntervals);
 
   setTimeout(() => {

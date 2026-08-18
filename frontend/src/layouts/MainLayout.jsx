@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Moon, Sun, LogOut, LayoutDashboard, TrendingUp, Users, ChevronLeft, ChevronRight, Settings, Key, ShieldCheck, Activity, ClipboardList, User, Server } from 'lucide-react';
+import { Moon, Sun, LogOut, LayoutDashboard, TrendingUp, Users, ChevronLeft, ChevronRight, Settings, Key, ShieldCheck, Activity, ClipboardList, User, Server, Database } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 const MainLayout = () => {
@@ -15,7 +15,7 @@ const MainLayout = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const isTransformerDashboard = ['/dashboard', '/transformer-data', '/performance-report', '/manage-users'].includes(location.pathname);
+  const isTransformerDashboard = ['/dashboard', '/transformer-data', '/performance-report', '/manage-users', '/settings'].includes(location.pathname);
   const isAdminDashboard = role === 'admin' && (location.pathname === '/users' || location.pathname === '/provisioning' || location.pathname === '/manage-transformers');
   const isSuperuserDashboard = role === 'superuser' && (location.pathname === '/manage-users');
   const showSidebar = isTransformerDashboard || isAdminDashboard || isSuperuserDashboard;
@@ -196,7 +196,7 @@ const MainLayout = () => {
                         : 'text-[#5e6c84] dark:text-[#94a3b8] hover:bg-[#f4f5f7] dark:hover:bg-white/5 hover:text-[#172b4d] dark:hover:text-white'
                     }`}
                   >
-                    <Settings size={20} className="shrink-0" />
+                    <Database size={20} className="shrink-0" />
                     {!isSidebarCollapsed && <span className="truncate">Transformer Data</span>}
                   </Link>
                   <Link 
@@ -228,6 +228,18 @@ const MainLayout = () => {
 
                     </>
                   )}
+                  <Link 
+                    to="/settings"
+                    title={isSidebarCollapsed ? "Settings" : undefined}
+                    className={`flex items-center py-3 rounded-xl font-medium transition-all ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} ${
+                      location.pathname === '/settings' 
+                        ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
+                        : 'text-[#5e6c84] dark:text-[#94a3b8] hover:bg-[#f4f5f7] dark:hover:bg-white/5 hover:text-[#172b4d] dark:hover:text-white'
+                    }`}
+                  >
+                    <Settings size={20} className="shrink-0" />
+                    {!isSidebarCollapsed && <span className="truncate">Settings</span>}
+                  </Link>
                 </>
               )}
             </nav>
@@ -279,7 +291,7 @@ const MainLayout = () => {
                 : 'text-[#5e6c84] dark:text-[#94a3b8] hover:text-[#172b4d] dark:hover:text-white'
             }`}
           >
-            <Settings size={20} />
+            <Database size={20} />
             <span className="text-[10px] font-medium">Data</span>
           </Link>
 
@@ -307,6 +319,17 @@ const MainLayout = () => {
               <span className="text-[10px] font-medium">Users</span>
             </Link>
           )}
+          <Link 
+            to="/settings"
+            className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
+              location.pathname === '/settings' 
+                ? 'text-[#0052cc] dark:text-[#4c9aff]' 
+                : 'text-[#5e6c84] dark:text-[#94a3b8] hover:text-[#172b4d] dark:hover:text-white'
+            }`}
+          >
+            <Settings size={20} />
+            <span className="text-[10px] font-medium">Settings</span>
+          </Link>
         </nav>
       )}
 

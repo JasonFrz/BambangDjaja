@@ -3,8 +3,18 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { getDbConnection, getAllDatabases } = require('../utils/db');
+const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 
-router.post('/login', async (req, res) => {
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 login requests per `window`
+  message: { error: 'Terlalu banyak percobaan login. Silakan coba lagi setelah 15 menit.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post('/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).json({ error: 'Missing username or password' });
@@ -116,8 +126,15 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Username atau password invalid' });
     }
     
+    const token = jwt.sign(
+      { username: foundUser.username, role: foundUser.role || 'user', dbName: foundDbName },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
     res.json({ 
       success: true,
+      token,
       username: foundUser.username, 
       role: foundUser.role || 'user', 
       company_name: foundDbName,

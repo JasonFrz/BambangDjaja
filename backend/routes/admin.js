@@ -77,6 +77,43 @@ router.get('/databases/:dbName/tables/:tableName', async (req, res) => {
   }
 });
 
+router.put('/databases/:oldDbName', async (req, res) => {
+  const { oldDbName } = req.params;
+  const { newDbName } = req.body;
+  
+  if (!newDbName || newDbName.trim() === '') {
+    return res.status(400).json({ error: 'New database name is required' });
+  }
+  
+  const systemDbs = ['information_schema', 'mysql', 'performance_schema', 'sys', 'defaultdb', 'tmu_master'];
+  if (systemDbs.includes(oldDbName) || systemDbs.includes(newDbName)) {
+    return res.status(403).json({ error: 'Cannot rename system database' });
+  }
+
+  try {
+    const pool = await getAdminPool();
+    const [rows] = await pool.execute('SHOW DATABASES LIKE ?', [newDbName]);
+    if (rows.length > 0) return res.status(400).json({ error: 'Database with new name already exists' });
+
+    await pool.execute(`CREATE DATABASE \`${newDbName}\``);
+
+    const [tables] = await pool.execute(`SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = ?`, [oldDbName]);
+    for (const table of tables) {
+      const tableName = table.TABLE_NAME;
+      await pool.execute(`RENAME TABLE \`${oldDbName}\`.\`${tableName}\` TO \`${newDbName}\`.\`${tableName}\``);
+    }
+
+    await pool.execute(`DROP DATABASE \`${oldDbName}\``);
+    await pool.execute(`UPDATE tmu_master.transformers SET db_name = ? WHERE db_name = ?`, [newDbName, oldDbName]);
+    await pool.execute(`UPDATE tmu_master.users SET tenant_db = ? WHERE tenant_db = ?`, [newDbName, oldDbName]);
+
+    res.json({ success: true, message: `Database successfully renamed to ${newDbName}.` });
+  } catch (error) {
+    console.error(`Error renaming database ${oldDbName} to ${newDbName}:`, error);
+    res.status(500).json({ error: 'Failed to rename database', details: error.message });
+  }
+});
+
 router.delete('/databases/:dbName', async (req, res) => {
   const { dbName } = req.params;
 

@@ -8,6 +8,7 @@ import ManageUsersSuperuser from './pages/ManageUsersSuperuser';
 import Profile from './pages/Profile';
 import TransformerData from './pages/TransformerData';
 import PerformanceReport from './pages/PerformanceReport';
+import Settings from './pages/Settings';
 
 import { ThemeProvider } from './contexts/ThemeContext';
 import { TrendDataProvider } from './contexts/TrendDataContext';
@@ -55,6 +56,7 @@ function App() {
                   <Route path="manage-users" element={<ManageUsersSuperuser />} />
                   <Route path="profile" element={<Profile />} />
                   <Route path="performance-report" element={<PerformanceReport />} />
+                  <Route path="settings" element={<Settings />} />
 
                 </Route>
               </Routes>

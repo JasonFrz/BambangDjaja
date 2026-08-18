@@ -1329,15 +1329,6 @@ const Dashboard = () => {
               <button onClick={() => { setEditingPanel(null); setEditorOpen(true); }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all">
                 <PlusSquare strokeWidth={2.5} size={14} /><span className="hidden sm:inline">Add Panel</span>
               </button>
-
-              {/* --- Icon-only Buttons (Bottom Group) --- */}
-              {/* WA Buttons */}
-              <button onClick={handleTestWA} title="Test WA Notification" className="p-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 transition-colors shadow-sm">
-                <BellRing strokeWidth={2.5} size={16} />
-              </button>
-              <button onClick={() => setShowLogoutModal(true)} title="Logout WA" className="p-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/20 transition-colors shadow-sm">
-                <Power strokeWidth={2.5} size={16} />
-              </button>
             </>
           )}
 

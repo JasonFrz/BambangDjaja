@@ -41,19 +41,23 @@ const Login = () => {
       const data = await response.json();
 
       if (response.ok) {
+        if (data.token) sessionStorage.setItem('token', data.token);
+        
         if (rememberMe) {
           localStorage.setItem('savedUsername', username);
         } else {
           localStorage.removeItem('savedUsername');
         }
+        
+        sessionStorage.setItem('username', data.username);
+        sessionStorage.setItem('role', data.role);
+        sessionStorage.setItem('phone', data.phone || '');
+        sessionStorage.setItem('company_name', data.company_name || '');
+        
         if (data.role === 'admin') {
           sessionStorage.setItem('admin', 'true');
           window.location.href = '/admin';
         } else {
-          sessionStorage.setItem('username', data.username);
-          sessionStorage.setItem('role', data.role);
-          sessionStorage.setItem('phone', data.phone || '');
-          sessionStorage.setItem('company_name', data.company_name || '');
           window.location.href = '/';
         }
       } else {

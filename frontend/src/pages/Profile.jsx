@@ -6,6 +6,7 @@ import EnergyLoader from '../components/EnergyLoader';
 
 const Profile = () => {
   const [profile, setProfile] = useState(null);
+  const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,6 +33,7 @@ const Profile = () => {
         const data = await res.json();
         if (res.ok) {
           setProfile(data);
+          setUsername(data.username || '');
           setPhone(data.nomor_telpon || '');
           setEmail(data.email || '');
         } else {
@@ -55,6 +57,7 @@ const Profile = () => {
         method: 'PUT',
         headers: getHeaders(),
         body: JSON.stringify({ 
+          username: username,
           nomor_telpon: phone,
           email: email,
           password: password || undefined
@@ -65,6 +68,10 @@ const Profile = () => {
       if (res.ok) {
         setSuccess('Profile updated successfully!');
         setPassword('');
+        if (data.newUsername) {
+          sessionStorage.setItem('username', data.newUsername);
+          setProfile(prev => ({ ...prev, username: data.newUsername }));
+        }
       } else {
         setError(data.error || 'Failed to update profile');
       }
@@ -136,6 +143,20 @@ const Profile = () => {
               </div>
 
               <div className="grid grid-cols-1 gap-6 pt-2">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-[#172b4d] dark:text-white flex items-center gap-2">
+                    <User size={16} className="text-gray-400" />
+                    Username
+                  </label>
+                  <input 
+                    type="text" 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full bg-[#f4f5f7] dark:bg-[#070a13] border border-[#dfe1e6] dark:border-white/10 rounded-xl py-3 px-4 text-[#172b4d] dark:text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                    placeholder="Enter your new username"
+                    required
+                  />
+                </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-[#172b4d] dark:text-white flex items-center gap-2">
                     <Phone size={16} className="text-gray-400" />

@@ -5,22 +5,17 @@ const { getDbConnection } = require('../utils/db');
 const formatPhoneNumber = require('../utils/phoneFormatter');
 
 const checkAdmin = async (req, res, next) => {
-  const dbName = req.headers['x-db-name'];
-  const username = req.headers['x-username'];
-  
-  if (!dbName || !username) {
-    return res.status(400).json({ error: 'Missing X-DB-Name or X-Username header' });
-  }
-  
   try {
-    const db = await getDbConnection(dbName);
-    const [rows] = await db.execute('SELECT role FROM users WHERE username = ?', [username]);
+    const { username, role, dbName } = req.user; // Injected by verifyToken
     
-    if (rows.length === 0 || rows[0].role !== 'admin') {
-      return res.status(403).json({ error: 'Unauthorized. Admin role required.' });
+    if (role !== 'admin' && role !== 'superuser') {
+      return res.status(403).json({ error: 'Unauthorized. Admin or Superuser role required.' });
     }
     
-    req.dbName = dbName;
+    const targetDb = req.headers['x-db-name'] || dbName;
+    const db = await getDbConnection(targetDb);
+    
+    req.dbName = targetDb;
     req.db = db;
     next();
   } catch (error) {
