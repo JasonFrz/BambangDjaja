@@ -3,6 +3,13 @@ const qrcode = require('qrcode-terminal');
 
 let waClient = null;
 let waReady = false;
+let qrString = '';
+let connectionState = 'DISCONNECTED'; // DISCONNECTED, NEEDS_SCAN, CONNECTING, CONNECTED
+
+let connectedSince = null;
+let messagesSentToday = 0;
+let connectedPhone = '';
+let lastMessageDate = null;
 
 const os = require('os');
 const isArm = os.platform() === 'linux' && os.arch().includes('arm');
@@ -10,11 +17,13 @@ const isArm = os.platform() === 'linux' && os.arch().includes('arm');
 const initWhatsApp = () => {
   if (waClient) return;
 
+  connectionState = 'CONNECTING';
+  qrString = '';
+
   waClient = new Client({
     authStrategy: new LocalAuth({ dataPath: './wa_session' }),
     webVersionCache: {
-      type: 'remote',
-      remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
+      type: 'none'
     },
     puppeteer: {
       headless: true,
@@ -25,35 +34,55 @@ const initWhatsApp = () => {
         '--disable-gpu',
         '--disable-dev-shm-usage',
         '--disable-software-rasterizer',
-        '--disable-extensions'
+        '--disable-extensions',
+        '--no-first-run',
+        '--no-zygote',
+        '--mute-audio',
+        '--disable-background-networking',
+        '--disable-background-timer-throttling'
       ]
     }
   });
 
   waClient.on('qr', (qr) => {
-    console.log('\n========================================');
-    console.log('  SCAN QR CODE DI BAWAH UNTUK WHATSAPP');
-    console.log('========================================\n');
-    qrcode.generate(qr, { small: true });
-    console.log('\nJika sudah terhubung, notifikasi WhatsApp otomatis aktif.\n');
+    qrString = qr;
+    connectionState = 'NEEDS_SCAN';
   });
 
   waClient.on('ready', () => {
     waReady = true;
+    qrString = '';
+    connectionState = 'CONNECTED';
+    connectedSince = new Date().toISOString();
+    messagesSentToday = 0;
+    lastMessageDate = new Date().toDateString();
+    
+    if (waClient.info && waClient.info.wid) {
+      connectedPhone = '+' + waClient.info.wid.user;
+    }
+    
     console.log('\n✅ WhatsApp Client READY! Notifikasi siap dikirim.\n');
   });
 
   waClient.on('authenticated', () => {
     console.log('✅ WhatsApp Authenticated!');
+    connectionState = 'CONNECTING';
+    qrString = '';
   });
 
   waClient.on('auth_failure', (msg) => {
     waReady = false;
+    qrString = '';
+    connectionState = 'DISCONNECTED';
     console.error('❌ WhatsApp Auth Failure:', msg);
   });
 
   waClient.on('disconnected', (reason) => {
     waReady = false;
+    qrString = '';
+    connectionState = 'DISCONNECTED';
+    connectedSince = null;
+    connectedPhone = '';
     console.log('⚠️ WhatsApp Disconnected:', reason);
 
     if (waClient) {
@@ -66,6 +95,8 @@ const initWhatsApp = () => {
   waClient.initialize().catch(err => {
     console.error('❌ Failed to initialize WhatsApp:', err);
     waReady = false;
+    qrString = '';
+    connectionState = 'DISCONNECTED';
     waClient = null;
   });
 };
@@ -88,6 +119,16 @@ const sendWhatsAppMessage = async (phone, text) => {
     }
     await waClient.sendMessage(chatId, text);
     console.log(`✅ Berhasil mengirim notifikasi WA ke ${phoneNumber}`);
+    
+    // Update tracking
+    const today = new Date().toDateString();
+    if (lastMessageDate !== today) {
+      messagesSentToday = 1;
+      lastMessageDate = today;
+    } else {
+      messagesSentToday++;
+    }
+    
     return true;
   } catch (error) {
     console.error(`❌ Gagal mengirim notifikasi WA ke ${phoneNumber}:`, error.message);
@@ -103,6 +144,10 @@ const logoutWhatsApp = async () => {
       waClient = null;
     }
     waReady = false;
+    qrString = '';
+    connectionState = 'DISCONNECTED';
+    connectedSince = null;
+    connectedPhone = '';
 
     const fs = require('fs');
     if (fs.existsSync('./wa_session')) {
@@ -128,5 +173,10 @@ module.exports = {
   initWhatsApp,
   sendWhatsAppMessage,
   logoutWhatsApp,
-  get waReady() { return waReady; }
+  get waReady() { return waReady; },
+  get qrString() { return qrString; },
+  get connectionState() { return connectionState; },
+  get connectedSince() { return connectedSince; },
+  get messagesSentToday() { return messagesSentToday; },
+  get connectedPhone() { return connectedPhone; }
 };

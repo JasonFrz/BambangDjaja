@@ -103,4 +103,15 @@ router.post('/logout', async (req, res) => {
   }
 });
 
+router.get('/status', (req, res) => {
+  res.json({
+    ready: whatsappClient.waReady,
+    state: whatsappClient.connectionState,
+    qr: whatsappClient.qrString,
+    connectedSince: whatsappClient.connectedSince,
+    messagesSentToday: whatsappClient.messagesSentToday,
+    connectedPhone: whatsappClient.connectedPhone
+  });
+});
+
 module.exports = router;

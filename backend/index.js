@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 
 const app = express();
@@ -13,6 +15,21 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 5000;
+
+// Security Headers
+app.use(helmet());
+
+// Rate Limiting (Maksimal 200 request per 15 menit per IP)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 1000, 
+  message: { error: "Terlalu banyak request dari IP ini, coba lagi nanti." },
+  standardHeaders: true, 
+  legacyHeaders: false, 
+});
+
+// Apply rate limiter global (atau bisa ditaruh di app.use("/api", limiter) saja)
+app.use("/api/", limiter);
 
 app.use(cors());
 app.use(express.json());
@@ -95,7 +112,7 @@ app.get("/api/health", (req, res) => {
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
 const trendRoutes = require("./routes/trends");
-const superadminRoutes = require("./routes/superadmin");
+const adminRoutes = require("./routes/admin");
 const superuserUsersRoutes = require("./routes/superuser_users");
 const profileRoutes = require("./routes/profile");
 const analyticsRoutes = require("./routes/analytics");
@@ -104,7 +121,7 @@ const layoutsRoutes = require("./routes/layouts");
 app.use("/api", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/trends", trendRoutes);
-app.use("/api/superadmin", superadminRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/superuser-users", superuserUsersRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/analytics", analyticsRoutes);

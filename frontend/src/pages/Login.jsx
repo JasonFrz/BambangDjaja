@@ -46,11 +46,16 @@ const Login = () => {
         } else {
           localStorage.removeItem('savedUsername');
         }
-        sessionStorage.setItem('username', data.username);
-        sessionStorage.setItem('role', data.role);
-        sessionStorage.setItem('phone', data.phone || '');
-        sessionStorage.setItem('company_name', data.company_name || '');
-        window.location.href = '/';
+        if (data.role === 'admin') {
+          sessionStorage.setItem('admin', 'true');
+          window.location.href = '/admin';
+        } else {
+          sessionStorage.setItem('username', data.username);
+          sessionStorage.setItem('role', data.role);
+          sessionStorage.setItem('phone', data.phone || '');
+          sessionStorage.setItem('company_name', data.company_name || '');
+          window.location.href = '/';
+        }
       } else {
         setError(data.error || 'Login failed');
       }

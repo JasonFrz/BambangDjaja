@@ -93,39 +93,42 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
                 const alertNow = Date.now();
                 const lastSent = waCooldowns.get(roomName) || 0;
                 if (alertNow - lastSent > COOLDOWN_MS) {
+                  waCooldowns.set(roomName, alertNow);
                   
-                  try {
-                    const [columnsInfo] = await db.execute("SHOW COLUMNS FROM users");
-                    const columns = columnsInfo.map(c => c.Field);
-                    
-                    if (columns.includes('nomor_telpon') || columns.includes('email')) {
-                      let selectCols = ['nomor_telpon'];
-                      if (columns.includes('email')) selectCols.push('email');
+                  // Jalankan proses kirim pesan secara asynchronous (non-blocking) agar poller utama tidak terhenti
+                  (async () => {
+                    try {
+                      const [columnsInfo] = await db.execute("SHOW COLUMNS FROM users");
+                      const columns = columnsInfo.map(c => c.Field);
                       
-                      const [users] = await db.execute(`SELECT ${selectCols.join(', ')} FROM users`);
-                      for (const user of users) {
-                        const phone = user.nomor_telpon ? user.nomor_telpon.trim() : '';
-                        const email = user.email ? user.email.trim() : '';
+                      if (columns.includes('nomor_telpon') || columns.includes('email')) {
+                        let selectCols = ['nomor_telpon'];
+                        if (columns.includes('email')) selectCols.push('email');
                         
-                        const msg = `⚠️ *[TMU ALERT - FREKUENSI TINGGI]*\n\nTrafo *${trafoId}* (DB: ${dbName}) terdeteksi memiliki frekuensi tidak normal!\nFrekuensi saat ini: *${currentFreq.toFixed(2)} Hz*\n\nSilakan segera periksa sistem Anda.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
-                        const emailSubject = `[TMU ALERT] Frekuensi Tinggi Terdeteksi pada Trafo ${trafoId}`;
-                        const emailMsg = `Peringatan: Frekuensi tinggi terdeteksi!\n\nTrafo: ${trafoId}\nDatabase: ${dbName}\nFrekuensi saat ini: ${currentFreq.toFixed(2)} Hz\n\nSilakan segera periksa sistem Anda.\n\nPesan otomatis dari PT. Bambang Djaja - TMU System`;
+                        const [users] = await db.execute(`SELECT ${selectCols.join(', ')} FROM users`);
+                        for (const user of users) {
+                          const phone = user.nomor_telpon ? user.nomor_telpon.trim() : '';
+                          const email = user.email ? user.email.trim() : '';
+                          
+                          const msg = `⚠️ *[TMU ALERT - FREKUENSI TINGGI]*\n\nTrafo *${trafoId}* (DB: ${dbName}) terdeteksi memiliki frekuensi tidak normal!\nFrekuensi saat ini: *${currentFreq.toFixed(2)} Hz*\n\nSilakan segera periksa sistem Anda.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
+                          const emailSubject = `[TMU ALERT] Frekuensi Tinggi Terdeteksi pada Trafo ${trafoId}`;
+                          const emailMsg = `Peringatan: Frekuensi tinggi terdeteksi!\n\nTrafo: ${trafoId}\nDatabase: ${dbName}\nFrekuensi saat ini: ${currentFreq.toFixed(2)} Hz\n\nSilakan segera periksa sistem Anda.\n\nPesan otomatis dari PT. Bambang Djaja - TMU System`;
 
-                        if (phone.length >= 10) {
-                          await whatsappClient.sendWhatsAppMessage(phone, msg).catch(() => {});
-                          // Tambahkan delay agar puppeteer whatsapp tidak crash saat kirim massal
-                          await new Promise(resolve => setTimeout(resolve, 3000));
-                        }
-                        
-                        if (email && email.includes('@')) {
-                          await emailClient.sendEmailMessage(email, emailSubject, emailMsg).catch(() => {});
+                          if (phone.length >= 10) {
+                            await whatsappClient.sendWhatsAppMessage(phone, msg).catch(() => {});
+                            // Tambahkan delay agar puppeteer whatsapp tidak crash saat kirim massal
+                            await new Promise(resolve => setTimeout(resolve, 3000));
+                          }
+                          
+                          if (email && email.includes('@')) {
+                            await emailClient.sendEmailMessage(email, emailSubject, emailMsg).catch(() => {});
+                          }
                         }
                       }
+                    } catch (waErr) {
+                      console.error('Gagal mengirim WA/Email Alert:', waErr.message);
                     }
-                    waCooldowns.set(roomName, alertNow);
-                  } catch (waErr) {
-                    console.error('Gagal mengirim WA/Email Alert:', waErr.message);
-                  }
+                  })();
                 }
               }
             }

@@ -16,7 +16,7 @@ import { ApiProvider } from './contexts/ApiContext';
 import { DialogProvider } from './contexts/DialogContext';
 import EnergyLoader from './components/EnergyLoader';
 
-import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 
 const ProtectedRoute = ({ children }) => {
   const username = sessionStorage.getItem('username');
@@ -42,7 +42,7 @@ function App() {
             <BrowserRouter>
               <Routes>
                 <Route path="/login" element={<Login />} />
-                <Route path="/superadmin" element={<SuperAdminDashboard />} />
+                <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/" element={
                   <ProtectedRoute>
                     <MainLayout />

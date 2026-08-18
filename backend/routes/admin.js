@@ -1,0 +1,219 @@
+const express = require('express');
+const router = express.Router();
+const { getAllDatabases, getDbConnection, getAdminPool } = require('../utils/db');
+const bcrypt = require('bcryptjs');
+
+const authenticateSuperAdmin = (req, res, next) => {
+  const isSuper = req.headers['x-super-admin'];
+  if (isSuper === 'true') {
+    next();
+  } else {
+    return res.status(401).json({ error: 'Unauthorized. Super admin access required.' });
+  }
+};
+
+router.use(authenticateSuperAdmin);
+
+router.get('/databases', async (req, res) => {
+  try {
+    const databases = await getAllDatabases();
+    res.json({ success: true, databases });
+  } catch (error) {
+    console.error('Error fetching databases:', error);
+    res.status(500).json({ error: 'Failed to fetch databases', details: error.message });
+  }
+});
+
+router.get('/databases/:dbName/tables', async (req, res) => {
+  const { dbName } = req.params;
+  try {
+    const pool = await getDbConnection(dbName);
+    const [rows] = await pool.execute('SHOW TABLES');
+
+    const tables = rows.map(row => Object.values(row)[0]);
+    res.json({ success: true, tables });
+  } catch (error) {
+    console.error(`Error fetching tables for db ${dbName}:`, error);
+    res.status(500).json({ error: 'Failed to fetch tables', details: error.message });
+  }
+});
+
+router.get('/databases/:dbName/tables/:tableName', async (req, res) => {
+  const { dbName, tableName } = req.params;
+  const { limit, sort } = req.query;
+  try {
+    const pool = await getDbConnection(dbName);
+
+    const [cols] = await pool.execute(`SHOW COLUMNS FROM \`${tableName}\``);
+    const colNames = cols.map(c => c.Field);
+    
+    let orderClause = '';
+    if (sort === 'latest') {
+      if (colNames.includes('id')) orderClause = 'ORDER BY id DESC';
+      else if (colNames.includes('timestamp')) orderClause = 'ORDER BY timestamp DESC';
+      else if (colNames.includes('created_at')) orderClause = 'ORDER BY created_at DESC';
+    } else if (sort === 'oldest') {
+      if (colNames.includes('id')) orderClause = 'ORDER BY id ASC';
+      else if (colNames.includes('timestamp')) orderClause = 'ORDER BY timestamp ASC';
+      else if (colNames.includes('created_at')) orderClause = 'ORDER BY created_at ASC';
+    }
+
+    let limitClause = 'LIMIT 100';
+    if (limit === 'all') {
+      limitClause = '';
+    } else if (limit) {
+      const parsed = parseInt(limit);
+      if (!isNaN(parsed) && parsed > 0) {
+        limitClause = `LIMIT ${parsed}`;
+      }
+    }
+
+    const query = `SELECT * FROM \`${tableName}\` ${orderClause} ${limitClause}`;
+    const [rows] = await pool.execute(query);
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error(`Error fetching data for table ${tableName}:`, error);
+    res.status(500).json({ error: 'Failed to fetch table data', details: error.message });
+  }
+});
+
+router.delete('/databases/:dbName', async (req, res) => {
+  const { dbName } = req.params;
+
+  const systemDbs = ['information_schema', 'mysql', 'performance_schema', 'sys', 'defaultdb', 'tmu_master'];
+  if (systemDbs.includes(dbName)) {
+    return res.status(403).json({ error: 'Cannot delete system database' });
+  }
+
+  try {
+
+    const pool = await getAdminPool();
+    await pool.execute(`DROP DATABASE \`${dbName}\``);
+    await pool.execute(`DELETE FROM tmu_master.transformers WHERE db_name = ?`, [dbName]);
+
+    res.json({ success: true, message: `Database ${dbName} successfully deleted.` });
+  } catch (error) {
+    console.error(`Error dropping database ${dbName}:`, error);
+    res.status(500).json({ error: 'Failed to delete database', details: error.message });
+  }
+});
+
+// Admin Users CRUD endpoints
+router.get('/users', async (req, res) => {
+  try {
+    const pool = await getDbConnection('tmu_master');
+    const [users] = await pool.execute("SELECT id, username, role, created_at FROM users WHERE role = 'admin' ORDER BY created_at DESC");
+    res.json({ success: true, data: users });
+  } catch (error) {
+    console.error('Error fetching admin users:', error);
+    res.status(500).json({ error: 'Failed to fetch admin users' });
+  }
+});
+
+router.post('/users', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+
+  try {
+    const pool = await getDbConnection('tmu_master');
+    const [existing] = await pool.execute('SELECT id FROM users WHERE username = ?', [username]);
+    if (existing.length > 0) return res.status(400).json({ error: 'Username already exists' });
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    
+    await pool.execute("INSERT INTO users (username, password, role) VALUES (?, ?, 'admin')", [username, hashedPassword]);
+    res.json({ success: true, message: 'Admin user created successfully' });
+  } catch (error) {
+    console.error('Error creating admin user:', error);
+    res.status(500).json({ error: 'Failed to create admin user' });
+  }
+});
+
+router.put('/users/:id', async (req, res) => {
+  const { id } = req.params;
+  const { username, password } = req.body;
+
+  try {
+    const pool = await getDbConnection('tmu_master');
+    
+    if (username) {
+      const [existing] = await pool.execute('SELECT id FROM users WHERE username = ? AND id != ?', [username, id]);
+      if (existing.length > 0) return res.status(400).json({ error: 'Username already taken' });
+    }
+
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      await pool.execute('UPDATE users SET username = ?, password = ? WHERE id = ?', [username, hashedPassword, id]);
+    } else {
+      await pool.execute('UPDATE users SET username = ? WHERE id = ?', [username, id]);
+    }
+
+    res.json({ success: true, message: 'Admin user updated successfully' });
+  } catch (error) {
+    console.error('Error updating admin user:', error);
+    res.status(500).json({ error: 'Failed to update admin user' });
+  }
+});
+
+router.delete('/users/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const pool = await getDbConnection('tmu_master');
+    const [countRow] = await pool.execute("SELECT COUNT(*) as count FROM users WHERE role = 'admin'");
+    if (countRow[0].count <= 1) {
+      return res.status(400).json({ error: 'Cannot delete the last remaining admin user' });
+    }
+
+    await pool.execute("DELETE FROM users WHERE id = ? AND role = 'admin'", [id]);
+    res.json({ success: true, message: 'Admin user deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting admin user:', error);
+    res.status(500).json({ error: 'Failed to delete admin user' });
+  }
+});
+
+router.get('/all-users', async (req, res) => {
+  try {
+    const pool = await getDbConnection('tmu_master');
+    const [users] = await pool.execute("SELECT id, username, role, email, nomor_telpon as nomor_telpon, created_at FROM users ORDER BY created_at DESC");
+    res.json({ success: true, data: users });
+  } catch (error) {
+    console.error('Error fetching all users:', error);
+    res.status(500).json({ error: 'Failed to fetch all users' });
+  }
+});
+
+router.get('/stats', async (req, res) => {
+  try {
+    const poolMaster = await getDbConnection('tmu_master');
+    const [dbRows] = await poolMaster.execute("SELECT db_name FROM transformers");
+    const dbCount = dbRows.length;
+    
+    let totalTables = 0;
+    if (dbRows.length > 0) {
+      const pool = await getAdminPool();
+      const dbNames = dbRows.map(r => `'${r.db_name}'`).join(',');
+      const [tableCountRes] = await pool.execute(`SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA IN (${dbNames})`);
+      totalTables = tableCountRes[0].count;
+    }
+
+    const [userRes] = await poolMaster.execute("SELECT COUNT(*) as count FROM users");
+    const [adminRes] = await poolMaster.execute("SELECT COUNT(*) as count FROM users WHERE role = 'admin'");
+    
+    res.json({
+      success: true,
+      databases: dbCount,
+      tables: totalTables,
+      appUsers: userRes[0].count,
+      activeAdmins: adminRes[0].count
+    });
+  } catch (error) {
+    console.error('Error fetching admin stats:', error);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+module.exports = router;
