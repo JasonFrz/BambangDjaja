@@ -176,7 +176,7 @@ const PerformanceReport = () => {
   const r2 = (val) => val !== null && val !== undefined ? (Math.round((parseFloat(val) || 0) * 100) / 100).toString() : '-';
 
   return (
-    <div className="flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out] w-full max-w-7xl mx-auto">
+    <div className="flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out] w-full">
       <div className="mb-2">
         <h2 className="text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1 transition-colors flex items-center gap-4">
           Performance Report

@@ -30,7 +30,10 @@ const TransformerSelection = () => {
         setTransformers([
           { id: '1000000024b2178e', name: 'Trafo Mechanical', status: 'Offline', power_capacity: '1000 kVA', type: 'DyN' },
           { id: '5a8c554f', name: 'Trafo Testing', status: 'Online', power_capacity: '1000 kVA', type: 'DyN' },
-          { id: '100000008bf9d86e', name: 'Trafo PTR', status: 'Online', power_capacity: '2000 kVA', type: 'DyN' }
+          { id: '100000008bf9d86e', name: 'Trafo PTR', status: 'Online', power_capacity: '2000 kVA', type: 'DyN' },
+          { id: '100000008bf9d86f', name: 'Trafo Assembly', status: 'Online', power_capacity: '1500 kVA', type: 'DyN' },
+          { id: '100000008bf9d86g', name: 'Trafo Paint Shop', status: 'Offline', power_capacity: '1200 kVA', type: 'DyN' },
+          { id: '100000008bf9d86h', name: 'Trafo Main Utility', status: 'Online', power_capacity: '2500 kVA', type: 'DyN' }
         ]);
         setLoading(false);
       }, 600); // slight delay for smooth entry
@@ -147,7 +150,7 @@ const TransformerSelection = () => {
         
         {/* Premium Hero Section */}
         <div className="text-center mb-6 flex flex-col items-center animate-slide-up-fade">
-          <h1 className="text-3xl md:text-[38px] font-serif text-[#172b4d] dark:text-white leading-tight mb-4">
+          <h1 className="text-3xl md:text-[38px] font-heading font-bold tracking-tight text-[#172b4d] dark:text-white leading-tight mb-4">
             Select a unit to begin monitoring
           </h1>
           <p className="text-[#5e6c84] dark:text-[#94a3b8] text-sm md:text-base font-medium mx-auto">
@@ -193,10 +196,10 @@ const TransformerSelection = () => {
                 >
                   
                   {/* Top Area */}
-                  <div className="relative h-[128px] w-full bg-gray-50/50 dark:bg-white/[0.02] border-b border-[#dfe1e6]/50 dark:border-white/5 flex items-center justify-center shrink-0">
+                  <div className="relative h-[200px] w-full bg-gray-50/50 dark:bg-white/[0.02] border-b border-[#dfe1e6]/50 dark:border-white/5 flex items-center justify-center shrink-0">
                     
                     {/* Animated Waveform */}
-                    <svg viewBox="0 0 100 40" className={`w-24 h-auto transition-colors duration-500 ${isOnline ? 'text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'text-[#5e6c84] dark:text-gray-600 opacity-40'}`}>
+                    <svg viewBox="0 0 100 40" className={`w-32 h-auto transition-colors duration-500 ${isOnline ? 'text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'text-[#5e6c84] dark:text-gray-600 opacity-40'}`}>
                       <path 
                         d="M 0 20 L 30 20 L 40 5 L 50 35 L 60 20 L 100 20" 
                         fill="none" 

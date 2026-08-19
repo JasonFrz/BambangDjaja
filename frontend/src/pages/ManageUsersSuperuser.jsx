@@ -171,7 +171,7 @@ const ManageUsersSuperuser = () => {
   const filteredUsers = Array.isArray(users) ? users.filter(u => String(u.username || '').toLowerCase().includes(searchTerm.toLowerCase())) : [];
 
   return (
-    <div className="flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out] w-full max-w-7xl mx-auto pb-10">
+    <div className="flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out] w-full pb-10">
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>

@@ -616,6 +616,28 @@ const Dashboard = () => {
     }
   };
 
+  const renameLayoutInApi = async (layoutId, newName) => {
+    try {
+      const username = sessionStorage.getItem('username');
+      const role = sessionStorage.getItem('role');
+      const companyName = sessionStorage.getItem('company_name');
+      if (!username || !companyName) return;
+
+      await fetch(`${apiUrl}/api/layouts/${layoutId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Username': username,
+          'X-Company-Name': companyName,
+          'X-Role': role
+        },
+        body: JSON.stringify({ layout_name: newName })
+      });
+    } catch (e) {
+      console.error("Failed to rename layout in DB:", e);
+    }
+  };
+
   const deleteLayoutFromApi = async (layoutId) => {
     try {
       const username = sessionStorage.getItem('username');
@@ -701,7 +723,7 @@ const Dashboard = () => {
 
   // Profile Management Functions
   const handleCreateProfile = async () => {
-    const name = await prompt('Enter new dashboard profile name:', { title: 'Save As New Profile', placeholder: 'e.g. My Custom View' });
+    const name = await prompt('Enter new dashboard profile name:', { title: 'Save As New Profile', placeholder: 'e.g. My Custom View', maxLength: 20 });
     if (!name || name.trim() === '') return;
 
     const newId = 'p_' + Math.random().toString(36).substr(2, 9);
@@ -721,6 +743,41 @@ const Dashboard = () => {
             panels: panels ? [...panels] : null,
             layouts: JSON.parse(JSON.stringify(gridLayouts)),
             isEditable: true
+          }
+        }
+      };
+    });
+  };
+
+  const [inlineRename, setInlineRename] = useState(false);
+  const [inlineRenameValue, setInlineRenameValue] = useState("");
+
+  const handleRenameProfile = () => {
+    setInlineRename(true);
+    setInlineRenameValue(profilesState.profiles[profilesState.activeProfileId]?.name || '');
+  };
+
+  const submitInlineRename = () => {
+    if (!inlineRename) return;
+    setInlineRename(false);
+    
+    const currentName = profilesState.profiles[profilesState.activeProfileId]?.name || '';
+    const newName = inlineRenameValue.trim();
+    
+    if (!newName || newName === '' || newName === currentName) return;
+
+    // Use specific PUT endpoint for renaming
+    renameLayoutInApi(profilesState.activeProfileId, newName);
+
+    setProfilesState(prev => {
+      const activeId = prev.activeProfileId;
+      return {
+        ...prev,
+        profiles: {
+          ...prev.profiles,
+          [activeId]: {
+            ...prev.profiles[activeId],
+            name: newName
           }
         }
       };
@@ -1244,13 +1301,31 @@ const Dashboard = () => {
           {/* --- Text/Dropdown Buttons (Top Group) --- */}
           {/* Profile Selector (Custom Dropdown) */}
           <div className="relative" ref={profileDropdownRef}>
-            <button
-              onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-              className="flex items-center justify-between min-w-[150px] px-3 py-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-indigo-600 dark:text-indigo-400 text-xs font-bold cursor-pointer hover:bg-gray-50 dark:hover:bg-[#374151] transition-colors shadow-sm"
-            >
-              <span className="truncate pr-4">{profilesState.profiles[profilesState.activeProfileId]?.name || 'Main Dashboard'}</span>
-              <ChevronDown size={14} className={`text-indigo-500 shrink-0 transition-transform ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
+            {inlineRename ? (
+              <input
+                autoFocus
+                type="text"
+                maxLength={20}
+                value={inlineRenameValue}
+                onChange={(e) => setInlineRenameValue(e.target.value)}
+                onBlur={submitInlineRename}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') submitInlineRename();
+                  if (e.key === 'Escape') setInlineRename(false);
+                }}
+                className="flex items-center justify-between min-w-[150px] px-3 py-2 rounded-xl bg-white dark:bg-[#1f2937] border-2 border-indigo-500 text-indigo-600 dark:text-indigo-400 text-xs font-bold shadow-sm outline-none"
+              />
+            ) : (
+              <button
+                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                onDoubleClick={handleRenameProfile}
+                title="Double click to rename"
+                className="flex items-center justify-between min-w-[150px] px-3 py-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-indigo-600 dark:text-indigo-400 text-xs font-bold cursor-pointer hover:bg-gray-50 dark:hover:bg-[#374151] transition-colors shadow-sm"
+              >
+                <span className="truncate pr-4">{profilesState.profiles[profilesState.activeProfileId]?.name || 'Main Dashboard'}</span>
+                <ChevronDown size={14} className={`text-indigo-500 shrink-0 transition-transform ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+            )}
 
             {isProfileDropdownOpen && (
               <div className="absolute top-full mt-1.5 left-0 w-56 bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl z-[100] overflow-hidden flex flex-col animate-[slideDownFade_0.15s_ease-out] origin-top">

@@ -135,6 +135,34 @@ router.put('/active', async (req, res) => {
   }
 });
 
+// PUT to rename a layout
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { layout_name } = req.body;
+    
+    if (!layout_name) return res.status(400).json({ error: 'Missing layout_name' });
+    
+    const dbName = req.headers['x-db-name'];
+    const db = await getDbConnection(dbName);
+    await ensureLayoutsTable(db);
+    
+    const userId = await getUserId(db, req.headers['x-username'] || req.user?.username);
+    if (!userId) return res.status(403).json({ error: 'User not found' });
+    
+    const [result] = await db.execute('UPDATE user_layouts SET layout_name = ? WHERE id = ? AND user_id = ?', [layout_name, id, userId]);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Layout not found' });
+    }
+    
+    res.json({ success: true, message: 'Layout renamed successfully' });
+  } catch (error) {
+    console.error('Error renaming layout:', error);
+    res.status(500).json({ error: 'Server error renaming layout' });
+  }
+});
+
 // DELETE a layout
 router.delete('/:id', async (req, res) => {
   try {

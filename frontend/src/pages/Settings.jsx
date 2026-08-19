@@ -101,7 +101,7 @@ const Settings = () => {
   });
 
   return (
-    <div className="flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out] w-full max-w-7xl mx-auto pb-10">
+    <div className="flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out] w-full pb-10">
       <div className="mb-2">
         <h2 className="text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1 transition-colors">
           Threshold settings

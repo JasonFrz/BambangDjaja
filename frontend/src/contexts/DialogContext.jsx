@@ -55,7 +55,7 @@ export const DialogProvider = ({ children }) => {
   );
 };
 
-const Dialog = ({ type, message, title, defaultValue, placeholder, onClose }) => {
+const Dialog = ({ type, message, title, defaultValue, placeholder, maxLength, onClose }) => {
   const isConfirm = type === 'confirm';
   const isPrompt = type === 'prompt';
   const [inputValue, setInputValue] = useState(defaultValue || '');
@@ -84,6 +84,7 @@ const Dialog = ({ type, message, title, defaultValue, placeholder, onClose }) =>
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder={placeholder || "Enter value..."}
+              maxLength={maxLength}
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-black/20 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') onClose(inputValue);
