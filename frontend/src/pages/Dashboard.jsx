@@ -575,17 +575,29 @@ const Dashboard = () => {
   // Container ref for accurate RGL width
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(1200);
+  const [isResizingContainer, setIsResizingContainer] = useState(false);
+  const resizeTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (isLoadingTrend || panels === null || !containerRef.current) return;
     const observer = new ResizeObserver(entries => {
       for (const entry of entries) {
         const width = entry.contentRect.width;
-        if (width > 0) setContainerWidth(width);
+        if (width > 0) {
+          setContainerWidth(width);
+          setIsResizingContainer(true);
+          clearTimeout(resizeTimeoutRef.current);
+          resizeTimeoutRef.current = setTimeout(() => {
+            setIsResizingContainer(false);
+          }, 150);
+        }
       }
     });
     observer.observe(containerRef.current);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      clearTimeout(resizeTimeoutRef.current);
+    };
   }, [isLoadingTrend, panels]);
 
   // ─── API Helpers for Layouts ─────────────────────────────────────────
@@ -1267,7 +1279,7 @@ const Dashboard = () => {
       <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between w-full gap-4">
 
         {/* Left Side: Title & Badges */}
-        <div className="flex-1 min-w-0">
+        <div className="shrink-0 min-w-0">
           <div className="flex items-center gap-3 mb-1">
             <h2 className="text-2xl md:text-3xl font-bold text-[#172b4d] dark:text-white font-heading tracking-tight">Dashboard</h2>
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${isLive ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 animate-glow-pulse' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
@@ -1287,17 +1299,17 @@ const Dashboard = () => {
         {/* Center: Clock (Only in Fullscreen & Desktop) */}
         {isFullscreen && (
           <div className="hidden xl:flex flex-col items-center justify-center shrink-0 px-4">
-            <span className="text-[#172b4d] dark:text-white font-bold tracking-widest text-lg leading-none">
+            <span className="text-[#172b4d] dark:text-white font-medium tracking-widest text-lg leading-none font-mono">
               {currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </span>
-            <span className="text-xs text-[#5e6c84] dark:text-[#94a3b8] font-medium mt-1">
+            <span className="text-xs text-[#5e6c84] dark:text-[#94a3b8] font-medium mt-1 font-mono">
               {currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </span>
           </div>
         )}
 
         {/* Right Side: Toolbar */}
-        <div className="flex flex-1 items-center gap-2 flex-wrap xl:justify-end">
+        <div className="flex flex-1 items-center gap-2 flex-wrap lg:flex-nowrap xl:justify-end">
           {/* --- Text/Dropdown Buttons (Top Group) --- */}
           {/* Profile Selector (Custom Dropdown) */}
           <div className="relative" ref={profileDropdownRef}>
@@ -1448,7 +1460,7 @@ const Dashboard = () => {
         {/* Always-mounted RGL — never destroy/recreate on first panel add */}
         <ResponsiveGridLayout
           width={containerWidth}
-          className="layout"
+          className={`layout ${isResizingContainer ? 'is-container-resizing' : ''}`}
           layouts={lockedLayouts}
           breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
           cols={{ lg: 12, md: 10, sm: 6, xs: 2, xxs: 1 }}

@@ -91,12 +91,15 @@ const Login = () => {
             </h1>
           </div>
           
-          <h2 className="text-5xl lg:text-6xl font-black font-heading leading-tight mb-6 text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-[#8e9bb0]">
+          <h2 
+            className="text-5xl lg:text-6xl font-black leading-tight mb-6 text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-[#8e9bb0]"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
             Transformer <br /> Monitoring Unit
           </h2>
           
           <p className="text-[#8e9bb0] text-lg max-w-md leading-relaxed mb-8">
-            Access real-time power analytics, monitor phase voltages, and ensure optimal energy distribution with our advanced AI-driven infrastructure.
+           Access real-time power analytics, monitor phase voltages, and explore your transformer data with the flexibility to track, analyze, and visualize performance your way.
           </p>
 
           <div className="flex items-center gap-4 text-sm font-medium text-emerald-400 bg-emerald-900/20 px-4 py-2.5 rounded-full border border-emerald-500/20 w-fit backdrop-blur-md">

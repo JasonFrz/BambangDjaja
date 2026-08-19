@@ -3,8 +3,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
-  --font-heading: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   --animate-slide-up-fade: slideUpFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   --animate-float-soft: floatSoft 6s ease-in-out infinite;
@@ -87,3 +88,9 @@
 .dark .bg-dot-pattern {
   background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
 }
+
+/* Fix React Grid Layout stuttering during container resize */
+.is-container-resizing .react-grid-item.cssTransforms {
+  transition-property: none !important;
+}
+

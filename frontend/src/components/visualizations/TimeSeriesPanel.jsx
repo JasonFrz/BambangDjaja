@@ -11,7 +11,7 @@ export const ChartTooltip = ({ active, payload, label }) => {
   if (!active || !payload || !payload.length) return null;
   return (
     <div className="bg-white dark:bg-[#111217] border border-gray-200 dark:border-[#32363e] rounded-sm px-4 py-3 shadow-2xl">
-      <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider">
+      <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider font-mono">
         {typeof label === 'number' ? new Date(label).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : label}
       </p>
       {payload.map((entry, i) => {
@@ -20,8 +20,8 @@ export const ChartTooltip = ({ active, payload, label }) => {
           <div key={i} className="flex items-center gap-2 py-0.5">
             <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
             <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">{meta?.label || entry.name}</span>
-            <span className="text-xs font-bold text-gray-900 dark:text-white ml-auto pl-3">
-              {entry.value != null ? Number(entry.value).toFixed(2) : '—'} {meta?.unit || ''}
+            <span className="text-xs font-bold text-gray-900 dark:text-white ml-auto pl-3 font-mono">
+              {entry.value != null ? Number(entry.value).toFixed(2) : '—'} <span className="font-sans text-[10px] font-semibold">{meta?.unit || ''}</span>
             </span>
           </div>
         );
@@ -116,7 +116,7 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
   return (
     <div className="h-full w-full flex flex-col transition-colors duration-500">
       <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 font-sans text-center truncate flex-1 tracking-wide">{panel.title}</h3>
+        <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 font-sans text-center truncate flex-1 tracking-wide">{panel.title}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
       <div className="flex-1 min-h-0">
@@ -125,3 +125,4 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
     </div>
   );
 });
+

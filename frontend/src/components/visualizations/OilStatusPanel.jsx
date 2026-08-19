@@ -33,7 +33,7 @@ export const OilStatusPanel = memo(({ panel, tempData, isEditing }) => {
   return (
     <div className="h-full w-full flex flex-col transition-colors duration-500 rounded-none overflow-hidden">
       <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 font-sans text-center truncate flex-1 tracking-wide">{panel.title || 'Oil Status'}</h3>
+        <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 font-sans text-center truncate flex-1 tracking-wide">{panel.title || 'Oil Status'}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
       <div className="flex-1 flex items-center justify-center pt-2">
@@ -45,3 +45,4 @@ export const OilStatusPanel = memo(({ panel, tempData, isEditing }) => {
     </div>
   );
 });
+

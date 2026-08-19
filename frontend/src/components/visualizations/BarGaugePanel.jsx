@@ -7,7 +7,7 @@ export const BarGaugePanel = memo(({ panel, latestData, isEditing }) => {
   return (
     <div className="h-full w-full flex flex-col">
       <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 font-sans text-center truncate flex-1 tracking-wide">{panel.title}</h3>
+        <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 font-sans text-center truncate flex-1 tracking-wide">{panel.title}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-3 justify-center">
@@ -38,3 +38,4 @@ export const BarGaugePanel = memo(({ panel, latestData, isEditing }) => {
     </div>
   );
 });
+

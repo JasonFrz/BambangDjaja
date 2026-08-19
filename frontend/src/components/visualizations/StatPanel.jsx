@@ -9,14 +9,14 @@ export const StatPanel = memo(({ panel, latestData, chartData, isEditing }) => {
   return (
     <div className="h-full w-full flex flex-col">
       <div className={`flex items-center gap-3 mb-3 select-none ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-        <h3 className="font-semibold text-[#172b4d] dark:text-white text-sm font-heading tracking-tight truncate flex-1">{panel.title}</h3>
+        <h3 className="font-medium text-[#172b4d] dark:text-white text-sm font-heading tracking-tight truncate flex-1">{panel.title}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
 
       {metrics.length === 1 ? (
         <div className="flex-1 flex flex-col min-h-0 relative group" style={{ containerType: 'inline-size' }}>
           <div className="absolute inset-0 flex flex-col items-center justify-center pb-8 z-10 pointer-events-none">
-            <span className="font-bold text-[#172b4d] dark:text-white font-sans tracking-tight drop-shadow-md leading-none" style={{ fontSize: 'clamp(24px, 20cqi, 72px)' }}>
+            <span className="font-bold text-[#172b4d] dark:text-white font-mono tracking-tight drop-shadow-md leading-none" style={{ fontSize: 'clamp(24px, 20cqi, 72px)' }}>
               {(latestData[metrics[0]] ?? 0).toFixed(2)}
             </span>
             <span className="font-semibold text-[#8993a4] dark:text-[#64748b] mt-1" style={{ fontSize: 'clamp(10px, 5cqi, 16px)' }}>{METRICS[metrics[0]]?.unit}</span>
@@ -60,3 +60,4 @@ export const StatPanel = memo(({ panel, latestData, chartData, isEditing }) => {
     </div>
   );
 });
+
