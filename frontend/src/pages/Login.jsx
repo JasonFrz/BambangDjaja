@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../contexts/ApiContext';
-import { Cpu, User, Lock, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, ArrowRight, ShieldCheck, Eye, EyeOff, Activity } from 'lucide-react';
 
 const Login = () => {
   const [username, setUsername] = useState(localStorage.getItem('savedUsername') || '');
@@ -13,18 +13,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { apiUrl } = useApi();
   
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [isHovering, setIsHovering] = useState(false);
-  
   const navigate = useNavigate();
-
-  const handleMouseMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setMousePos({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    });
-  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -71,185 +60,206 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#070a13] relative overflow-hidden font-sans">
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#050B14] relative overflow-hidden font-sans">
+      
+      {/* Background Image with Gradient Fade */}
+      <div 
+        className="absolute inset-0 z-0 pointer-events-none opacity-20"
+        style={{
+          backgroundImage: 'url(/background.png)',
+          backgroundPosition: 'left bottom',
+          backgroundSize: 'cover',
+          backgroundRepeat: 'no-repeat',
+          WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,1) 30%, rgba(0,0,0,0.3) 100%)',
+          maskImage: 'linear-gradient(to right, rgba(0,0,0,1) 30%, rgba(0,0,0,0.3) 100%)'
+        }}
+      />
 
-      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-[#0052cc]/10 blur-[120px] animate-float-soft"></div>
-      <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-[#6554c0]/10 blur-[150px] animate-float-soft" style={{ animationDelay: '2s' }}></div>
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[2px] bg-gradient-to-r from-transparent via-[#4c9aff]/20 to-transparent -rotate-45 blur-sm"></div>
+      <div className="w-full max-w-[1200px] mx-auto flex flex-col lg:flex-row items-center lg:items-center justify-between gap-8 md:gap-12 p-6 lg:p-12 relative z-10">
 
-      <div className="w-full max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-center gap-12 p-6 relative z-10">
-
-        <div className="hidden lg:flex flex-col flex-1 text-white/90 animate-slide-up-fade">
-          <div className="flex items-center gap-4 mb-10">
+        {/* Mobile/Tablet Branding (Hidden on Desktop) */}
+        <div className="flex flex-col items-center justify-center lg:hidden w-full mb-4 md:mb-8 animate-slide-up-fade">
+          <div className="flex flex-col md:flex-row items-center gap-3 md:gap-4">
             <img 
               src="/logo-bnd.png" 
               alt="B&D Logo" 
-              className="h-20 w-auto object-contain rounded-xl shadow-[0_0_30px_rgba(0,163,255,0.6)] bg-white/5 backdrop-blur-sm p-1"
+              className="h-14 md:h-16 w-auto object-contain drop-shadow-[0_0_15px_rgba(0,163,255,0.4)]"
             />
-            <h1 className="text-3xl font-bold tracking-tight font-heading">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight leading-none font-sans text-white text-center">
+              PT. Bambang Djaja
+            </h1>
+          </div>
+        </div>
+
+        {/* Left Section (Desktop Only) */}
+        <div className="hidden lg:flex flex-col flex-1 text-white/90 w-full animate-slide-up-fade lg:pr-10">
+          <div className="flex items-center gap-4 mb-16 lg:mb-24">
+            <img 
+              src="/logo-bnd.png" 
+              alt="B&D Logo" 
+              className="h-16 w-auto object-contain drop-shadow-[0_0_15px_rgba(0,163,255,0.4)]"
+            />
+            <h1 className="text-3xl lg:text-4xl font-bold tracking-tight leading-none font-sans text-white">
               PT. Bambang Djaja
             </h1>
           </div>
           
           <h2 
-            className="text-5xl lg:text-6xl font-black leading-tight mb-6 text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-[#8e9bb0]"
+            className="text-5xl lg:text-[4rem] font-bold leading-[1.1] mb-8 text-[#e2e8f0]"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            Transformer <br /> Monitoring Unit
+            Transformer <br /> <span className="text-[#94a3b8]">Monitoring Unit</span>
           </h2>
           
-          <p className="text-[#8e9bb0] text-lg max-w-md leading-relaxed mb-8">
-           Access real-time power analytics, monitor phase voltages, and explore your transformer data with the flexibility to track, analyze, and visualize performance your way.
+          <div className="w-12 h-1 bg-[#0052cc] mb-8" />
+
+          <p className="text-[#8e9bb0] text-lg lg:text-xl max-w-lg leading-relaxed mb-12 font-sans">
+            Monitor, analyze, and visualize transformer data in real time — with the flexibility to focus on the metrics that matter to you.
           </p>
 
-          <div className="flex items-center gap-4 text-sm font-medium text-emerald-400 bg-emerald-900/20 px-4 py-2.5 rounded-full border border-emerald-500/20 w-fit backdrop-blur-md">
+          <div className="flex items-center gap-3 text-sm font-medium text-emerald-400 bg-transparent px-4 py-2.5 rounded-full border border-emerald-500/30 w-fit backdrop-blur-md">
             <ShieldCheck size={18} />
-            Secure Enterprise Connection
+            Secure Monitoring Environment
           </div>
         </div>
 
-        <div className="w-full max-w-[420px] animate-slide-up-fade" style={{ animationDelay: '200ms' }}>
-          <div 
-            className="bg-[#151521]/80 backdrop-blur-2xl p-10 rounded-3xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.6)] relative overflow-hidden group"
-            onMouseMove={handleMouseMove}
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
-          >
+        {/* Right Section: Login Card */}
+        <div className="w-full max-w-[460px] animate-slide-up-fade relative mx-auto lg:mx-0" style={{ animationDelay: '200ms' }}>
+          
+          {/* Ambient Glow behind the card */}
+          <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-[#0052cc]/15 blur-[80px] rounded-full pointer-events-none -z-10" />
 
-            <div 
-              className="absolute pointer-events-none transition-opacity duration-300 ease-in-out"
-              style={{
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                opacity: isHovering ? 1 : 0,
-                background: `radial-gradient(400px circle at ${mousePos.x}px ${mousePos.y}px, rgba(0, 163, 255, 0.15), transparent 40%)`,
-                zIndex: 0
-              }}
-            ></div>
+          <div className="bg-transparent md:bg-[#0b101e]/80 md:backdrop-blur-2xl p-0 md:p-8 lg:p-10 rounded-none md:rounded-[24px] border-none md:border-solid md:border-white/5 md:shadow-[0_20px_60px_rgba(0,0,0,0.8)] relative overflow-hidden z-10 w-full">
+            
 
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#0052cc]/20 rounded-full blur-[50px] transition-all duration-700 group-hover:bg-[#4c9aff]/30"></div>
-
-            <div className="relative z-10">
-              <div className="mb-10">
-                
-                <div className="flex lg:hidden items-center gap-3 mb-6">
-                  <img 
-                    src="/logo-bnd.png" 
-                    alt="B&D Logo" 
-                    className="h-10 w-auto object-contain rounded-lg shadow-[0_0_15px_rgba(0,163,255,0.4)] bg-white/5 backdrop-blur-sm p-0.5"
-                  />
-                  <h1 className="text-xl font-bold tracking-tight font-heading text-white">
-                    PT. Bambang Djaja
-                  </h1>
+            <div className="mb-8">
+              <p className="text-[#00a3ff] text-xs font-bold tracking-widest uppercase mb-3 font-sans">
+                TMU Portal
+              </p>
+              <h3 className="text-3xl font-semibold text-white mb-2 font-sans tracking-tight">Welcome Back</h3>
+              <p className="text-[#8e9bb0] text-sm font-sans">Enter your credentials to access the monitoring system.</p>
+              
+              {error && (
+                <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                  {error}
                 </div>
+              )}
+            </div>
 
-                <h3 className="text-2xl font-bold text-white font-heading mb-2">Welcome Back</h3>
-                <p className="text-[#8e9bb0] text-sm">Enter your credentials to access the portal.</p>
-                {error && (
-                  <div className="mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
-                    {error}
+            {/* Form */}
+            <form onSubmit={handleLogin} className="flex flex-col gap-6">
+
+              {/* Username */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-[#8e9bb0] uppercase tracking-wider">
+                  Username or Email
+                </label>
+                <div className={`relative flex items-center bg-[#13192b] rounded-xl border transition-all duration-300 ${isFocused === 'username' ? 'border-[#0052cc]' : 'border-white/5 hover:border-white/10'}`}>
+                  <div className="pl-4 text-[#5e6c84]">
+                    <User size={18} strokeWidth={2} />
                   </div>
-                )}
+                  <input 
+                    type="text" 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    onFocus={() => setIsFocused('username')}
+                    onBlur={() => setIsFocused(null)}
+                    className="w-full bg-transparent border-none py-3.5 px-3 text-white text-[15px] outline-none placeholder:text-[#475569] font-sans"
+                    placeholder="test"
+                    required
+                  />
+                </div>
               </div>
 
-              <form onSubmit={handleLogin} className="flex flex-col gap-5">
+              {/* Password */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-[#8e9bb0] uppercase tracking-wider">
+                  Password
+                </label>
+                <div className={`relative flex items-center bg-[#13192b] rounded-xl border transition-all duration-300 ${isFocused === 'password' ? 'border-[#0052cc]' : 'border-white/5 hover:border-white/10'}`}>
+                  <div className="pl-4 text-[#5e6c84]">
+                    <Lock size={18} strokeWidth={2} />
+                  </div>
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onFocus={() => setIsFocused('password')}
+                    onBlur={() => setIsFocused(null)}
+                    className="w-full bg-transparent border-none py-3.5 px-3 text-white text-[15px] outline-none placeholder:text-[#475569] tracking-widest font-sans"
+                    placeholder="••••••••"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="pr-4 text-[#5e6c84] hover:text-white transition-colors focus:outline-none"
+                  >
+                    {showPassword ? <EyeOff size={18} strokeWidth={2} /> : <Eye size={18} strokeWidth={2} />}
+                  </button>
+                </div>
+              </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-[#8e9bb0] uppercase tracking-wider pl-1">
-                    Username or Email
-                  </label>
-                  <div className={`relative flex items-center bg-[#070a13] rounded-xl border transition-all duration-300 ${isFocused === 'username' ? 'border-[#4c9aff] shadow-[0_0_15px_rgba(76,154,255,0.2)]' : 'border-white/10 hover:border-white/20'}`}>
-                    <div className={`pl-4 transition-colors duration-300 ${isFocused === 'username' ? 'text-[#4c9aff]' : 'text-[#5e6c84]'}`}>
-                      <User size={18} />
-                    </div>
+              {/* Remember me */}
+              <div className="flex items-center mt-1">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className="relative flex items-center justify-center w-5 h-5 rounded border border-white/10 bg-[#13192b] group-hover:border-[#0052cc] transition-colors">
                     <input 
-                      type="text" 
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      onFocus={() => setIsFocused('username')}
-                      onBlur={() => setIsFocused(null)}
-                      className="w-full bg-transparent border-none py-3.5 px-3 text-white text-sm outline-none placeholder:text-[#5e6c84]"
-                      placeholder="admin / admin@example.com"
-                      required
+                      type="checkbox" 
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="peer absolute opacity-0 w-full h-full cursor-pointer"
                     />
+                    <svg className="w-3.5 h-3.5 text-transparent peer-checked:text-[#00a3ff] transition-colors pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
                   </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex justify-between items-center pl-1">
-                    <label className="text-xs font-semibold text-[#8e9bb0] uppercase tracking-wider">
-                      Password
-                    </label>
-                  </div>
-                  <div className={`relative flex items-center bg-[#070a13] rounded-xl border transition-all duration-300 ${isFocused === 'password' ? 'border-[#4c9aff] shadow-[0_0_15px_rgba(76,154,255,0.2)]' : 'border-white/10 hover:border-white/20'}`}>
-                    <div className={`pl-4 transition-colors duration-300 ${isFocused === 'password' ? 'text-[#4c9aff]' : 'text-[#5e6c84]'}`}>
-                      <Lock size={18} />
-                    </div>
-                    <input 
-                      type={showPassword ? "text" : "password"} 
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      onFocus={() => setIsFocused('password')}
-                      onBlur={() => setIsFocused(null)}
-                      className="w-full bg-transparent border-none py-3.5 px-3 text-white text-sm outline-none placeholder:text-[#5e6c84]"
-                      placeholder="••••••••"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="pr-4 text-[#5e6c84] hover:text-[#4c9aff] transition-colors focus:outline-none"
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center pl-1 mt-1">
-                  <label className="flex items-center gap-2 cursor-pointer group">
-                    <div className="relative flex items-center justify-center w-4 h-4 rounded border border-white/20 bg-[#070a13] group-hover:border-[#4c9aff] transition-colors">
-                      <input 
-                        type="checkbox" 
-                        checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
-                        className="peer absolute opacity-0 w-full h-full cursor-pointer"
-                      />
-                      <svg className="w-3 h-3 text-transparent peer-checked:text-[#4c9aff] transition-colors pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <span className="text-sm text-[#8e9bb0] group-hover:text-white transition-colors select-none">
-                      Remember me
-                    </span>
-                  </label>
-                </div>
-
-                <button 
-                  type="submit" 
-                  className="relative group mt-6 flex items-center justify-center gap-3 w-full py-4 rounded-xl overflow-hidden bg-[#070a13] border border-[#0052cc]/50 hover:border-[#00a3ff] hover:shadow-[0_0_30px_rgba(0,163,255,0.4)] active:scale-[0.98] transition-all duration-500"
-                >
-                  
-                  <div className="absolute inset-0 bg-gradient-to-r from-[#0052cc] via-[#00a3ff] to-[#4c9aff] opacity-70 group-hover:opacity-100 transition-opacity duration-500 z-0"></div>
-
-                  <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-white/40 to-transparent z-10"></div>
-
-                  <div className="absolute inset-0 -translate-x-[150%] skew-x-[45deg] bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-shimmer z-10"></div>
-
-                  <span className="relative z-20 text-white font-bold text-[15px] tracking-wide flex items-center gap-2">
-                    {isLoading ? 'Signing In...' : 'Sign In to Dashboard'}
-                    
-                    {!isLoading && <ArrowRight size={18} className="group-hover:translate-x-1.5 transition-transform duration-300" />}
+                  <span className="text-[15px] text-[#8e9bb0] group-hover:text-white transition-colors select-none font-sans">
+                    Remember me
                   </span>
-                </button>
-              </form>
+                </label>
+              </div>
+
+              {/* Submit */}
+              <button 
+                type="submit" 
+                className="mt-4 flex items-center justify-center gap-3 w-full py-3.5 rounded-xl bg-[#0052cc] hover:bg-[#0065ff] active:bg-[#0047b3] transition-colors duration-200"
+              >
+                <span className="text-white font-medium text-[15px] flex items-center gap-2 font-sans">
+                  {isLoading ? 'Signing In...' : 'Sign In to Dashboard'}
+                  {!isLoading && <ArrowRight size={18} />}
+                </span>
+              </button>
+            </form>
+
+            {/* System Status Footer */}
+            <div className="mt-10 pt-6 border-t border-white/5 flex items-center justify-between">
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse" />
+                  <span className="text-emerald-500 text-[11px] font-bold tracking-widest uppercase font-mono">
+                    System Operational
+                  </span>
+                </div>
+                <span className="text-[#64748b] text-[13px] font-sans">
+                  All monitoring services are running normally.
+                </span>
+              </div>
+              <Activity className="text-emerald-500/50" size={28} strokeWidth={1.5} />
             </div>
-            
+
           </div>
         </div>
 
       </div>
+      
+      {/* Copyright Footer */}
+      <div className="absolute bottom-6 left-0 w-full text-center lg:text-left lg:left-12 z-10">
+        <p className="text-[#8e9bb0] text-xs font-sans">
+          &copy; {new Date().getFullYear()} PT. Bambang Djaja. All rights reserved.
+        </p>
+      </div>
+
     </div>
   );
 };
