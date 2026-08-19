@@ -16,6 +16,19 @@ axios.interceptors.request.use((config) => {
   return config;
 });
 
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      if (window.location.pathname !== '/login') {
+        sessionStorage.clear();
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 const originalFetch = window.fetch;
 window.fetch = async (...args) => {
   let [resource, config] = args;
@@ -38,8 +51,18 @@ window.fetch = async (...args) => {
     if (username) config.headers['X-Username'] = username;
   }
   
-  return originalFetch(resource, config);
+  const response = await originalFetch(resource, config);
+  
+  if (response.status === 401 || response.status === 403) {
+    if (window.location.pathname !== '/login') {
+      sessionStorage.clear();
+      window.location.href = '/login';
+    }
+  }
+  
+  return response;
 };
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />

@@ -9,13 +9,14 @@ import Profile from './pages/Profile';
 import TransformerData from './pages/TransformerData';
 import PerformanceReport from './pages/PerformanceReport';
 import Settings from './pages/Settings';
+import TransformerSelection from './pages/TransformerSelection';
 
 import { ThemeProvider } from './contexts/ThemeContext';
 import { TrendDataProvider } from './contexts/TrendDataContext';
 import { TemperatureDataProvider } from './contexts/TemperatureDataContext';
 import { ApiProvider } from './contexts/ApiContext';
 import { DialogProvider } from './contexts/DialogContext';
-import EnergyLoader from './components/EnergyLoader';
+
 
 import AdminDashboard from './pages/AdminDashboard';
 
@@ -33,36 +34,43 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+const DataProvidersWrapper = ({ children }) => (
+  <TrendDataProvider>
+    <TemperatureDataProvider>
+      {children}
+    </TemperatureDataProvider>
+  </TrendDataProvider>
+);
+
 function App() {
   return (
     <ApiProvider>
       <DialogProvider>
         <ThemeProvider>
-        <TrendDataProvider>
-          <TemperatureDataProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/" element={
-                  <ProtectedRoute>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <DataProvidersWrapper>
                     <MainLayout />
-                  </ProtectedRoute>
-                }>
-                  <Route index element={<Navigate to="/dashboard" replace />} />
-                  <Route path="dashboard" element={<Dashboard />} />
-                  <Route path="transformer-data" element={<TransformerData />} />
-                  <Route path="users" element={<AddUser />} />
-                  <Route path="manage-users" element={<ManageUsersSuperuser />} />
-                  <Route path="profile" element={<Profile />} />
-                  <Route path="performance-report" element={<PerformanceReport />} />
-                  <Route path="settings" element={<Settings />} />
+                  </DataProvidersWrapper>
+                </ProtectedRoute>
+              }>
+                <Route index element={<Navigate to="/home" replace />} />
+                <Route path="home" element={<TransformerSelection />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="transformer-data" element={<TransformerData />} />
+                <Route path="users" element={<AddUser />} />
+                <Route path="manage-users" element={<ManageUsersSuperuser />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="performance-report" element={<PerformanceReport />} />
+                <Route path="settings" element={<Settings />} />
 
-                </Route>
-              </Routes>
-            </BrowserRouter>
-          </TemperatureDataProvider>
-        </TrendDataProvider>
+              </Route>
+            </Routes>
+          </BrowserRouter>
         </ThemeProvider>
       </DialogProvider>
     </ApiProvider>

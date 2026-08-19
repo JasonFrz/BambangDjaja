@@ -10,6 +10,8 @@
   --animate-float-soft: floatSoft 6s ease-in-out infinite;
   --animate-glow-pulse: glowPulse 3s ease-in-out infinite;
   --animate-shimmer: shimmer 2s infinite;
+  --animate-status-pulse: statusPulse 1.6s ease-in-out infinite;
+  --animate-waveform-dash: waveformDash 1s linear infinite;
 
   @keyframes slideUpFade {
     0% { opacity: 0; transform: translateY(24px) scale(0.98); }
@@ -25,6 +27,13 @@
   }
   @keyframes shimmer {
     100% { transform: translateX(150%) skewX(45deg); }
+  }
+  @keyframes statusPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(0.7); opacity: 0.4; }
+  }
+  @keyframes waveformDash {
+    to { stroke-dashoffset: -24; }
   }
 }
 
@@ -46,20 +55,19 @@
 }
 
 
-/* Custom scrollbar to keep it clean */
+/* Global scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent; 
 }
 ::-webkit-scrollbar-thumb {
-  background: #dfe1e6; 
-  border-radius: 4px;
+  @apply bg-gray-300 dark:bg-gray-700 rounded-full;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #5e6c84; 
+  @apply bg-gray-400 dark:bg-gray-500;
 }
 
 /* Hide scrollbar for clean mobile sliding menus */
@@ -69,4 +77,13 @@
 }
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* Subtle dot grid pattern for Lobby background */
+.bg-dot-pattern {
+  background-image: radial-gradient(rgba(0, 82, 204, 0.15) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+.dark .bg-dot-pattern {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
 }

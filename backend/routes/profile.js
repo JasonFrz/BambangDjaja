@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { getDbConnection } = require('../utils/db');
 const formatPhoneNumber = require('../utils/phoneFormatter');
 
@@ -111,7 +112,14 @@ router.put('/', checkUser, async (req, res) => {
       await req.db.execute(query, params);
     }
 
-    res.json({ message: 'Profile updated successfully', newUsername });
+    // Generate a new token since credentials (username/password) might have changed
+    const newToken = jwt.sign(
+      { id: req.user.id, username: newUsername, role: req.user.role, dbName: req.dbName },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({ message: 'Profile updated successfully', newUsername, newToken });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error: ' + error.message });

@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const { getDbConnection } = require('../utils/db');
-const { authenticateToken } = require('../middleware/auth');
 
 // Middleware to ensure user_layouts table exists
 const ensureLayoutsTable = async (db) => {
@@ -44,20 +43,18 @@ const getUserId = async (db, username) => {
   return null;
 };
 
-// Apply auth middleware to all layout routes
-router.use(authenticateToken);
 
 // GET all layouts for the current user
 router.get('/', async (req, res) => {
   try {
-    const dbName = req.user.company_name;
+    const dbName = req.headers['x-db-name'];
     if (!dbName) return res.status(400).json({ error: 'Company name is missing' });
     
     const db = await getDbConnection(dbName);
     await ensureLayoutsTable(db);
     
-    const userId = await getUserId(db, req.user.username);
-    if (!userId) return res.status(403).json({ error: 'DEBUG_USER_NOT_FOUND', user: req.user.username, db: dbName });
+    const userId = await getUserId(db, req.headers['x-username'] || req.user?.username);
+    if (!userId) return res.status(403).json({ error: 'User not found' });
     
     const [layouts] = await db.execute('SELECT id, layout_name, layout_data, is_active FROM user_layouts WHERE user_id = ?', [userId]);
     
@@ -77,12 +74,12 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: id, layout_name, layout_data' });
     }
     
-    const dbName = req.user.company_name;
+    const dbName = req.headers['x-db-name'];
     const db = await getDbConnection(dbName);
     await ensureLayoutsTable(db);
     
-    const userId = await getUserId(db, req.user.username);
-    if (!userId) return res.status(403).json({ error: 'DEBUG_USER_NOT_FOUND', user: req.user.username, db: dbName });
+    const userId = await getUserId(db, req.headers['x-username'] || req.user?.username);
+    if (!userId) return res.status(403).json({ error: 'User not found' });
     
     // Check if layout exists
     const [existing] = await db.execute('SELECT id FROM user_layouts WHERE id = ? AND user_id = ?', [id, userId]);
@@ -114,12 +111,12 @@ router.put('/active', async (req, res) => {
     const { id } = req.body;
     if (!id) return res.status(400).json({ error: 'Missing layout id' });
     
-    const dbName = req.user.company_name;
+    const dbName = req.headers['x-db-name'];
     const db = await getDbConnection(dbName);
     await ensureLayoutsTable(db);
     
-    const userId = await getUserId(db, req.user.username);
-    if (!userId) return res.status(403).json({ error: 'DEBUG_USER_NOT_FOUND', user: req.user.username, db: dbName });
+    const userId = await getUserId(db, req.headers['x-username'] || req.user?.username);
+    if (!userId) return res.status(403).json({ error: 'User not found' });
     
     // Deactivate all layouts for user
     await db.execute('UPDATE user_layouts SET is_active = 0 WHERE user_id = ?', [userId]);
@@ -143,12 +140,12 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    const dbName = req.user.company_name;
+    const dbName = req.headers['x-db-name'];
     const db = await getDbConnection(dbName);
     await ensureLayoutsTable(db);
     
-    const userId = await getUserId(db, req.user.username);
-    if (!userId) return res.status(403).json({ error: 'DEBUG_USER_NOT_FOUND', user: req.user.username, db: dbName });
+    const userId = await getUserId(db, req.headers['x-username'] || req.user?.username);
+    if (!userId) return res.status(403).json({ error: 'User not found' });
     
     await db.execute('DELETE FROM user_layouts WHERE id = ? AND user_id = ?', [id, userId]);
     

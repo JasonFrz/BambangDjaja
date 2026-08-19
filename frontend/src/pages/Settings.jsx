@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useApi } from '../contexts/ApiContext';
 import { Edit, Check, Activity } from 'lucide-react';
+import EnergyLoader from '../components/EnergyLoader';
 
 const METRIC_LABELS = {
   v_phase: { label: 'Phase voltage', tab: 'Voltage', unit: 'V' },
@@ -128,8 +129,8 @@ const Settings = () => {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-20">
-          <Activity size={32} className="animate-pulse text-blue-500" />
+        <div className="flex flex-col items-center justify-center min-h-[40vh] animate-[fadeIn_0.3s_ease-out]">
+          <EnergyLoader text="Loading Settings..." />
         </div>
       ) : (
         <div className="flex flex-col gap-4">

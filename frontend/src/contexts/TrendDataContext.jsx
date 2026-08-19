@@ -130,7 +130,7 @@ export const TrendDataProvider = ({ children }) => {
     checkLive();
     const interval = setInterval(checkLive, 5000); 
     return () => clearInterval(interval);
-  }, [isConnected, wsData]);
+  }, [isConnected, wsData, updateInterval]);
 
   return (
     <TrendDataContext.Provider value={{

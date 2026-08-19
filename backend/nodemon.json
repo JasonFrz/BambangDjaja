@@ -1,0 +1,7 @@
+{
+  "ignore": [
+    ".wwebjs_cache/*",
+    "wa_session/*",
+    "*.log"
+  ]
+}

@@ -21,8 +21,60 @@
       })();
     </script>
   </head>
-  <body>
-    <div id="root"></div>
+    <style>
+      body { margin: 0; background-color: #070a13; height: 100vh; width: 100vw; font-family: 'Space Grotesk', sans-serif; overflow: hidden; }
+      #root { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+      #root:has(> .flex) { display: block; } /* Reset flex when React mounts */
+      html.light body { background-color: #f3f4f6; }
+      
+      .energy-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
+      .el-spinner { position: relative; width: 6rem; height: 6rem; margin-bottom: 1.5rem; }
+      
+      .el-circle1 { position: absolute; inset: 0; border: 4px solid transparent; border-top-color: #0052cc; border-bottom-color: #00a3ff; border-radius: 50%; animation: el-spin 2s linear infinite; box-sizing: border-box; }
+      .el-circle2 { position: absolute; inset: 0.5rem; border: 4px solid transparent; border-top-color: #00a3ff; border-bottom-color: #0052cc; border-radius: 50%; animation: el-spin-reverse 1.5s linear infinite; box-sizing: border-box; }
+      .el-circle3 { position: absolute; inset: 1rem; border: 2px dashed #4c9aff; border-radius: 50%; animation: el-spin 3s linear infinite; box-sizing: border-box; }
+      
+      .el-glow-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+      .el-glow { width: 3rem; height: 3rem; border-radius: 50%; background: linear-gradient(to bottom right, rgba(0,82,204,0.6), rgba(0,163,255,0.6)); filter: blur(4px); animation: el-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+      
+      .el-icon-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #00a3ff; filter: drop-shadow(0 0 8px rgba(0,163,255,0.8)); z-index: 10; animation: el-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+      .el-icon-wrap svg { width: 28px; height: 28px; fill: currentColor; }
+      
+      .el-text { color: white; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; font-size: 0.875rem; animation: el-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; display: flex; align-items: center; gap: 0.5rem; margin: 0; }
+      html.light .el-text { color: #172b4d; }
+      
+      .el-dots { display: flex; gap: 0.375rem; margin-top: 0.75rem; }
+      .el-dot { width: 0.5rem; height: 0.5rem; background-color: #00a3ff; border-radius: 50%; box-shadow: 0 0 5px #00a3ff; animation: el-bounce 1s infinite; }
+      .el-dot:nth-child(1) { animation-delay: 0ms; }
+      .el-dot:nth-child(2) { animation-delay: 200ms; }
+      .el-dot:nth-child(3) { animation-delay: 400ms; }
+      
+      @keyframes el-spin { to { transform: rotate(360deg); } }
+      @keyframes el-spin-reverse { to { transform: rotate(-360deg); } }
+      @keyframes el-pulse { 50% { opacity: 0.5; } }
+      @keyframes el-bounce { 0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8,0,1,1); } 50% { transform: none; animation-timing-function: cubic-bezier(0,0,0.2,1); } }
+    </style>
+    <div id="root">
+      <div class="energy-loader">
+        <div class="el-spinner">
+          <div class="el-circle1"></div>
+          <div class="el-circle2"></div>
+          <div class="el-circle3"></div>
+          <div class="el-glow-wrap"><div class="el-glow"></div></div>
+          <div class="el-icon-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+          </div>
+        </div>
+        <h3 class="el-text">TMU SYSTEM</h3>
+        <div class="el-dots">
+          <span class="el-dot"></span>
+          <span class="el-dot"></span>
+          <span class="el-dot"></span>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

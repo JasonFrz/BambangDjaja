@@ -68,6 +68,9 @@ const Profile = () => {
       if (res.ok) {
         setSuccess('Profile updated successfully!');
         setPassword('');
+        if (data.newToken) {
+          sessionStorage.setItem('token', data.newToken);
+        }
         if (data.newUsername) {
           sessionStorage.setItem('username', data.newUsername);
           setProfile(prev => ({ ...prev, username: data.newUsername }));

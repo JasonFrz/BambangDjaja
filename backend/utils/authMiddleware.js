@@ -11,9 +11,8 @@ const verifyToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // { username, role, dbName }
+    req.user = decoded;
     
-    // Inject untuk kompatibilitas dengan route yang lama
     req.headers['x-db-name'] = decoded.dbName;
     req.headers['x-username'] = decoded.username;
     

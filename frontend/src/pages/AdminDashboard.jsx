@@ -129,7 +129,10 @@ const AdminDashboard = () => {
 
   const axiosInstance = axios.create({
     baseURL: apiUrl,
-    headers: { 'X-Super-Admin': 'true' }
+    headers: { 
+      'X-Super-Admin': 'true',
+      'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+    }
   });
 
   const handleLogout = () => {
@@ -719,10 +722,10 @@ const AdminDashboard = () => {
                     </div>
                     <div className="flex-1 overflow-y-auto space-y-3 pb-20 custom-scrollbar">
                       {databases.filter(d => d.toLowerCase().includes(searchTermDb.toLowerCase())).map(db => (
-                        <button 
+                        <div 
                           key={db}
                           onClick={() => fetchTables(db)}
-                          className="w-full bg-[#151521] border-b border-white/5 last:border-0 rounded-2xl p-5 flex items-center justify-between transition-colors active:bg-white/5"
+                          className="w-full bg-[#151521] border-b border-white/5 last:border-0 rounded-2xl p-5 flex items-center justify-between transition-colors active:bg-white/5 cursor-pointer"
                         >
                           <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-[#0a0a0f] border border-white/5 text-blue-400 rounded-xl flex items-center justify-center shadow-inner">
@@ -770,7 +773,7 @@ const AdminDashboard = () => {
                             <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
                             <ChevronRight size={18} className="text-gray-500" />
                           </div>
-                        </button>
+                        </div>
                       ))}
                     </div>
                   </>

@@ -7,10 +7,17 @@ const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 
 const app = express();
+app.set("trust proxy", 1); // Allow rate limiting behind proxies like ngrok
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: function (origin, callback) {
+      callback(null, origin || "*");
+    },
+    methods: ["GET", "POST"],
+    credentials: true,
+    allowedHeaders: ["ngrok-skip-browser-warning"]
   },
 });
 
@@ -32,8 +39,11 @@ const limiter = rateLimit({
 app.use("/api/", limiter);
 
 app.use(cors({
-  origin: process.env.CLOUD_URL || "*",
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  origin: function (origin, callback) {
+    // Allow any origin for development/ngrok
+    callback(null, origin || "*");
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true
 }));
 app.use(express.json());
@@ -123,6 +133,7 @@ const analyticsRoutes = require("./routes/analytics");
 const layoutsRoutes = require("./routes/layouts");
 const settingsRoutes = require("./routes/settings");
 const { verifyToken } = require("./utils/authMiddleware");
+const { router: alertsRoutes } = require("./routes/alerts");
 
 app.use("/api", authRoutes); // /api/login is inside here, so it remains unprotected
 app.use("/api/users", verifyToken, userRoutes);
@@ -133,6 +144,7 @@ app.use("/api/profile", verifyToken, profileRoutes);
 app.use("/api/analytics", verifyToken, analyticsRoutes);
 app.use("/api/layouts", verifyToken, layoutsRoutes);
 app.use("/api/settings", verifyToken, settingsRoutes);
+app.use("/api/alerts", verifyToken, alertsRoutes);
 
 const startRealtimePoller = require("./utils/realtimePoller");
 const { initWhatsApp } = require("./utils/whatsappClient");

@@ -54,15 +54,20 @@ const MainLayout = () => {
     <div className="flex flex-col h-screen w-full bg-[#f4f7fe] dark:bg-[#111217] transition-colors duration-300 overflow-hidden">
 
       {!isFullscreen && (
-      <header className="h-[70px] px-6 md:px-8 flex justify-between items-center border-b border-gray-200 dark:border-[#22252b] bg-white dark:bg-[#111217] z-30 shrink-0 relative">
+      <header className={`h-[70px] px-6 md:px-8 flex justify-between items-center bg-white dark:bg-[#111217] z-30 shrink-0 relative ${location.pathname === '/home' ? '' : 'border-b border-gray-200 dark:border-[#22252b]'}`}>
         <Link to="/" className="flex items-center gap-3 group">
           <img src="/tmu-logo.png" alt="Logo" className="w-auto h-7 md:h-8 group-hover:opacity-80 transition-opacity" />
-          <h1 className="text-lg md:text-xl font-bold tracking-tight font-heading text-[#172b4d] dark:text-white">
-            TMU <span className="font-light opacity-80 hidden sm:inline">{isAdminDashboard ? 'Admin' : 'Dashboard'}</span>
-          </h1>
+          <div className="flex flex-col justify-center">
+            <h1 className="text-xl md:text-2xl font-black tracking-tight font-heading text-[#172b4d] dark:text-white leading-none">
+              TMU
+            </h1>
+            <span className="text-[9px] md:text-[11px] font-bold tracking-[0.15em] text-[#5e6c84] dark:text-[#94a3b8] uppercase mt-1 leading-none">
+              Transformer Monitoring Unit
+            </span>
+          </div>
         </Link>
 
-        {isTransformerDashboard && (
+        {(isTransformerDashboard || location.pathname === '/home') && (
           <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center justify-center w-[120px] sm:w-auto">
             <span className="text-[#172b4d] dark:text-white font-bold tracking-widest text-sm md:text-lg leading-none">
               {currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -262,7 +267,7 @@ const MainLayout = () => {
           </main>
     
           {!isFullscreen && (
-            <footer className="py-4 md:py-6 px-4 md:px-8 flex flex-col sm:flex-row justify-between items-center text-[#5e6c84] dark:text-[#94a3b8] text-xs sm:text-sm shrink-0 mt-auto gap-2 sm:gap-0 text-center sm:text-left">
+            <footer className="relative z-10 py-4 md:py-6 px-4 md:px-8 flex flex-col sm:flex-row justify-between items-center text-[#5e6c84] dark:text-[#94a3b8] text-xs sm:text-sm shrink-0 mt-auto gap-2 sm:gap-0 text-center sm:text-left">
               <p>&copy; {new Date().getFullYear()} PT. Bambang Djaja. All rights reserved.</p>
               <p>Transformer Monitoring Unit V1.0</p>
             </footer>

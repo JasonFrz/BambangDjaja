@@ -32,6 +32,27 @@ async function sendAlertMessage(db, dbName, trafoId, alert) {
       
       const emailSubject = `[TMU ALERT] Abnormal Parameter pada Trafo ${trafoId}`;
       const emailMsg = `Peringatan: Anomali sensor terdeteksi!\n\nTrafo: ${trafoId}\nDatabase: ${dbName}\nParameter: ${alert.name} ${alert.sub ? '('+alert.sub+')' : ''}\nKondisi: ${alert.type} (${condition})\nNilai Saat Ini: ${alert.val}\nBatas Toleransi: ${alert.limit}\n\nSilakan segera periksa sistem Anda.\n\nPesan otomatis dari PT. Bambang Djaja - TMU System`;
+
+      // Log alert to DB
+      try {
+        await db.execute(`
+          CREATE TABLE IF NOT EXISTS alert_logs (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            alert_type VARCHAR(50) NOT NULL,
+            parameter_name VARCHAR(100) NOT NULL,
+            condition_text VARCHAR(255) NOT NULL,
+            current_value VARCHAR(50) NOT NULL,
+            threshold_limit VARCHAR(50) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await db.execute(
+          `INSERT INTO alert_logs (alert_type, parameter_name, condition_text, current_value, threshold_limit) VALUES (?, ?, ?, ?, ?)`,
+          [alert.type, `${alert.name} ${alert.sub ? '('+alert.sub+')' : ''}`, condition, alert.val.toString(), alert.limit.toString()]
+        );
+      } catch (dbErr) {
+        console.error("Failed to log alert to DB:", dbErr.message);
+      }
       
       let phones = [];
       let emails = [];
@@ -128,7 +149,7 @@ async function checkAndAlert(db, dbName, trafoId, data, isOil = false) {
       });
 
       for (const alert of alerts) {
-          const cooldownKey = `${dbName}_${trafoId}_${alert.key}_${alert.sub}`;
+          const cooldownKey = `${dbName}_${trafoId}_${alert.key}_${alert.sub}_${alert.type}`;
           const lastSent = waCooldowns.get(cooldownKey) || 0;
           const now = Date.now();
           
