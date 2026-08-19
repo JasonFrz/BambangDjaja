@@ -51,11 +51,17 @@ const MainLayout = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#f4f7fe] dark:bg-[#111217] transition-colors duration-300 overflow-hidden">
+    <div className="flex flex-col h-screen w-full bg-[#f4f7fe] dark:bg-[#111217] transition-colors duration-300 overflow-hidden relative">
+      
+      {/* Ambient Warm Blue Glow from bottom to middle */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+        {/* Wide radial glow anchored at the bottom */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/3 w-[120%] h-[60%] bg-[#00a3ff]/15 dark:bg-[#00a3ff]/20 blur-[120px] rounded-[100%]" />
+      </div>
 
       {!isFullscreen && (
-      <header className={`h-[70px] px-6 md:px-8 flex justify-between items-center bg-white dark:bg-[#111217] z-30 shrink-0 relative ${location.pathname === '/home' ? '' : 'border-b border-gray-200 dark:border-[#22252b]'}`}>
-        <Link to="/" className="flex items-center gap-3 group">
+      <header className={`h-[70px] px-6 md:px-8 flex justify-between items-center bg-white/80 dark:bg-[#111217]/80 backdrop-blur-md z-30 shrink-0 relative ${location.pathname === '/home' ? '' : 'border-b border-gray-200 dark:border-[#22252b]'}`}>
+        <Link to="/" className="flex items-center gap-3 group relative z-10">
           <img src="/tmu-logo.png" alt="Logo" className="w-auto h-7 md:h-8 group-hover:opacity-80 transition-opacity" />
           <div className="flex flex-col justify-center">
             <h1 className="text-xl md:text-2xl font-black tracking-tight font-heading text-[#172b4d] dark:text-white leading-none">

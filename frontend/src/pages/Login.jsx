@@ -12,7 +12,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { apiUrl } = useApi();
-  
+
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -31,18 +31,18 @@ const Login = () => {
 
       if (response.ok) {
         if (data.token) sessionStorage.setItem('token', data.token);
-        
+
         if (rememberMe) {
           localStorage.setItem('savedUsername', username);
         } else {
           localStorage.removeItem('savedUsername');
         }
-        
+
         sessionStorage.setItem('username', data.username);
         sessionStorage.setItem('role', data.role);
         sessionStorage.setItem('phone', data.phone || '');
         sessionStorage.setItem('company_name', data.company_name || '');
-        
+
         if (data.role === 'admin') {
           sessionStorage.setItem('admin', 'true');
           window.location.href = '/admin';
@@ -61,9 +61,9 @@ const Login = () => {
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#050B14] relative overflow-hidden font-sans">
-      
+
       {/* Background Image with Gradient Fade */}
-      <div 
+      <div
         className="absolute inset-0 z-0 pointer-events-none opacity-20"
         style={{
           backgroundImage: 'url(/background.png)',
@@ -80,9 +80,9 @@ const Login = () => {
         {/* Mobile/Tablet Branding (Hidden on Desktop) */}
         <div className="flex flex-col items-center justify-center lg:hidden w-full mb-4 md:mb-8 animate-slide-up-fade">
           <div className="flex flex-col md:flex-row items-center gap-3 md:gap-4">
-            <img 
-              src="/logo-bnd.png" 
-              alt="B&D Logo" 
+            <img
+              src="/logo-bnd.png"
+              alt="B&D Logo"
               className="h-14 md:h-16 w-auto object-contain drop-shadow-[0_0_15px_rgba(0,163,255,0.4)]"
             />
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight leading-none font-sans text-white text-center">
@@ -94,23 +94,23 @@ const Login = () => {
         {/* Left Section (Desktop Only) */}
         <div className="hidden lg:flex flex-col flex-1 text-white/90 w-full animate-slide-up-fade lg:pr-10">
           <div className="flex items-center gap-4 mb-16 lg:mb-24">
-            <img 
-              src="/logo-bnd.png" 
-              alt="B&D Logo" 
+            <img
+              src="/logo-bnd.png"
+              alt="B&D Logo"
               className="h-16 w-auto object-contain drop-shadow-[0_0_15px_rgba(0,163,255,0.4)]"
             />
             <h1 className="text-3xl lg:text-4xl font-bold tracking-tight leading-none font-sans text-white">
               PT. Bambang Djaja
             </h1>
           </div>
-          
-          <h2 
+
+          <h2
             className="text-5xl lg:text-[4rem] font-bold leading-[1.1] mb-8 text-[#e2e8f0]"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             Transformer <br /> <span className="text-[#94a3b8]">Monitoring Unit</span>
           </h2>
-          
+
           <div className="w-12 h-1 bg-[#0052cc] mb-8" />
 
           <p className="text-[#8e9bb0] text-lg lg:text-xl max-w-lg leading-relaxed mb-12 font-sans">
@@ -125,12 +125,12 @@ const Login = () => {
 
         {/* Right Section: Login Card */}
         <div className="w-full max-w-[460px] animate-slide-up-fade relative mx-auto lg:mx-0" style={{ animationDelay: '200ms' }}>
-          
+
           {/* Ambient Glow behind the card */}
           <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-[#0052cc]/15 blur-[80px] rounded-full pointer-events-none -z-10" />
 
           <div className="bg-transparent md:bg-[#0b101e]/80 md:backdrop-blur-2xl p-0 md:p-8 lg:p-10 rounded-none md:rounded-[24px] border-none md:border-solid md:border-white/5 md:shadow-[0_20px_60px_rgba(0,0,0,0.8)] relative overflow-hidden z-10 w-full">
-            
+
 
             <div className="mb-8">
               <p className="text-[#00a3ff] text-xs font-bold tracking-widest uppercase mb-3 font-sans">
@@ -138,7 +138,7 @@ const Login = () => {
               </p>
               <h3 className="text-3xl font-semibold text-white mb-2 font-sans tracking-tight">Welcome Back</h3>
               <p className="text-[#8e9bb0] text-sm font-sans">Enter your credentials to access the monitoring system.</p>
-              
+
               {error && (
                 <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
                   {error}
@@ -158,8 +158,8 @@ const Login = () => {
                   <div className="pl-4 text-[#5e6c84]">
                     <User size={18} strokeWidth={2} />
                   </div>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     onFocus={() => setIsFocused('username')}
@@ -180,8 +180,8 @@ const Login = () => {
                   <div className="pl-4 text-[#5e6c84]">
                     <Lock size={18} strokeWidth={2} />
                   </div>
-                  <input 
-                    type={showPassword ? "text" : "password"} 
+                  <input
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     onFocus={() => setIsFocused('password')}
@@ -204,8 +204,8 @@ const Login = () => {
               <div className="flex items-center mt-1">
                 <label className="flex items-center gap-3 cursor-pointer group">
                   <div className="relative flex items-center justify-center w-5 h-5 rounded border border-white/10 bg-[#13192b] group-hover:border-[#0052cc] transition-colors">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
                       className="peer absolute opacity-0 w-full h-full cursor-pointer"
@@ -221,8 +221,8 @@ const Login = () => {
               </div>
 
               {/* Submit */}
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="mt-4 flex items-center justify-center gap-3 w-full py-3.5 rounded-xl bg-[#0052cc] hover:bg-[#0065ff] active:bg-[#0047b3] transition-colors duration-200"
               >
                 <span className="text-white font-medium text-[15px] flex items-center gap-2 font-sans">
@@ -252,7 +252,7 @@ const Login = () => {
         </div>
 
       </div>
-      
+
       {/* Copyright Footer */}
       <div className="absolute bottom-6 left-0 w-full text-center lg:text-left lg:left-12 z-10">
         <p className="text-[#8e9bb0] text-xs font-sans">
