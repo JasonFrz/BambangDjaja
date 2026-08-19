@@ -19,6 +19,10 @@ const TransformerSelection = () => {
   const [waSending, setWaSending] = useState(null);
   const [waStatus, setWaStatus] = useState({});
 
+  // Mouse tracking state for cursor glow
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isHovering, setIsHovering] = useState(false);
+
   useEffect(() => {
     // Mock data for UI presentation without backend
     const fetchTransformers = () => {
@@ -97,8 +101,35 @@ const TransformerSelection = () => {
   const onlineUnits = transformers.filter(t => t.status === 'Online').length;
   const offlineUnits = transformers.filter(t => t.status === 'Offline').length;
 
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMousePos({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  };
+
   return (
-    <div className="relative min-h-full w-full bg-dot-pattern flex flex-col overflow-hidden">
+    <div 
+      className="relative min-h-full w-full bg-dot-pattern flex flex-col overflow-hidden"
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+    >
+      {/* Interactive Cursor Glow */}
+      <div 
+        className="absolute pointer-events-none transition-opacity duration-300 ease-in-out"
+        style={{
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          opacity: isHovering ? 1 : 0,
+          background: `radial-gradient(400px circle at ${mousePos.x}px ${mousePos.y}px, rgba(0, 163, 255, 0.15), transparent 40%)`,
+          zIndex: 0
+        }}
+      ></div>
+
       {/* Elegant ambient glow behind the content, shining from the bottom up */}
       <div className="absolute bottom-[-20%] left-1/2 -translate-x-1/2 w-[80vw] h-[60vh] bg-gradient-to-t from-[#0052cc]/15 via-[#0052cc]/5 dark:from-[#4c9aff]/20 dark:via-[#4c9aff]/5 to-transparent blur-[120px] pointer-events-none rounded-full z-0"></div>
 
