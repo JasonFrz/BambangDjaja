@@ -16,7 +16,7 @@ export const TemperatureDataProvider = ({ children }) => {
   
   const [updateInterval, setUpdateInterval] = useState(() => {
     const saved = localStorage.getItem('updateInterval');
-    return saved !== null ? parseInt(saved, 10) : 2000;
+    return saved !== null ? parseInt(saved, 10) : 5000;
   });
 
   // Keep updateInterval in sync if changed elsewhere

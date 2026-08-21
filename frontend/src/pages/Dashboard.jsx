@@ -757,7 +757,7 @@ const Dashboard = () => {
       });
       
       saveLayoutToApi(activeId, currentProf.name, { panels, layouts: gridLayouts }, true);
-    }, 3000);
+    }, 2000);
   }, [panels, gridLayouts, profilesState]);
 
   // Profile Management Functions
@@ -1052,8 +1052,13 @@ const Dashboard = () => {
         const newBp = (allLayouts[bp] || []);
         const oldBp = (prev[bp] || []);
         if (newBp.length !== oldBp.length) { hasChanges = true; break; }
-        for (let i = 0; i < newBp.length; i++) {
-          const n = newBp[i], o = oldBp[i];
+        
+        // Sort by ID to ensure order differences don't trigger false changes
+        const newSorted = [...newBp].sort((a,b) => String(a.i).localeCompare(String(b.i)));
+        const oldSorted = [...oldBp].sort((a,b) => String(a.i).localeCompare(String(b.i)));
+
+        for (let i = 0; i < newSorted.length; i++) {
+          const n = newSorted[i], o = oldSorted[i];
           if (!o || String(n.i) !== String(o.i) || n.x !== o.x || n.y !== o.y || n.w !== o.w || n.h !== o.h) {
             hasChanges = true; break;
           }
