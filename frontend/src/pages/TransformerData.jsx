@@ -247,17 +247,10 @@ const TransformerData = () => {
             </div>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-6">
-            {trafoImage && (
-              <div className="w-full sm:w-1/3 shrink-0 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 relative aspect-square">
-                <img src={trafoImage} alt="Transformer" className="w-full h-full object-cover" />
-              </div>
-            )}
-            <div className={`grid grid-cols-1 ${trafoImage ? 'sm:grid-cols-1 w-full sm:w-2/3' : 'sm:grid-cols-2 w-full'} gap-6`}>
-              <SpecField label="RATED POWER" value="100" unit="kVA" />
-              <SpecField label="FREQUENCY" value="50" unit="Hz" />
-              <SpecField label="IMPEDANCE" value="4" unit="%" />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <SpecField label="RATED POWER" value="100" unit="kVA" />
+            <SpecField label="FREQUENCY" value="50" unit="Hz" />
+            <SpecField label="IMPEDANCE" value="4" unit="%" />
           </div>
         </div>
 
