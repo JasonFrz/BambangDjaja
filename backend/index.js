@@ -134,6 +134,7 @@ const layoutsRoutes = require("./routes/layouts");
 const settingsRoutes = require("./routes/settings");
 const { verifyToken } = require("./utils/authMiddleware");
 const { router: alertsRoutes } = require("./routes/alerts");
+const trafoRoutes = require("./routes/trafo");
 
 app.use("/api", authRoutes); // /api/login is inside here, so it remains unprotected
 app.use("/api/users", verifyToken, userRoutes);
@@ -145,6 +146,7 @@ app.use("/api/analytics", verifyToken, analyticsRoutes);
 app.use("/api/layouts", verifyToken, layoutsRoutes);
 app.use("/api/settings", verifyToken, settingsRoutes);
 app.use("/api/alerts", verifyToken, alertsRoutes);
+app.use("/api/trafo", verifyToken, trafoRoutes);
 
 const startRealtimePoller = require("./utils/realtimePoller");
 const { initWhatsApp } = require("./utils/whatsappClient");

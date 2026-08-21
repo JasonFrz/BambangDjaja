@@ -478,11 +478,14 @@ const Dashboard = () => {
           return;
         }
 
+        const trafoId = sessionStorage.getItem('selectedTrafoId');
+
         const response = await fetch(`${apiUrl}/api/layouts`, {
           headers: {
             'X-Username': username,
-            'X-Company-Name': companyName,
-            'X-Role': role
+            'X-DB-Name': companyName,
+            'X-Role': role,
+            'X-Trafo-Id': trafoId || ''
           }
         });
         
@@ -492,15 +495,25 @@ const Dashboard = () => {
             const newProfiles = {};
             let activeId = 'default';
             layouts.forEach(layout => {
-              newProfiles[layout.id] = {
-                id: layout.id,
-                name: layout.layout_name,
-                panels: layout.layout_data.panels || [],
-                layouts: layout.layout_data.layouts || {},
-                isEditable: layout.id !== 'default'
-              };
-              if (layout.is_active) {
-                activeId = layout.id;
+              if (layout.layout_name === 'Main Dashboard') {
+                newProfiles['default'] = {
+                  id: 'default',
+                  dbId: layout.id,
+                  name: 'Main Dashboard',
+                  panels: layout.layout_data.panels || [],
+                  layouts: layout.layout_data.layouts || {},
+                  isEditable: false
+                };
+                if (layout.is_active) activeId = 'default';
+              } else {
+                newProfiles[layout.id] = {
+                  id: layout.id,
+                  name: layout.layout_name,
+                  panels: layout.layout_data.panels || [],
+                  layouts: layout.layout_data.layouts || {},
+                  isEditable: true
+                };
+                if (layout.is_active) activeId = layout.id;
               }
             });
             
@@ -608,13 +621,16 @@ const Dashboard = () => {
       const companyName = sessionStorage.getItem('company_name');
       if (!username || !companyName) return;
 
-      await fetch(`${apiUrl}/api/layouts`, {
+      const trafoId = sessionStorage.getItem('selectedTrafoId');
+
+      const response = await fetch(`${apiUrl}/api/layouts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Username': username,
-          'X-Company-Name': companyName,
-          'X-Role': role
+          'X-DB-Name': companyName,
+          'X-Role': role,
+          'X-Trafo-Id': trafoId || ''
         },
         body: JSON.stringify({
           id: layoutId,
@@ -623,8 +639,10 @@ const Dashboard = () => {
           is_active: isActive
         })
       });
+      return await response.json();
     } catch (e) {
       console.error("Failed to save layout to DB:", e);
+      return { success: false };
     }
   };
 
@@ -635,13 +653,16 @@ const Dashboard = () => {
       const companyName = sessionStorage.getItem('company_name');
       if (!username || !companyName) return;
 
+      const trafoId = sessionStorage.getItem('selectedTrafoId');
+
       await fetch(`${apiUrl}/api/layouts/${layoutId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'X-Username': username,
-          'X-Company-Name': companyName,
-          'X-Role': role
+          'X-DB-Name': companyName,
+          'X-Role': role,
+          'X-Trafo-Id': trafoId || ''
         },
         body: JSON.stringify({ layout_name: newName })
       });
@@ -657,12 +678,15 @@ const Dashboard = () => {
       const companyName = sessionStorage.getItem('company_name');
       if (!username || !companyName) return;
 
+      const trafoId = sessionStorage.getItem('selectedTrafoId');
+
       await fetch(`${apiUrl}/api/layouts/${layoutId}`, {
         method: 'DELETE',
         headers: {
           'X-Username': username,
-          'X-Company-Name': companyName,
-          'X-Role': role
+          'X-DB-Name': companyName,
+          'X-Role': role,
+          'X-Trafo-Id': trafoId || ''
         }
       });
     } catch (e) {
@@ -677,13 +701,16 @@ const Dashboard = () => {
       const companyName = sessionStorage.getItem('company_name');
       if (!username || !companyName) return;
 
+      const trafoId = sessionStorage.getItem('selectedTrafoId');
+
       await fetch(`${apiUrl}/api/layouts/active`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'X-Username': username,
-          'X-Company-Name': companyName,
-          'X-Role': role
+          'X-DB-Name': companyName,
+          'X-Role': role,
+          'X-Trafo-Id': trafoId || ''
         },
         body: JSON.stringify({ id: layoutId })
       });
@@ -730,7 +757,7 @@ const Dashboard = () => {
       });
       
       saveLayoutToApi(activeId, currentProf.name, { panels, layouts: gridLayouts }, true);
-    }, 1000);
+    }, 3000);
   }, [panels, gridLayouts, profilesState]);
 
   // Profile Management Functions
@@ -738,10 +765,14 @@ const Dashboard = () => {
     const name = await prompt('Enter new dashboard profile name:', { title: 'Save As New Profile', placeholder: 'e.g. My Custom View', maxLength: 20 });
     if (!name || name.trim() === '') return;
 
-    const newId = 'p_' + Math.random().toString(36).substr(2, 9);
-    
-    // Save to API first
-    saveLayoutToApi(newId, name.trim(), { panels: panels ? [...panels] : null, layouts: gridLayouts }, true);
+    // Save to API first, letting the backend generate the ID
+    const result = await saveLayoutToApi(null, name.trim(), { panels: panels ? [...panels] : null, layouts: gridLayouts }, true);
+    if (!result || !result.success || !result.id) {
+      alert("Gagal menyimpan profil baru ke server.", { title: 'Error' });
+      return;
+    }
+
+    const newId = result.id;
 
     setProfilesState(prev => {
       return {
@@ -797,27 +828,115 @@ const Dashboard = () => {
   };
 
   const handleDeleteProfile = async () => {
-    if (profilesState.activeProfileId === 'default') {
-      await alert("Cannot delete the default Main Dashboard.", { title: 'Delete Failed' });
-      return;
-    }
-
-    const isConfirmed = await confirm(`Are you sure you want to delete profile "${profilesState.profiles[profilesState.activeProfileId]?.name}"?`, { title: 'Delete Profile' });
+    const isDefault = profilesState.activeProfileId === 'default';
+    const actionText = isDefault ? 'reset' : 'delete';
+    const titleText = isDefault ? 'Reset Dashboard' : 'Delete Profile';
+    
+    const isConfirmed = await confirm(`Are you sure you want to ${actionText} "${profilesState.profiles[profilesState.activeProfileId]?.name}"?`, { title: titleText });
     if (isConfirmed) {
       const deletedId = profilesState.activeProfileId;
       
       // Call API
-      deleteLayoutFromApi(deletedId).then(() => setActiveLayoutInApi('default'));
+      deleteLayoutFromApi(deletedId).then(() => {
+        if (!isDefault) setActiveLayoutInApi('default');
+      });
 
       setProfilesState(prev => {
         const newProfiles = { ...prev.profiles };
-        delete newProfiles[prev.activeProfileId];
+        if (isDefault) {
+          newProfiles['default'] = { id: 'default', name: 'Main Dashboard', panels: null, layouts: { lg: [], md: [], sm: [], xs: [], xxs: [] }, isEditable: false };
+        } else {
+          delete newProfiles[deletedId];
+        }
         return {
           ...prev,
           activeProfileId: 'default',
           profiles: newProfiles
         };
       });
+    }
+  };
+
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  const handleCopyProfileId = () => {
+    const profile = profilesState.profiles[profilesState.activeProfileId];
+    const idToCopy = profile?.dbId || profile?.id || 'default';
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(idToCopy).then(() => {
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 3000);
+      }).catch(err => {
+        console.error("Failed to copy:", err);
+        fallbackCopyTextToClipboard(idToCopy);
+      });
+    } else {
+      fallbackCopyTextToClipboard(idToCopy);
+    }
+  };
+
+  const fallbackCopyTextToClipboard = (text) => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      
+      textArea.style.top = "0";
+      textArea.style.left = "0";
+      textArea.style.position = "fixed";
+      
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 3000);
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+    }
+  };
+
+  const handleImportProfile = async () => {
+    const id = await prompt('Masukkan Layout ID yang ingin diimpor:', { title: 'Import Layout' });
+    if (!id || id.trim() === '') return;
+
+    try {
+      const response = await fetch(`${apiUrl}/api/layouts/export/${id.trim()}`);
+      if (response.ok) {
+        const importedData = await response.json();
+        
+        // Simpan sebagai profil baru
+        const newName = importedData.layout_name + " (Imported)";
+        const newId = 'p_' + Math.random().toString(36).substr(2, 9);
+        const importedPanels = importedData.layout_data.panels;
+        const importedLayouts = importedData.layout_data.layouts;
+
+        saveLayoutToApi(newId, newName, { panels: importedPanels, layouts: importedLayouts }, true);
+
+        setProfilesState(prev => {
+          return {
+            ...prev,
+            activeProfileId: newId,
+            profiles: {
+              ...prev.profiles,
+              [newId]: {
+                id: newId,
+                name: newName,
+                panels: importedPanels,
+                layouts: importedLayouts,
+                isEditable: true
+              }
+            }
+          };
+        });
+      } else {
+        alert("Layout ID tidak ditemukan atau gagal mengambil data.", { title: 'Import Gagal' });
+      }
+    } catch (err) {
+      alert("Koneksi gagal saat import layout.", { title: 'Import Gagal' });
     }
   };
 
@@ -1274,7 +1393,15 @@ const Dashboard = () => {
   }
 
   return (
-    <div ref={containerRef} className={`flex flex-col gap-4 animate-[fadeIn_0.3s_ease-out] w-full ${isFullscreen ? 'p-2 bg-[#f4f7fe] dark:bg-[#111217] min-h-screen' : ''}`}>
+    <div ref={containerRef} className={`relative flex flex-col gap-4 animate-[fadeIn_0.3s_ease-out] w-full ${isFullscreen ? 'p-2 bg-[#f4f7fe] dark:bg-[#111217] min-h-screen' : ''}`}>
+      {/* Toast Notification */}
+      {copySuccess && (
+        <div className="fixed top-20 right-8 z-[1000] bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-[slideDownFade_0.3s_ease-out]">
+          <Check size={16} />
+          <span className="text-sm font-bold">Layout code successfully copied</span>
+        </div>
+      )}
+
       {/* ─── Header ─── */}
       <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between w-full gap-4">
 
@@ -1373,17 +1500,28 @@ const Dashboard = () => {
                 {!isFullscreen && (
                   <div className="border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/10">
                     <button
+                      onClick={() => { setIsProfileDropdownOpen(false); handleCopyProfileId(); }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2 transition-colors"
+                    >
+                      <FileDown size={14} /> Copy Current Layout ID
+                    </button>
+                    <button
+                      onClick={() => { setIsProfileDropdownOpen(false); handleImportProfile(); }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 flex items-center gap-2 transition-colors"
+                    >
+                      <Download size={14} /> Import Layout from ID...
+                    </button>
+                    <button
                       onClick={() => { setIsProfileDropdownOpen(false); handleCreateProfile(); }}
                       className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 flex items-center gap-2 transition-colors"
                     >
                       <PlusSquare size={14} /> Save As New Profile...
                     </button>
                     <button
-                      disabled={profilesState.activeProfileId === 'default'}
                       onClick={() => { setIsProfileDropdownOpen(false); handleDeleteProfile(); }}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-2 transition-colors"
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors"
                     >
-                      <Trash2 size={14} /> Delete Current Profile
+                      <Trash2 size={14} /> {profilesState.activeProfileId === 'default' ? 'Reset to Default Layout' : 'Delete Current Profile'}
                     </button>
                   </div>
                 )}

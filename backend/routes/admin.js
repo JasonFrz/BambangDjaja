@@ -104,8 +104,7 @@ router.put('/databases/:oldDbName', async (req, res) => {
     }
 
     await pool.execute(`DROP DATABASE \`${oldDbName}\``);
-    await pool.execute(`UPDATE tmu_master.transformers SET db_name = ? WHERE db_name = ?`, [newDbName, oldDbName]);
-    await pool.execute(`UPDATE tmu_master.users SET tenant_db = ? WHERE tenant_db = ?`, [newDbName, oldDbName]);
+    await pool.execute(`UPDATE tmu_master.users SET nama_db = ? WHERE nama_db = ?`, [newDbName, oldDbName]);
 
     res.json({ success: true, message: `Database successfully renamed to ${newDbName}.` });
   } catch (error) {
@@ -126,7 +125,6 @@ router.delete('/databases/:dbName', async (req, res) => {
 
     const pool = await getAdminPool();
     await pool.execute(`DROP DATABASE \`${dbName}\``);
-    await pool.execute(`DELETE FROM tmu_master.transformers WHERE db_name = ?`, [dbName]);
 
     res.json({ success: true, message: `Database ${dbName} successfully deleted.` });
   } catch (error) {
@@ -139,7 +137,7 @@ router.delete('/databases/:dbName', async (req, res) => {
 router.get('/users', async (req, res) => {
   try {
     const pool = await getDbConnection('tmu_master');
-    const [users] = await pool.execute("SELECT id, username, role, created_at FROM users WHERE role = 'admin' ORDER BY created_at DESC");
+    const [users] = await pool.execute("SELECT id, username, ROLE as role, email, nomor_telpon, created_at FROM users WHERE role = 'admin' ORDER BY created_at DESC");
     res.json({ success: true, data: users });
   } catch (error) {
     console.error('Error fetching admin users:', error);
@@ -159,7 +157,10 @@ router.post('/users', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     
-    await pool.execute("INSERT INTO users (username, password, role) VALUES (?, ?, 'admin')", [username, hashedPassword]);
+    await pool.execute(
+      "INSERT INTO users (nama_db, username, nomor_telpon, password, email, ROLE, created_at) VALUES (?, ?, ?, ?, ?, 'admin', NOW())", 
+      ['tmu_master', username, '-', hashedPassword, '-']
+    );
     res.json({ success: true, message: 'Admin user created successfully' });
   } catch (error) {
     console.error('Error creating admin user:', error);
@@ -215,7 +216,7 @@ router.delete('/users/:id', async (req, res) => {
 router.get('/all-users', async (req, res) => {
   try {
     const pool = await getDbConnection('tmu_master');
-    const [users] = await pool.execute("SELECT id, username, role, email, nomor_telpon as nomor_telpon, created_at FROM users ORDER BY created_at DESC");
+    const [users] = await pool.execute("SELECT id, username, ROLE as role, email, nomor_telpon as nomor_telpon, nama_db, created_at FROM users WHERE ROLE != 'admin' ORDER BY created_at DESC");
     res.json({ success: true, data: users });
   } catch (error) {
     console.error('Error fetching all users:', error);
@@ -225,19 +226,21 @@ router.get('/all-users', async (req, res) => {
 
 router.get('/stats', async (req, res) => {
   try {
-    const poolMaster = await getDbConnection('tmu_master');
-    const [dbRows] = await poolMaster.execute("SELECT db_name FROM transformers");
+    const { getAllDatabases } = require('../utils/db');
+    const dbRows = await getAllDatabases();
     const dbCount = dbRows.length;
     
     let totalTables = 0;
     if (dbRows.length > 0) {
       const pool = await getAdminPool();
-      const dbNames = dbRows.map(r => `'${r.db_name}'`).join(',');
+      const dbNames = dbRows.map(db => `'${db}'`).join(',');
       const [tableCountRes] = await pool.execute(`SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA IN (${dbNames})`);
       totalTables = tableCountRes[0].count;
     }
 
-    const [userRes] = await poolMaster.execute("SELECT COUNT(*) as count FROM users");
+    const poolMaster = await getDbConnection('tmu_master');
+
+    const [userRes] = await poolMaster.execute("SELECT COUNT(*) as count FROM users WHERE ROLE != 'admin'");
     const [adminRes] = await poolMaster.execute("SELECT COUNT(*) as count FROM users WHERE role = 'admin'");
     
     res.json({

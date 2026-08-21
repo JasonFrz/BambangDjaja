@@ -16,10 +16,10 @@ router.post('/test', async (req, res) => {
   }
 
   try {
-    const db = await getDbConnection(dbName);
+    const masterDb = await getDbConnection('tmu_master');
     
     // Mengecek apakah kolom nomor_telpon atau email ada di table users
-    const [columnsInfo] = await db.execute("SHOW COLUMNS FROM users");
+    const [columnsInfo] = await masterDb.execute("SHOW COLUMNS FROM users");
     const columns = columnsInfo.map(c => c.Field);
     
     if (!columns.includes('nomor_telpon') && !columns.includes('email')) {
@@ -30,8 +30,8 @@ router.post('/test', async (req, res) => {
     if (columns.includes('nomor_telpon')) selectCols.push('nomor_telpon');
     if (columns.includes('email')) selectCols.push('email');
 
-    // Ambil SEMUA pengguna
-    const [users] = await db.execute(`SELECT ${selectCols.join(', ')} FROM users`);
+    // Ambil SEMUA pengguna untuk tenant ini
+    const [users] = await masterDb.execute(`SELECT ${selectCols.join(', ')} FROM users WHERE nama_db = ?`, [dbName]);
 
     if (users.length === 0) {
       return res.status(404).json({ error: 'Tidak ada user di database ini.' });

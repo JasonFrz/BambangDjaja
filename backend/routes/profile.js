@@ -15,15 +15,15 @@ const checkUser = async (req, res, next) => {
   }
   
   try {
-    const db = await getDbConnection(dbName);
-    const [rows] = await db.execute('SELECT * FROM users WHERE username = ? LIMIT 1', [username]);
+    const masterDb = await getDbConnection('tmu_master');
+    const [rows] = await masterDb.execute('SELECT * FROM users WHERE username = ? LIMIT 1', [username]);
     
     if (rows.length === 0) {
       return res.status(404).json({ error: 'User not found.' });
     }
     
     req.dbName = dbName;
-    req.db = db;
+    req.db = masterDb;
     req.user = rows[0];
     req.username = username;
     next();
@@ -94,16 +94,11 @@ router.put('/', checkUser, async (req, res) => {
     }
 
     if (password) {
-        if (columns.includes('password_hash')) {
-          const password_hash = crypto.createHash('sha256').update(password).digest('hex');
-          updates.push('password_hash = ?');
-          params.push(password_hash);
-        } else if (columns.includes('password')) {
-          // Asumsi db admin/lainnya menggunakan bcrypt
-          const hashedPassword = await bcrypt.hash(password, 10);
-          updates.push('password = ?');
-          params.push(hashedPassword);
-        }
+      if (columns.includes('password')) {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        updates.push('password = ?');
+        params.push(hashedPassword);
+      }
     }
 
     if (updates.length > 0) {

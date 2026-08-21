@@ -21,6 +21,7 @@
     "qrcode.react": "^4.2.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-easy-crop": "^6.2.3",
     "react-grid-layout": "^2.2.3",
     "react-leaflet": "^5.0.0",
     "react-map-gl": "^8.1.1",

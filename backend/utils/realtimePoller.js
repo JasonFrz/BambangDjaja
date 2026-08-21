@@ -35,17 +35,7 @@ async function sendAlertMessage(db, dbName, trafoId, alert) {
 
       // Log alert to DB
       try {
-        await db.execute(`
-          CREATE TABLE IF NOT EXISTS alert_logs (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            alert_type VARCHAR(50) NOT NULL,
-            parameter_name VARCHAR(100) NOT NULL,
-            condition_text VARCHAR(255) NOT NULL,
-            current_value VARCHAR(50) NOT NULL,
-            threshold_limit VARCHAR(50) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
+
         await db.execute(
           `INSERT INTO alert_logs (alert_type, parameter_name, condition_text, current_value, threshold_limit) VALUES (?, ?, ?, ?, ?)`,
           [alert.type, `${alert.name} ${alert.sub ? '('+alert.sub+')' : ''}`, condition, alert.val.toString(), alert.limit.toString()]

@@ -22,26 +22,40 @@ const TransformerSelection = () => {
 
 
   useEffect(() => {
-    // Mock data for UI presentation without backend
-    const fetchTransformers = () => {
-      setTimeout(() => {
-        setTransformers([
-          { id: '1000000024b2178e', name: 'Trafo Mechanical', status: 'Offline', power_capacity: '1000 kVA', type: 'DyN' },
-          { id: '5a8c554f', name: 'Trafo Testing', status: 'Online', power_capacity: '1000 kVA', type: 'DyN' },
-          { id: '100000008bf9d86e', name: 'Trafo PTR', status: 'Online', power_capacity: '2000 kVA', type: 'DyN' },
-          { id: '100000008bf9d86f', name: 'Trafo Assembly', status: 'Online', power_capacity: '1500 kVA', type: 'DyN' },
-          { id: '100000008bf9d86g', name: 'Trafo Paint Shop', status: 'Offline', power_capacity: '1200 kVA', type: 'DyN' },
-          { id: '100000008bf9d86h', name: 'Trafo Main Utility', status: 'Online', power_capacity: '2500 kVA', type: 'DyN' }
-        ]);
+    const fetchTransformers = async () => {
+      try {
+        const username = sessionStorage.getItem('username');
+        const role = sessionStorage.getItem('role');
+        const companyName = sessionStorage.getItem('company_name');
+        const token = sessionStorage.getItem('token');
+
+        const response = await fetch(`${apiUrl}/api/trafo`, {
+          headers: {
+            'X-Username': username,
+            'X-Role': role,
+            'X-DB-Name': companyName,
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTransformers(data);
+        } else {
+          setError("Gagal mengambil data trafo dari server.");
+        }
+      } catch (err) {
+        setError("Koneksi ke server gagal.");
+      } finally {
         setLoading(false);
-      }, 600); // slight delay for smooth entry
+      }
     };
 
     fetchTransformers();
-  }, []);
+  }, [apiUrl]);
 
   const handleMonitor = (trafo) => {
-    setSelectedTrafoName(trafo.name);
+    setSelectedTrafoName(trafo.nama || trafo.name);
     setIsTransitioning(true);
     
     sessionStorage.setItem('selectedTrafoId', trafo.id);
@@ -71,7 +85,7 @@ const TransformerSelection = () => {
         },
         body: JSON.stringify({
           transformer_id: trafo.id,
-          transformer_name: trafo.name,
+          transformer_name: trafo.nama || trafo.name,
           message_type: 'report'
         })
       });
@@ -99,8 +113,8 @@ const TransformerSelection = () => {
 
   const companyName = sessionStorage.getItem('company_name');
   const totalUnits = transformers.length;
-  const onlineUnits = transformers.filter(t => t.status === 'Online').length;
-  const offlineUnits = transformers.filter(t => t.status === 'Offline').length;
+  const onlineUnits = transformers.filter(t => t.status !== 'Offline' && t.status !== undefined).length;
+  const offlineUnits = totalUnits - onlineUnits;
 
 
 
@@ -158,7 +172,7 @@ const TransformerSelection = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
             {transformers.map((trafo, index) => {
-              const isOnline = trafo.status === 'Online';
+              const isOnline = trafo.status !== 'Offline' && trafo.status !== undefined;
               
               return (
                 <div 
@@ -172,24 +186,27 @@ const TransformerSelection = () => {
                 >
                   
                   {/* Top Area */}
-                  <div className="relative h-[200px] w-full bg-gray-50/50 dark:bg-white/[0.02] border-b border-[#dfe1e6]/50 dark:border-white/5 flex items-center justify-center shrink-0">
+                  <div className="relative h-[200px] w-full bg-gray-50/50 dark:bg-white/[0.02] border-b border-[#dfe1e6]/50 dark:border-white/5 flex items-center justify-center shrink-0 overflow-hidden">
                     
-                    {/* Animated Waveform */}
-                    <svg viewBox="0 0 100 40" className={`w-32 h-auto transition-colors duration-500 ${isOnline ? 'text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'text-[#5e6c84] dark:text-gray-600 opacity-40'}`}>
-                      <path 
-                        d="M 0 20 L 30 20 L 40 5 L 50 35 L 60 20 L 100 20" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        strokeWidth="2.5" 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        className={isOnline ? 'animate-waveform-dash' : ''}
-                        style={isOnline ? { strokeDasharray: '8 6' } : {}}
-                      />
-                    </svg>
+                    {trafo.images ? (
+                      <img src={trafo.images} alt={trafo.nama || trafo.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <svg viewBox="0 0 100 40" className={`w-32 h-auto transition-colors duration-500 ${isOnline ? 'text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'text-[#5e6c84] dark:text-gray-600 opacity-40'}`}>
+                        <path 
+                          d="M 0 20 L 30 20 L 40 5 L 50 35 L 60 20 L 100 20" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          strokeWidth="2.5" 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          className={isOnline ? 'animate-waveform-dash' : ''}
+                          style={isOnline ? { strokeDasharray: '8 6' } : {}}
+                        />
+                      </svg>
+                    )}
 
                     {/* Status Badge */}
-                    <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white dark:bg-[#111217] border border-[#dfe1e6]/80 dark:border-white/10 shadow-sm">
+                    <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white dark:bg-[#111217] border border-[#dfe1e6]/80 dark:border-white/10 shadow-sm z-10">
                       {isOnline ? (
                         <>
                           <div className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-status-pulse"></div>
@@ -205,9 +222,9 @@ const TransformerSelection = () => {
                   </div>
 
                   {/* Body Area */}
-                  <div className="p-5 flex flex-col flex-1">
+                  <div className="p-5 flex flex-col flex-1 z-10">
                     <h3 className="font-bold text-[15px] text-[#172b4d] dark:text-white leading-tight truncate">
-                      {trafo.name}
+                      {trafo.nama || trafo.name}
                     </h3>
                     <p className="font-mono text-[11px] text-[#5e6c84] dark:text-gray-500 mt-1 truncate">
                       {trafo.id}

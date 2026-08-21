@@ -17,6 +17,7 @@ const AddUser = () => {
   const [companyName, setCompanyName] = useState('');
   const [dbName, setDbName] = useState('');
   const [phone, setPhone] = useState('+62');
+  const [email, setEmail] = useState('');
   const [editingUser, setEditingUser] = useState(null);
 
   const [changingPasswordUser, setChangingPasswordUser] = useState(null);
@@ -63,8 +64,8 @@ const AddUser = () => {
       const url = editingUser ? `${apiUrl}/api/users/${editingUser}` : `${apiUrl}/api/users`;
       const method = editingUser ? 'PUT' : 'POST';
       const body = editingUser 
-        ? JSON.stringify({ role, company_name: companyName, db_name: dbName, nomor_telpon: phone })
-        : JSON.stringify({ username, password, role, company_name: companyName, db_name: dbName, nomor_telpon: phone });
+        ? JSON.stringify({ role, company_name: companyName, db_name: dbName, nomor_telpon: phone, email })
+        : JSON.stringify({ username, password, role, company_name: companyName, db_name: dbName, nomor_telpon: phone, email });
 
       const response = await fetch(url, {
         method,
@@ -84,6 +85,7 @@ const AddUser = () => {
         setCompanyName('');
         setDbName('');
         setPhone('+62');
+        setEmail('');
         setShowCreateForm(false);
         setEditingUser(null);
         fetchUsers();
@@ -105,6 +107,7 @@ const AddUser = () => {
     setCompanyName(u.company_name === '-' ? '' : u.company_name);
     setDbName(u.db_name === '-' ? '' : u.db_name);
     setPhone(u.nomor_telpon || '+62');
+    setEmail(u.email || '');
     setShowCreateForm(true);
     setChangingPasswordUser(null);
     setError('');
@@ -304,6 +307,17 @@ const AddUser = () => {
                     placeholder="+628xxxxxxxxxx"
                   />
                 </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-[#172b4d] dark:text-white">Email</label>
+                <input 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-[#f4f5f7] dark:bg-[#070a13] border border-[#dfe1e6] dark:border-white/10 rounded-xl py-2.5 px-4 text-[#172b4d] dark:text-white text-sm outline-none focus:border-[#4c9aff] transition-all"
+                  placeholder="e.g. user@example.com"
+                  required
+                />
               </div>
               <div className="md:col-span-3 flex justify-end">
                 <button 

@@ -3,7 +3,7 @@ import axios from 'axios';
 import { 
   Database, Table, Trash2, AlertTriangle, ChevronRight, 
   RefreshCw, Server, Search, Users, UserPlus, Edit2, X, 
-  Eye, EyeOff, LayoutDashboard, Download, Menu, LogOut, CheckCircle2, XCircle, MessageCircle, ArrowLeft, ChevronDown
+  Eye, EyeOff, LayoutDashboard, Download, Menu, LogOut, CheckCircle2, XCircle, MessageCircle, ArrowLeft, ChevronDown, Settings, Sun, Moon
 } from 'lucide-react';
 import { useApi } from '../contexts/ApiContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -57,6 +57,7 @@ const AdminDashboard = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
   const [waStatus, setWaStatus] = useState({ ready: false, state: 'DISCONNECTED', qr: '', connectedSince: null, messagesSentToday: 0, connectedPhone: '' });
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   // Database Tab States
   const [selectedDb, setSelectedDb] = useState(null);
@@ -126,6 +127,11 @@ const AdminDashboard = () => {
     }
     return () => clearInterval(interval);
   }, [activeTab]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const axiosInstance = axios.create({
     baseURL: apiUrl,
@@ -358,49 +364,93 @@ const AdminDashboard = () => {
     <div className={`flex h-screen overflow-hidden ${isDarkMode ? 'dark' : ''} bg-[#101014] text-white font-sans`}>
       
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col inset-y-0 left-0 z-50 w-72 bg-[#151521] border-r border-white/5">
+      <aside className="hidden md:flex flex-col inset-y-0 left-0 z-50 w-72 bg-[#0b0c10] border-r border-white/5">
         <div className="p-6 flex items-center gap-3 border-b border-white/5">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
-            <Server size={20} />
+          <div className="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center text-white p-1">
+            <img src="/tmu-logo.png" alt="TMU Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <h1 className="font-bold text-lg tracking-tight leading-tight">Admin panel</h1>
-            <p className="text-xs text-gray-400 font-medium">Control panel</p>
+            <h1 className="font-bold text-xl tracking-tight leading-tight">TMU</h1>
+            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Transformer<br/>Monitoring Unit</p>
           </div>
         </div>
+        
+        <div className="px-6 py-5">
+          <p className="text-xs font-bold text-blue-500 tracking-widest uppercase">Admin Control Panel</p>
+        </div>
 
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
-          <SidebarItem icon={LayoutDashboard} label="Overview" id="overview" />
-          <SidebarItem icon={Database} label="Databases" id="databases" />
-          <SidebarItem icon={Users} label="Admin users" id="admins" />
-          <SidebarItem icon={Users} label="App users" id="users" />
-          <SidebarItem icon={null} label="WhatsApp" id="whatsapp" isCustomIcon={true} />
+        <nav className="flex-1 px-4 space-y-6 overflow-y-auto custom-scrollbar pb-6">
+          <div>
+            <SidebarItem icon={LayoutDashboard} label="Overview" id="overview" />
+          </div>
+
+          <div>
+            <p className="px-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Database</p>
+            <SidebarItem icon={Database} label="Databases" id="databases" />
+          </div>
+
+          <div>
+            <p className="px-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Access Management</p>
+            <SidebarItem icon={Users} label="Admin Users" id="admins" />
+            <SidebarItem icon={UserPlus} label="App Users" id="users" />
+          </div>
+
+          <div>
+            <p className="px-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Services</p>
+            <SidebarItem icon={null} label="Notifications" id="whatsapp" isCustomIcon={true} />
+          </div>
+
+          <div>
+            <p className="px-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">System</p>
+            <SidebarItem icon={Settings} label="Settings" id="settings" />
+          </div>
         </nav>
 
         <div className="p-4 border-t border-white/5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-blue-900/50 text-blue-400 flex items-center justify-center font-bold text-sm">
-                A
+          <div className="flex items-center justify-center">
+            <div className="flex items-center gap-3 w-full">
+              <div className="w-10 h-10 rounded-full bg-blue-900/30 text-blue-400 flex items-center justify-center font-bold text-lg shrink-0">
+                {(sessionStorage.getItem('username') || 'A').charAt(0).toUpperCase()}
               </div>
-              <span className="font-bold text-sm">admin</span>
+              <div className="overflow-hidden">
+                <span className="font-bold text-sm block truncate">{sessionStorage.getItem('username') || 'admin'}</span>
+                <span className="text-[10px] text-gray-500 block truncate capitalize">
+                  {sessionStorage.getItem('role') === 'admin' ? 'Administrator' : sessionStorage.getItem('role') || 'Super Administrator'}
+                </span>
+              </div>
             </div>
-            <button onClick={handleLogout} className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/10" title="Logout">
-              <LogOut size={18} />
-            </button>
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 bg-[#1a1a24] pb-[72px] md:pb-0">
-        {/* Mobile Header */}
-        <div className="md:hidden flex items-center justify-between p-4 bg-[#151521] border-b border-white/5 shrink-0 z-20 sticky top-0">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
-              <Server size={16} />
+      <main className="flex-1 flex flex-col min-w-0 bg-[#0b0c10] pb-[72px] md:pb-0">
+        
+        {/* Desktop Header */}
+        <header className="hidden md:flex items-center justify-between p-6 border-b border-white/5 bg-[#0b0c10]">
+          <div className="flex items-center gap-4">
+            <button className="text-gray-400 hover:text-white transition-colors"><Menu size={20} /></button>
+          </div>
+          <div className="flex items-center gap-6">
+            <button className="text-gray-400 hover:text-white transition-colors"><Sun size={20} /></button>
+            <div className="text-right border-l border-white/10 pl-6">
+              <p className="font-bold text-lg font-mono leading-tight">{currentTime.toLocaleTimeString('id-ID')}</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest">{currentTime.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
             </div>
-            <h1 className="font-bold text-base tracking-tight">Admin panel</h1>
+            <button onClick={handleLogout} className="px-4 py-2 rounded-lg bg-red-900/20 border border-red-500/20 text-red-400 hover:bg-red-900/30 hover:text-red-300 flex items-center gap-2 transition-colors">
+              <LogOut size={16} />
+              <span className="text-[11px] font-bold uppercase tracking-wider">Logout</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Mobile Header */}
+        <div className="md:hidden flex items-center justify-between p-4 bg-[#0b0c10] border-b border-white/5 shrink-0 z-20 sticky top-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center text-white p-1">
+              <img src="/tmu-logo.png" alt="TMU Logo" className="w-full h-full object-contain" />
+            </div>
+            <h1 className="font-bold text-base tracking-tight">TMU</h1>
           </div>
           <button onClick={handleLogout} className="p-2 text-red-400 hover:text-red-300 transition-colors rounded-lg bg-red-900/20 hover:bg-red-900/30" title="Logout">
             <LogOut size={18} />
@@ -420,118 +470,214 @@ const AdminDashboard = () => {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8">
                 {[
-                  { label: 'Databases', value: stats.databases },
-                  { label: 'Total tables', value: stats.tables },
-                  { label: 'App users', value: stats.appUsers },
-                  { label: 'Active admins', value: stats.activeAdmins }
+                  { label: 'DATABASES', value: stats.databases, color: 'blue', icon: Database, sub: '1 online' },
+                  { label: 'TOTAL TABLES', value: stats.tables, color: 'cyan', icon: Table, sub: '' },
+                  { label: 'APP USERS', value: stats.appUsers, color: 'purple', icon: Users, sub: '' },
+                  { label: 'ACTIVE ADMINS', value: stats.activeAdmins, color: 'green', icon: UserPlus, sub: 'Active' }
                 ].map((stat, i) => (
-                  <div key={i} className="p-2 md:p-1">
-                    <p className="text-gray-400 text-xs md:text-sm font-medium mb-1">{stat.label}</p>
-                    <p className="text-2xl md:text-3xl font-bold">{isLoadingStats ? '-' : stat.value}</p>
+                  <div key={i} className={`bg-[#101014] border-t-2 ${
+                    stat.color === 'blue' ? 'border-t-blue-500' :
+                    stat.color === 'cyan' ? 'border-t-cyan-500' :
+                    stat.color === 'purple' ? 'border-t-purple-500' :
+                    'border-t-green-500'
+                  } rounded-xl p-6 shadow-lg relative overflow-hidden group border-x border-b border-x-white/5 border-b-white/5`}>
+                    <div className={`absolute -top-10 -right-10 w-32 h-32 ${
+                      stat.color === 'blue' ? 'bg-blue-500/5' :
+                      stat.color === 'cyan' ? 'bg-cyan-500/5' :
+                      stat.color === 'purple' ? 'bg-purple-500/5' :
+                      'bg-green-500/5'
+                    } rounded-full blur-3xl transition-all group-hover:opacity-100 opacity-50`}></div>
+                    
+                    <div className="flex items-center gap-4 mb-4 relative z-10">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                        stat.color === 'blue' ? 'bg-blue-900/20 text-blue-400 border-blue-500/20' :
+                        stat.color === 'cyan' ? 'bg-cyan-900/20 text-cyan-400 border-cyan-500/20' :
+                        stat.color === 'purple' ? 'bg-purple-900/20 text-purple-400 border-purple-500/20' :
+                        'bg-green-900/20 text-green-400 border-green-500/20'
+                      } border`}>
+                        <stat.icon size={20} />
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-[10px] font-bold tracking-widest uppercase mb-1">{stat.label}</p>
+                        <div className="flex items-baseline gap-2">
+                          <p className="text-3xl font-bold font-mono text-white leading-none">{isLoadingStats ? '-' : stat.value}</p>
+                        </div>
+                      </div>
+                    </div>
+                    {stat.sub && (
+                      <div className="flex items-center gap-1.5 mt-2 relative z-10">
+                        <div className={`w-1.5 h-1.5 rounded-full ${stat.color === 'green' || stat.color === 'blue' ? 'bg-green-500' : 'bg-transparent'}`}></div>
+                        <span className="text-[10px] text-green-400 font-medium uppercase tracking-wider">{stat.sub}</span>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
 
               {/* Middle Cards */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 {/* Databases Card */}
-                <div className="bg-[#151521] border border-white/10 rounded-2xl p-6">
-                  <div className="flex justify-between items-center mb-6">
+                <div className="bg-[#101014] border border-white/5 rounded-2xl p-6 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl transition-all group-hover:bg-blue-500/10"></div>
+                  <div className="flex justify-between items-center mb-6 relative z-10">
                     <h3 className="font-bold text-lg">Databases</h3>
-                    <button onClick={() => setActiveTab('databases')} className="text-blue-400 hover:text-blue-300 text-sm font-semibold">View all</button>
+                    <button onClick={() => setActiveTab('databases')} className="text-blue-500 hover:text-blue-400 text-sm font-semibold flex items-center gap-2 transition-colors">
+                      View all <ChevronRight size={16} />
+                    </button>
                   </div>
-                  <div className="space-y-4 max-h-64 overflow-y-auto custom-scrollbar pr-2">
+                  <div className="space-y-4 max-h-64 overflow-y-auto custom-scrollbar pr-2 relative z-10">
                     {isLoadingDbs ? <EnergyLoader size="small" /> : databases.map(db => (
-                      <div key={db} className="flex items-center justify-between border-b border-white/5 pb-4 last:border-0 last:pb-0">
-                        <div className="flex items-center gap-3">
-                          <Database size={20} className="text-gray-400" />
+                      <div key={db} className="bg-[#151521] border border-white/5 rounded-xl p-4 flex items-center justify-between transition-colors hover:bg-white/5">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-blue-900/20 border border-blue-500/20 text-blue-400 rounded-xl flex items-center justify-center">
+                            <Database size={20} />
+                          </div>
                           <div>
-                            <p className="font-bold text-sm">{db}</p>
-                            <p className="text-xs text-gray-500">Active database</p>
+                            <p className="font-bold text-sm mb-1">{db}</p>
+                            <p className="text-xs text-gray-400">Production database</p>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Table size={12} className="text-gray-500" />
+                              <span className="text-[10px] text-gray-500 font-medium">TABLES • Last sync just now</span>
+                            </div>
                           </div>
                         </div>
-                        <span className="px-3 py-1 bg-green-900/20 text-green-400 text-xs font-bold rounded-lg uppercase">online</span>
+                        <span className="px-3 py-1 bg-green-900/20 border border-green-500/20 text-green-400 text-[10px] font-bold rounded-lg uppercase tracking-wider">online</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {/* WhatsApp Card */}
-                <div className="bg-[#151521] border border-white/10 rounded-2xl p-6 flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-bold text-lg mb-6">WhatsApp session</h3>
-                    {waStatus.ready ? (
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-12 h-12 bg-green-900/30 rounded-full flex items-center justify-center">
-                          <img src="/wa.png" alt="WA" className="w-6 h-6 object-contain" />
-                        </div>
-                        <div>
-                          <p className="font-bold">{waStatus.connectedPhone || '+62 8XX-XXXX-XXXX'}</p>
-                          <p className="text-sm text-gray-400">Active since {new Date(waStatus.connectedSince).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                        </div>
+                <div className="bg-[#101014] border border-white/5 rounded-2xl p-6 relative overflow-hidden group flex flex-col justify-between">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-green-500/5 rounded-full blur-3xl transition-all group-hover:bg-green-500/10"></div>
+                  <div className="relative z-10">
+                    <h3 className="font-bold text-lg mb-6">Notification Service</h3>
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-green-900/20 border border-green-500/20 rounded-xl flex items-center justify-center shrink-0">
+                        <img src="/wa.png" alt="WA" className="w-6 h-6 object-contain" style={{ filter: waStatus.ready ? 'brightness(1)' : 'grayscale(100%) opacity(0.7)' }} />
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-4 mb-6 opacity-50">
-                        <div className="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center">
-                          <img src="/wa.png" alt="WA" className="w-6 h-6 object-contain grayscale" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-gray-400">Not connected</p>
-                          <p className="text-sm text-gray-500">Scan QR to connect</p>
-                        </div>
+                      <div>
+                        <h4 className="font-bold mb-1">WhatsApp</h4>
+                        {waStatus.ready ? (
+                          <>
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                              <span className="text-[10px] text-green-400 font-bold uppercase tracking-wider">Connected</span>
+                            </div>
+                            <p className="text-xs text-gray-400 leading-relaxed max-w-sm mb-2">
+                              System is actively sending alerts to <strong className="text-white">{waStatus.connectedPhone || '+62 8XX-XXXX-XXXX'}</strong>.
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                              <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider">Not Connected</span>
+                            </div>
+                            <p className="text-xs text-gray-400 leading-relaxed max-w-sm mb-2">
+                              Receive transformer alerts and system notifications through WhatsApp.
+                            </p>
+                          </>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                   <button 
                     onClick={waStatus.ready ? handleLogoutWA : () => setActiveTab('whatsapp')} 
-                    className={`w-full py-3 rounded-xl border font-bold transition-colors mt-4 md:mt-0 ${waStatus.ready ? 'border-red-900/50 text-red-400 hover:bg-red-900/20' : 'border-blue-900/50 text-blue-400 hover:bg-blue-900/20'}`}
+                    className={`w-full py-3 rounded-xl border font-bold transition-all mt-6 relative z-10 text-sm ${waStatus.ready ? 'border-red-900/50 text-red-400 hover:bg-red-900/20' : 'bg-[#151521] border-blue-900/50 text-blue-400 hover:bg-blue-900/20 hover:border-blue-500/50 shadow-lg shadow-blue-900/10'}`}
                   >
-                    {waStatus.ready ? 'Logout WhatsApp' : 'Connect WhatsApp'}
+                    {waStatus.ready ? 'Disconnect WhatsApp' : 'Connect WhatsApp'}
                   </button>
+                  
+                  {/* Decorative background phone wireframe */}
+                  {!waStatus.ready && (
+                    <div className="absolute -bottom-10 -right-10 opacity-30 pointer-events-none">
+                       <svg width="180" height="200" viewBox="0 0 100 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="10" y="10" width="80" height="130" rx="12" stroke="white" strokeWidth="2" strokeOpacity="0.5"/>
+                          <rect x="25" y="60" width="50" height="50" rx="4" stroke="#4ade80" strokeWidth="2"/>
+                          <path d="M40 70H60M40 85H60M40 100H50" stroke="#4ade80" strokeWidth="2" strokeLinecap="round"/>
+                       </svg>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* App Users Table */}
-              <div className="bg-[#151521] border border-white/10 rounded-2xl p-4 md:p-6">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                  <h3 className="font-bold text-lg">App users</h3>
-                  <div className="flex gap-3 w-full md:w-auto">
+              <div className="bg-[#101014] border border-white/5 rounded-2xl overflow-hidden">
+                <div className="p-6 border-b border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div>
+                    <h3 className="font-bold text-lg mb-1">App Users</h3>
+                    <p className="text-xs text-gray-500">{allUsers.length} registered users</p>
+                  </div>
+                  <div className="flex flex-wrap gap-3 w-full md:w-auto">
                     <div className="relative flex-1 md:flex-none">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                       <input 
                         type="text" 
                         placeholder="Search users..."
                         value={searchAllUser}
                         onChange={e => setSearchAllUser(e.target.value)}
-                        className="bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-sm outline-none focus:border-white/30 text-white w-full md:w-64"
+                        className="bg-[#151521] border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm outline-none focus:border-white/30 text-white w-full md:w-64 transition-colors"
                       />
                     </div>
-                    <button onClick={downloadAllUsersCSV} className="p-2 border border-white/10 rounded-lg hover:bg-white/5 transition-colors" title="Export CSV">
-                      <Download size={18} />
+                    <button onClick={downloadAllUsersCSV} className="px-4 py-2 text-sm font-semibold border border-white/10 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-2" title="Export CSV">
+                      <Download size={16} /> Export
+                    </button>
+                    <button onClick={() => setActiveTab('users')} className="px-4 py-2 text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg shadow-blue-600/20">
+                      <UserPlus size={16} /> Add User
                     </button>
                   </div>
                 </div>
-                <div className="overflow-x-auto max-h-80 overflow-y-auto custom-scrollbar">
-                  <table className="w-full text-left text-sm relative">
-                    <thead className="sticky top-0 bg-[#151521] z-10">
-                      <tr className="text-gray-400 border-b border-white/5">
-                        <th className="pb-3 font-medium uppercase text-xs tracking-wider">username</th>
-                        <th className="pb-3 font-medium uppercase text-xs tracking-wider">phone number</th>
-                        <th className="pb-3 font-medium uppercase text-xs tracking-wider">email</th>
-                        <th className="pb-3 font-medium uppercase text-xs tracking-wider">role</th>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-[#151521]/50 text-gray-400">
+                      <tr>
+                        <th className="py-4 px-6 font-medium text-xs tracking-widest uppercase">Username</th>
+                        <th className="py-4 px-6 font-medium text-xs tracking-widest uppercase">Phone Number</th>
+                        <th className="py-4 px-6 font-medium text-xs tracking-widest uppercase">Email</th>
+                        <th className="py-4 px-6 font-medium text-xs tracking-widest uppercase">Role</th>
+                        <th className="py-4 px-6 font-medium text-xs tracking-widest uppercase">Status</th>
+                        <th className="py-4 px-6 font-medium text-xs tracking-widest uppercase text-center">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                      {allUsers.filter(u => u.username.toLowerCase().includes(searchAllUser.toLowerCase())).map(u => (
-                        <tr key={u.id}>
-                          <td className="py-4 font-bold">{u.username}</td>
-                          <td className="py-4 text-gray-300">{u.nomor_telpon || '-'}</td>
-                          <td className="py-4 text-gray-300">{u.email || '-'}</td>
-                          <td className="py-4">
-                            <span className={`px-2 py-1 rounded text-xs font-bold capitalize ${u.role === 'admin' ? 'bg-blue-900/30 text-blue-400' : u.role === 'superuser' ? 'bg-purple-900/30 text-purple-400' : 'bg-gray-800 text-gray-300'}`}>
+                      {allUsers.filter(u => (u.username||'').toLowerCase().includes(searchAllUser.toLowerCase())).slice(0, 5).map(u => (
+                        <tr key={u.id} className="hover:bg-white/5 transition-colors">
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                                u.role === 'admin' ? 'bg-blue-900/30 text-blue-400' :
+                                u.role === 'superuser' ? 'bg-purple-900/30 text-purple-400' :
+                                'bg-gray-800 text-gray-300'
+                              }`}>
+                                {u.username.charAt(0).toUpperCase()}
+                              </div>
+                              <span className="font-bold">{u.username}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6 text-gray-400">{u.nomor_telpon || '-'}</td>
+                          <td className="py-4 px-6 text-gray-400">{u.email || '-'}</td>
+                          <td className="py-4 px-6">
+                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              u.role === 'admin' ? 'bg-blue-900/20 text-blue-400 border border-blue-500/20' : 
+                              u.role === 'superuser' ? 'bg-purple-900/20 text-purple-400 border border-purple-500/20' : 
+                              'bg-gray-800/50 text-gray-400 border border-gray-600/30'
+                            }`}>
                               {u.role}
                             </span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                              <span className="text-xs text-green-400 font-medium">Active</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6 text-center">
+                            <button className="p-2 text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/5" title="More Actions">
+                              <Menu size={16} className="rotate-90" />
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -1008,8 +1154,7 @@ const AdminDashboard = () => {
                      options={[
                        { value: 'all', label: 'All Roles' },
                        { value: 'user', label: 'User' },
-                       { value: 'superuser', label: 'Superuser' },
-                       { value: 'admin', label: 'Admin' }
+                       { value: 'superuser', label: 'Superuser' }
                      ]}
                      className="w-full md:w-40"
                    />
@@ -1022,6 +1167,7 @@ const AdminDashboard = () => {
                        <tr className="text-gray-400">
                          <th className="p-4 font-semibold border-b border-white/5">ID</th>
                          <th className="p-4 font-semibold border-b border-white/5">Username</th>
+                         <th className="p-4 font-semibold border-b border-white/5">Database</th>
                          <th className="p-4 font-semibold border-b border-white/5">Phone Number</th>
                          <th className="p-4 font-semibold border-b border-white/5">Email</th>
                          <th className="p-4 font-semibold border-b border-white/5">Role</th>
@@ -1039,6 +1185,7 @@ const AdminDashboard = () => {
                          <tr key={u.id} className="hover:bg-white/5">
                            <td className="p-4 text-gray-500">#{u.id}</td>
                            <td className="p-4 font-bold">{u.username}</td>
+                           <td className="p-4 text-gray-300">{u.nama_db || '-'}</td>
                            <td className="p-4 text-gray-300">{u.nomor_telpon || '-'}</td>
                            <td className="p-4 text-gray-300">{u.email || '-'}</td>
                            <td className="p-4">
@@ -1072,6 +1219,10 @@ const AdminDashboard = () => {
                            <div className="flex justify-between items-start gap-4">
                              <span className="text-gray-400 text-sm">id</span>
                              <span className="font-semibold text-sm text-right break-all">{u.id}</span>
+                           </div>
+                           <div className="flex justify-between items-start gap-4">
+                             <span className="text-gray-400 text-sm">database</span>
+                             <span className="font-semibold text-sm text-right break-all">{u.nama_db || '-'}</span>
                            </div>
                            <div className="flex justify-between items-start gap-4">
                              <span className="text-gray-400 text-sm">nomor telpon</span>
