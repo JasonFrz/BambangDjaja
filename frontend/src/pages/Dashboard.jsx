@@ -1040,69 +1040,47 @@ const Dashboard = () => {
   const handleLayoutChange = useCallback((currentLayout, allLayouts) => {
     if (skipLayoutChangeRef.current) return;
 
-    const colsMap = { lg: 12, md: 10, sm: 6, xs: 2, xxs: 1 };
-
     setGridLayouts(prev => {
+      // Don't overwrite with empty if we had items
       const prevHasItems = Object.values(prev).some(bp => bp && bp.length > 0);
       const newHasItems = Object.values(allLayouts).some(bp => bp && bp.length > 0);
       if (prevHasItems && !newHasItems) return prev;
 
-      const cleaned = { ...prev };
+      // Deep equality check — return prev if nothing actually changed
+      let hasChanges = false;
+      for (const bp of Object.keys(allLayouts)) {
+        const newBp = (allLayouts[bp] || []);
+        const oldBp = (prev[bp] || []);
+        if (newBp.length !== oldBp.length) { hasChanges = true; break; }
+        for (let i = 0; i < newBp.length; i++) {
+          const n = newBp[i], o = oldBp[i];
+          if (!o || String(n.i) !== String(o.i) || n.x !== o.x || n.y !== o.y || n.w !== o.w || n.h !== o.h) {
+            hasChanges = true; break;
+          }
+        }
+        if (hasChanges) break;
+      }
+      if (!hasChanges) return prev;
+
+      const cleaned = {};
       Object.keys(allLayouts).forEach(bp => {
-        const raw = (allLayouts[bp] || []).map(({ static: _s, ...rest }) => rest);
-        cleaned[bp] = compactLayout(raw, colsMap[bp] || 12);
+        cleaned[bp] = (allLayouts[bp] || []).map(({ static: _s, ...rest }) => rest);
       });
       return cleaned;
     });
   }, []);
 
-  // ─── Generate layout for a new panel ─────────────────────────────────
-  const findEmptyPosition = (layout, w, h, cols) => {
-    if (!layout || layout.length === 0) return { x: 0, y: 0 };
-    
-    const compacted = compactLayout(layout, cols);
-    
-    let maxY = 0;
-    compacted.forEach(item => {
-      if (item.y + item.h > maxY) maxY = item.y + item.h;
-    });
-
-    for (let y = 0; y <= maxY; y++) {
-      for (let x = 0; x <= cols - w; x++) {
-        const hasCollision = compacted.some(item => {
-          return !(
-            item.x + item.w <= x || 
-            x + w <= item.x ||      
-            item.y + item.h <= y || 
-            y + h <= item.y         
-          );
-        });
-        if (!hasCollision) return { x, y };
-      }
-    }
-    return { x: 0, y: maxY };
+  // ─── Default sizes for new panels ───────────────────────────────────
+  const getDefaultSize = (type) => {
+    const isSmall = type === 'stat' || type === 'gauge' || type === 'oilstatus';
+    return {
+      lg:  { w: isSmall ? 3 : 6,  h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 },
+      md:  { w: isSmall ? 3 : 5,  h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 },
+      sm:  { w: isSmall ? 3 : 6,  h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 },
+      xs:  { w: 2,                h: isSmall ? 4 : 5, minW: 1, minH: 2 },
+      xxs: { w: 1,                h: isSmall ? 4 : 5, minW: 1, minH: 2 },
+    };
   };
-
-  const generateLayoutForPanel = useCallback((panelId, type, currentLayouts = {}) => {
-    const isSmallPanel = type === 'stat' || type === 'gauge' || type === 'oilstatus';
-    
-    const layouts = {};
-    
-    const bps = [
-      { bp: 'lg', cols: 12, w: isSmallPanel ? 3 : 6, h: isSmallPanel ? 4 : 5, minW: 2, minH: isSmallPanel ? 2 : 4 },
-      { bp: 'md', cols: 10, w: isSmallPanel ? 3 : 5, h: isSmallPanel ? 4 : 5, minW: 2, minH: isSmallPanel ? 2 : 4 },
-      { bp: 'sm', cols: 6, w: isSmallPanel ? 3 : 6, h: isSmallPanel ? 4 : 5, minW: 2, minH: isSmallPanel ? 2 : 4 },
-      { bp: 'xs', cols: 2, w: 2, h: isSmallPanel ? 4 : 5, minW: 1, minH: 2 },
-      { bp: 'xxs', cols: 1, w: 1, h: isSmallPanel ? 4 : 5, minW: 1, minH: 2 }
-    ];
-
-    bps.forEach(({ bp, cols, w, h, minW, minH }) => {
-      const { x, y } = findEmptyPosition(currentLayouts[bp] || [], w, h, cols);
-      layouts[bp] = { i: panelId, x, y, w, h, minW, minH };
-    });
-
-    return layouts;
-  }, []);
 
   const scrollToTop = useCallback(() => {
     if (containerRef.current) {
@@ -1119,120 +1097,63 @@ const Dashboard = () => {
 
   // ─── Panel CRUD ──────────────────────────────────────────────────────
   const handleSavePanel = (panelConfig) => {
-    const isNew = !panels?.find(p => p.id === panelConfig.id);
-    const existingPanels = (panels || []).filter(p => p.id !== panelConfig.id);
+    const panelId = String(panelConfig.id);
+    const isNew = !panels?.find(p => String(p.id) === panelId);
 
     setPanels(prev => {
-      const existing = (prev || []).find(p => p.id === panelConfig.id);
+      const existing = (prev || []).find(p => String(p.id) === panelId);
       if (existing) {
-        return prev.map(p => p.id === panelConfig.id ? panelConfig : p);
+        return prev.map(p => String(p.id) === panelId ? panelConfig : p);
       }
       return [...(prev || []), panelConfig];
     });
 
-    setGridLayouts(prev => {
-      const isSmall = panelConfig.type === 'stat' || panelConfig.type === 'gauge' || panelConfig.type === 'oilstatus';
+    if (isNew) {
+      // Block onLayoutChange while we programmatically set layouts
+      skipLayoutChangeRef.current = true;
 
-      // ─── IF PERTAMA KALI ADD PANEL (0 panel sebelumnya) ───
-      // Langsung kunci di posisi paling atas kiri (x:0, y:0) tanpa cek ghost items
-      if (existingPanels.length === 0) {
-        return {
-          lg: [{ i: panelConfig.id, x: 0, y: 0, w: isSmall ? 3 : 6, h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 }],
-          md: [{ i: panelConfig.id, x: 0, y: 0, w: isSmall ? 3 : 5, h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 }],
-          sm: [{ i: panelConfig.id, x: 0, y: 0, w: isSmall ? 3 : 6, h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 }],
-          xs: [{ i: panelConfig.id, x: 0, y: 0, w: 2, h: isSmall ? 4 : 5, minW: 1, minH: 2 }],
-          xxs: [{ i: panelConfig.id, x: 0, y: 0, w: 1, h: isSmall ? 4 : 5, minW: 1, minH: 2 }]
-        };
-      }
-
-      // ─── IF PANEL KEDUA (1 panel sebelumnya) ───
-      // Tempatkan di samping panel 1 (x:6, y:0) jika muat, atau di bawahnya
-      if (existingPanels.length === 1) {
-        const firstId = existingPanels[0].id;
-        const firstLg = (prev.lg || []).find(l => l.i === firstId) || { x: 0, y: 0, w: 6, h: 5 };
-        const startX = (firstLg.x === 0 && firstLg.w <= 6) ? firstLg.w : 0;
-        const startY = startX === 0 ? (firstLg.y + firstLg.h) : firstLg.y;
-
-        const secondLayout = {
-          lg: [
-            ...((prev.lg || []).filter(l => l.i === firstId)),
-            { i: panelConfig.id, x: startX, y: startY, w: isSmall ? 3 : 6, h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 }
-          ],
-          md: [
-            ...((prev.md || []).filter(l => l.i === firstId)),
-            { i: panelConfig.id, x: startX === 0 ? 0 : 5, y: startY, w: isSmall ? 3 : 5, h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 }
-          ],
-          sm: [
-            ...((prev.sm || []).filter(l => l.i === firstId)),
-            { i: panelConfig.id, x: 0, y: (prev.sm || [])[0]?.h || 5, w: isSmall ? 3 : 6, h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 }
-          ],
-          xs: [
-            ...((prev.xs || []).filter(l => l.i === firstId)),
-            { i: panelConfig.id, x: 0, y: (prev.xs || [])[0]?.h || 5, w: 2, h: isSmall ? 4 : 5, minW: 1, minH: 2 }
-          ],
-          xxs: [
-            ...((prev.xxs || []).filter(l => l.i === firstId)),
-            { i: panelConfig.id, x: 0, y: (prev.xxs || [])[0]?.h || 5, w: 1, h: isSmall ? 4 : 5, minW: 1, minH: 2 }
-          ]
-        };
-
+      setGridLayouts(prev => {
+        const sizes = getDefaultSize(panelConfig.type);
+        const bps = ['lg', 'md', 'sm', 'xs', 'xxs'];
         const colsMap = { lg: 12, md: 10, sm: 6, xs: 2, xxs: 1 };
         const updated = {};
-        Object.keys(secondLayout).forEach(bp => {
-          updated[bp] = compactLayout(secondLayout[bp], colsMap[bp]);
+
+        bps.forEach(bp => {
+          const existingItems = (prev[bp] || []).filter(l => String(l.i) !== panelId);
+          const cols = colsMap[bp];
+          const { w, h, minW, minH } = sizes[bp];
+
+          // Find bottom of existing items
+          let maxBottom = 0;
+          existingItems.forEach(item => {
+            const bottom = item.y + item.h;
+            if (bottom > maxBottom) maxBottom = bottom;
+          });
+
+          // Place new panel at x:0, y:maxBottom (below everything)
+          updated[bp] = [
+            ...existingItems,
+            { i: panelId, x: 0, y: maxBottom, w, h, minW, minH }
+          ];
         });
+
         return updated;
-      }
-
-      // ─── UNTUK PANEL KE-3 DAN SETERUSNYA ───
-      const existingPanelIds = new Set(existingPanels.map(p => p.id));
-      existingPanelIds.add(panelConfig.id);
-
-      const bpsList = ['lg', 'md', 'sm', 'xs', 'xxs'];
-      const colsMap = { lg: 12, md: 10, sm: 6, xs: 2, xxs: 1 };
-      const cleanedPrev = {};
-      
-      bpsList.forEach(bp => {
-        cleanedPrev[bp] = (prev[bp] || []).filter(l => existingPanelIds.has(l.i));
       });
-      
-      const newL = generateLayoutForPanel(panelConfig.id, panelConfig.type, cleanedPrev);
-      
-      const updated = {};
-      bpsList.forEach(bp => {
-        const rawList = [...(cleanedPrev[bp] || [])];
-        if (!rawList.some(l => l.i === panelConfig.id)) {
-          rawList.push(newL[bp] || newL.lg);
-        }
-        updated[bp] = compactLayout(rawList, colsMap[bp]);
-      });
-      
-      return updated;
-    });
 
-    if (isNew) {
-      skipLayoutChangeRef.current = true;
       setLayoutGeneration(g => g + 1);
-      
       scrollToTop();
-      setTimeout(() => {
-        scrollToTop();
-      }, 100);
-      setTimeout(() => {
-        skipLayoutChangeRef.current = false;
-        scrollToTop();
-      }, 500);
+      setTimeout(() => { scrollToTop(); }, 100);
+      setTimeout(() => { skipLayoutChangeRef.current = false; }, 500);
     }
   };
 
   const handleDeletePanel = (panelId) => {
-    setPanels(prev => (prev || []).filter(p => p.id !== panelId));
+    const pid = String(panelId);
+    setPanels(prev => (prev || []).filter(p => String(p.id) !== pid));
     setGridLayouts(prev => {
-      const colsMap = { lg: 12, md: 10, sm: 6, xs: 2, xxs: 1 };
       const updated = {};
       Object.keys(prev).forEach(bp => {
-        const filtered = (prev[bp] || []).filter(l => l.i !== panelId);
-        updated[bp] = compactLayout(filtered, colsMap[bp] || 12);
+        updated[bp] = (prev[bp] || []).filter(l => String(l.i) !== pid);
       });
       return updated;
     });
