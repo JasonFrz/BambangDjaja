@@ -49,7 +49,9 @@ const AdminDashboard = () => {
   const { isDarkMode } = useTheme();
   const { alert } = useDialog();
 
-  const [activeTab, setActiveTab] = useState('overview'); // overview, databases, admins, users, whatsapp
+  const [activeTab, setActiveTab] = useState(() => {
+    return sessionStorage.getItem('admin_active_tab') || 'overview';
+  });
 
   // States
   const [stats, setStats] = useState({ databases: 0, tables: 0, appUsers: 0, activeAdmins: 0 });
@@ -125,6 +127,8 @@ const AdminDashboard = () => {
         fetchAllUsers();
       }
     }
+    
+    sessionStorage.setItem('admin_active_tab', activeTab);
   }, [activeTab]);
 
   useEffect(() => {

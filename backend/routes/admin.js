@@ -92,19 +92,19 @@ router.put('/databases/:oldDbName', async (req, res) => {
 
   try {
     const pool = await getAdminPool();
-    const [rows] = await pool.execute('SHOW DATABASES LIKE ?', [newDbName]);
+    const [rows] = await pool.query('SHOW DATABASES LIKE ?', [newDbName]);
     if (rows.length > 0) return res.status(400).json({ error: 'Database with new name already exists' });
 
-    await pool.execute(`CREATE DATABASE \`${newDbName}\``);
+    await pool.query(`CREATE DATABASE \`${newDbName}\``);
 
-    const [tables] = await pool.execute(`SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = ?`, [oldDbName]);
+    const [tables] = await pool.query(`SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = ?`, [oldDbName]);
     for (const table of tables) {
       const tableName = table.TABLE_NAME;
-      await pool.execute(`RENAME TABLE \`${oldDbName}\`.\`${tableName}\` TO \`${newDbName}\`.\`${tableName}\``);
+      await pool.query(`RENAME TABLE \`${oldDbName}\`.\`${tableName}\` TO \`${newDbName}\`.\`${tableName}\``);
     }
 
-    await pool.execute(`DROP DATABASE \`${oldDbName}\``);
-    await pool.execute(`UPDATE tmu_master.users SET nama_db = ? WHERE nama_db = ?`, [newDbName, oldDbName]);
+    await pool.query(`DROP DATABASE \`${oldDbName}\``);
+    await pool.query(`UPDATE tmu_master.users SET nama_db = ? WHERE nama_db = ?`, [newDbName, oldDbName]);
 
     res.json({ success: true, message: `Database successfully renamed to ${newDbName}.` });
   } catch (error) {
@@ -124,7 +124,7 @@ router.delete('/databases/:dbName', async (req, res) => {
   try {
 
     const pool = await getAdminPool();
-    await pool.execute(`DROP DATABASE \`${dbName}\``);
+    await pool.query(`DROP DATABASE \`${dbName}\``);
 
     res.json({ success: true, message: `Database ${dbName} successfully deleted.` });
   } catch (error) {
