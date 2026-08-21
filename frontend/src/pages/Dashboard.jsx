@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from "react";
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Plus, X, Settings2, Trash2, RefreshCw, GripVertical, Edit3, Send, LogOut, Download, Loader2, ChevronDown, Check, Search, Layers, RotateCcw, Thermometer, TrendingUp, BarChart3, Eye, AlertTriangle, Maximize2, Minimize2, MousePointer2, BellRing, Power, FileDown, Monitor, Crosshair, LayoutGrid, PlusSquare, Database, PieChart as PieChartIcon, FileText, Table, AlignLeft, CalendarClock, List, Rss, MessageSquareWarning, CandlestickChart, ActivitySquare, LayoutPanelLeft, BoxSelect, Calendar } from 'lucide-react';
 import { useTrendData } from "../contexts/TrendDataContext";
 import { useTemperatureData } from "../contexts/TemperatureDataContext";
 import { useDialog } from "../contexts/DialogContext";
 import EnergyLoader from "../components/EnergyLoader";
+import LoadingScreen from "../components/LoadingScreen";
 import { saveAs } from 'file-saver';
 import { useApi } from '../contexts/ApiContext';
 import { Responsive as ResponsiveGridLayout } from 'react-grid-layout';
@@ -409,7 +410,9 @@ const Dashboard = () => {
   const { apiUrl } = useApi();
   const { data: tempData, liveData: oilLiveData } = useTemperatureData();
   const { confirm, prompt, alert } = useDialog();
+  const location = useLocation();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showLoadingScreen, setShowLoadingScreen] = useState(location.state?.fromHome === true);
   const [isSyncHoverActive, setIsSyncHoverActive] = useState(() => {
     const stored = localStorage.getItem('grafana_sync_hover');
     return stored !== null ? JSON.parse(stored) : true;
@@ -611,7 +614,7 @@ const Dashboard = () => {
       observer.disconnect();
       clearTimeout(resizeTimeoutRef.current);
     };
-  }, [isLoadingTrend, panels]);
+  }, [isLoadingTrend, panels, showLoadingScreen]);
 
   // ─── API Helpers for Layouts ─────────────────────────────────────────
   const saveLayoutToApi = async (layoutId, layoutName, layoutData, isActive) => {
@@ -1266,10 +1269,23 @@ const Dashboard = () => {
   }, [gridLayouts, isEditing]);
 
   // ─── Loading Screen ───────────────
+  const isDashboardLoaded = !isLayoutsLoading && !isLoadingTrend;
+  
+  if (showLoadingScreen) {
+    return (
+      <LoadingScreen 
+        text="LOADING DASHBOARD..." 
+        subtext={sessionStorage.getItem('selectedTrafoName') || ''} 
+        isLoaded={isDashboardLoaded}
+        onFinish={() => setShowLoadingScreen(false)}
+      />
+    );
+  }
+
   if (isLayoutsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] animate-[fadeIn_0.3s_ease-out]">
-        <EnergyLoader text="Loading Dashboard..." />
+        <EnergyLoader text="Loading Layouts..." />
       </div>
     );
   }

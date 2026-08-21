@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Zap, Activity, ShieldCheck, ShieldAlert, Building2, MessageCircle } from 'lucide-react';
 import EnergyLoader from '../components/EnergyLoader';
 import { useApi } from '../contexts/ApiContext';
-import LoadingScreen from '../components/LoadingScreen';
+
 
 const TransformerSelection = () => {
   const [transformers, setTransformers] = useState([]);
@@ -13,7 +13,6 @@ const TransformerSelection = () => {
   const { apiUrl } = useApi();
   const navigate = useNavigate();
 
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [selectedTrafoName, setSelectedTrafoName] = useState("");
   
   const [waSending, setWaSending] = useState(null);
@@ -56,14 +55,11 @@ const TransformerSelection = () => {
 
   const handleMonitor = (trafo) => {
     setSelectedTrafoName(trafo.nama || trafo.name);
-    setIsTransitioning(true);
     
     sessionStorage.setItem('selectedTrafoId', trafo.id);
     window.dispatchEvent(new Event('trafoChanged'));
     
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 2500);
+    navigate('/dashboard', { state: { fromHome: true } });
   };
 
   const handleSendWA = async (trafo) => {
@@ -129,12 +125,7 @@ const TransformerSelection = () => {
       {/* Gradient fade to blend seamlessly into the bottom edge without dimming text */}
       <div className="fixed bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#f4f7fe] dark:from-[#111217] to-transparent pointer-events-none z-0"></div>
 
-      {isTransitioning && (
-        <LoadingScreen 
-          text="Loading Dashboard..." 
-          subtext={selectedTrafoName}
-        />
-      )}
+
 
       <div className="flex flex-col items-center justify-start flex-1 w-full max-w-6xl mx-auto py-6 md:py-8 px-4 relative z-10">
         

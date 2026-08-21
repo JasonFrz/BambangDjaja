@@ -1,22 +1,34 @@
 import React, { useEffect, useState } from 'react';
 import { Zap } from 'lucide-react';
 
-const LoadingScreen = ({ text = "INITIALIZING...", subtext = "" }) => {
+const LoadingScreen = ({ text = "INITIALIZING...", subtext = "", isLoaded = false, onFinish }) => {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return prev + (Math.random() * 8 + 2);
-      });
-    }, 100);
+    let interval;
+    
+    if (isLoaded) {
+      interval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            if (onFinish) setTimeout(onFinish, 300);
+            return 100;
+          }
+          return prev + 20;
+        });
+      }, 30);
+    } else {
+      interval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 90) return 90;
+          return prev + (Math.random() * 8 + 2);
+        });
+      }, 100);
+    }
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isLoaded, onFinish]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#070a13]/80 backdrop-blur-xl animate-[fadeIn_0.4s_ease-out] overflow-hidden">
