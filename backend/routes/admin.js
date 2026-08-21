@@ -224,6 +224,63 @@ router.get('/all-users', async (req, res) => {
   }
 });
 
+router.put('/app-users/:id', async (req, res) => {
+  const { id } = req.params;
+  const { username, password, role, nama_db, nomor_telpon, email } = req.body;
+
+  try {
+    const pool = await getDbConnection('tmu_master');
+    
+    if (username) {
+      const [existing] = await pool.execute('SELECT id FROM users WHERE username = ? AND id != ?', [username, id]);
+      if (existing.length > 0) return res.status(400).json({ error: 'Username already taken' });
+    }
+
+    const formatPhoneNumber = require('../utils/phoneFormatter');
+    let phone = nomor_telpon ? formatPhoneNumber(nomor_telpon) : undefined;
+    
+    let query = 'UPDATE users SET ';
+    const params = [];
+    const updates = [];
+    
+    if (username !== undefined) { updates.push('username = ?'); params.push(username); }
+    if (role !== undefined) { updates.push('ROLE = ?'); params.push(role); }
+    if (nama_db !== undefined) { updates.push('nama_db = ?'); params.push(nama_db); }
+    if (phone !== undefined) { updates.push('nomor_telpon = ?'); params.push(phone || '-'); }
+    if (email !== undefined) { updates.push('email = ?'); params.push(email); }
+    
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      updates.push('password = ?'); params.push(hashedPassword);
+    }
+
+    if (updates.length > 0) {
+      query += updates.join(', ') + " WHERE id = ? AND ROLE != 'admin'";
+      params.push(id);
+      await pool.execute(query, params);
+    }
+
+    res.json({ success: true, message: 'App user updated successfully' });
+  } catch (error) {
+    console.error('Error updating app user:', error);
+    res.status(500).json({ error: 'Failed to update app user' });
+  }
+});
+
+router.delete('/app-users/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const pool = await getDbConnection('tmu_master');
+    await pool.execute("DELETE FROM users WHERE id = ? AND ROLE != 'admin'", [id]);
+    res.json({ success: true, message: 'App user deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting app user:', error);
+    res.status(500).json({ error: 'Failed to delete app user' });
+  }
+});
+
 router.get('/stats', async (req, res) => {
   try {
     const { getAllDatabases } = require('../utils/db');

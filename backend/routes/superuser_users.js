@@ -31,7 +31,7 @@ const checkSuperuser = async (req, res, next) => {
 
 router.post('/', checkSuperuser, async (req, res) => {
   try {
-    let { username, password, nomor_telpon, email } = req.body;
+    let { username, password, nomor_telpon, email, role } = req.body;
     
     if (!username || !password || !nomor_telpon || !email) {
       return res.status(400).json({ error: 'Username, password, nomor telepon, dan email wajib diisi' });
@@ -60,9 +60,11 @@ router.post('/', checkSuperuser, async (req, res) => {
     
     const hashedPassword = await bcrypt.hash(password, 10);
     
+    const newRole = (role === 'superuser') ? 'superuser' : 'user';
+    
     await req.db.execute(
       'INSERT INTO users (nama_db, username, nomor_telpon, password, email, ROLE, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
-      [req.dbName, username, nomor_telpon, hashedPassword, email, 'user']
+      [req.dbName, username, nomor_telpon, hashedPassword, email, newRole]
     );
     
     res.status(201).json({ message: 'User created successfully!' });
@@ -74,7 +76,7 @@ router.post('/', checkSuperuser, async (req, res) => {
 
 router.get('/', checkSuperuser, async (req, res) => {
   try {
-    const query = `SELECT id, username, ROLE as role, nama_db, nomor_telpon, email, created_at FROM users WHERE ROLE = 'user' AND nama_db = ? ORDER BY id DESC`;
+    const query = `SELECT id, username, ROLE as role, nama_db, nomor_telpon, email, created_at FROM users WHERE ROLE != 'admin' AND nama_db = ? ORDER BY id DESC`;
     const [users] = await req.db.execute(query, [req.dbName]);
     res.json(users);
   } catch (error) {
@@ -85,14 +87,14 @@ router.get('/', checkSuperuser, async (req, res) => {
 
 router.put('/:id', checkSuperuser, async (req, res) => {
   const { id } = req.params;
-  let { username, password, nomor_telpon, email } = req.body;
+  let { username, password, nomor_telpon, email, role } = req.body;
   if (!nomor_telpon || !email) {
     return res.status(400).json({ error: 'Nomor telepon dan email wajib diisi' });
   }
   nomor_telpon = formatPhoneNumber(nomor_telpon);
 
   try {
-    const [existing] = await req.db.execute('SELECT id FROM users WHERE id = ? AND ROLE = ? AND nama_db = ? LIMIT 1', [id, 'user', req.dbName]);
+    const [existing] = await req.db.execute("SELECT id FROM users WHERE id = ? AND ROLE != 'admin' AND nama_db = ? LIMIT 1", [id, req.dbName]);
     if (existing.length === 0) return res.status(404).json({ error: 'User not found in your database' });
 
     let query = 'UPDATE users SET ';
@@ -116,6 +118,10 @@ router.put('/:id', checkSuperuser, async (req, res) => {
     if (username !== undefined) { updates.push('username = ?'); params.push(username); }
     if (nomor_telpon !== undefined) { updates.push('nomor_telpon = ?'); params.push(nomor_telpon); }
     if (email !== undefined) { updates.push('email = ?'); params.push(email); }
+    if (role !== undefined) { 
+      updates.push('ROLE = ?'); 
+      params.push(role === 'superuser' ? 'superuser' : 'user'); 
+    }
     if (password) {
         const hashedPassword = await bcrypt.hash(password, 10);
         updates.push('password = ?');
@@ -139,7 +145,7 @@ router.delete('/:id', checkSuperuser, async (req, res) => {
   const { id } = req.params;
 
   try {
-    const [existing] = await req.db.execute('SELECT id FROM users WHERE id = ? AND ROLE = ? AND nama_db = ? LIMIT 1', [id, 'user', req.dbName]);
+    const [existing] = await req.db.execute("SELECT id FROM users WHERE id = ? AND ROLE != 'admin' AND nama_db = ? LIMIT 1", [id, req.dbName]);
     if (existing.length === 0) return res.status(404).json({ error: 'User not found in your database' });
 
     await req.db.execute('DELETE FROM users WHERE id = ? AND nama_db = ?', [id, req.dbName]);

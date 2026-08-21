@@ -15,6 +15,7 @@ const ManageUsersSuperuser = () => {
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [role, setRole] = useState('user');
   const [showPassword, setShowPassword] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);
 
@@ -88,7 +89,8 @@ const ManageUsersSuperuser = () => {
         username, 
         password: password || undefined, 
         nomor_telpon: phone,
-        email: email
+        email: email,
+        role: role
       });
 
       const response = await fetch(url, {
@@ -118,6 +120,7 @@ const ManageUsersSuperuser = () => {
     setPassword('');
     setPhone('');
     setEmail('');
+    setRole('user');
     setShowPassword(false);
     setShowCreateForm(false);
     setEditingUserId(null);
@@ -129,6 +132,7 @@ const ManageUsersSuperuser = () => {
     setPassword(''); // leave blank unless changing
     setPhone(u.nomor_telpon || '');
     setEmail(u.email || '');
+    setRole(u.role || 'user');
     setShowPassword(false);
     setShowCreateForm(true);
     setError('');
@@ -255,6 +259,19 @@ const ManageUsersSuperuser = () => {
                 </div>
               </div>
               <div className="space-y-1.5 md:col-span-1">
+                <label className="text-sm font-semibold text-[#172b4d] dark:text-white">Role</label>
+                <div className="relative">
+                  <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className="w-full bg-[#f4f5f7] dark:bg-[#070a13] border border-[#dfe1e6] dark:border-white/10 rounded-xl py-3 px-4 text-[#172b4d] dark:text-white text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none"
+                  >
+                    <option value="user">User</option>
+                    <option value="superuser">Superuser</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1.5 md:col-span-1">
                 <label className="text-sm font-semibold text-[#172b4d] dark:text-white">Email</label>
                 <div className="relative">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
@@ -355,8 +372,8 @@ const ManageUsersSuperuser = () => {
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800/30">
-                        {u.role}
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${u.role === 'superuser' ? 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 dark:border-purple-800/30' : 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800/30'} capitalize`}>
+                        {u.role || 'user'}
                       </span>
                     </td>
                     <td className="p-4 text-sm text-[#172b4d] dark:text-gray-300">

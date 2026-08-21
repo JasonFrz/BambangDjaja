@@ -106,8 +106,8 @@ const TransformerData = () => {
       })
       .then(res => res.json())
       .then(data => {
-        if (data && data.images) {
-          setTrafoImage(data.images);
+        if (data && data.image_url) {
+          setTrafoImage(data.image_url);
         }
       })
       .catch(err => console.error('Error fetching trafo data:', err));

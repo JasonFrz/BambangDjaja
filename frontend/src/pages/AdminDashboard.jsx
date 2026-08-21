@@ -83,6 +83,13 @@ const AdminDashboard = () => {
   const [adminFormError, setAdminFormError] = useState('');
   const [isSavingAdmin, setIsSavingAdmin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  
+  const [showAppUserModal, setShowAppUserModal] = useState(false);
+  const [editingAppUser, setEditingAppUser] = useState(null);
+  const [appUserForm, setAppUserForm] = useState({ username: '', password: '', role: '', nama_db: '', nomor_telpon: '', email: '' });
+  const [appUserFormError, setAppUserFormError] = useState('');
+  const [isSavingAppUser, setIsSavingAppUser] = useState(false);
+
   const [searchAdmin, setSearchAdmin] = useState('');
   const [searchAllUser, setSearchAllUser] = useState('');
   const [searchTermTableData, setSearchTermTableData] = useState('');
@@ -308,6 +315,33 @@ const AdminDashboard = () => {
       fetchAdmins();
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to delete admin user');
+    }
+  };
+
+  const handleSaveAppUser = async (e) => {
+    e.preventDefault();
+    setAppUserFormError('');
+    setIsSavingAppUser(true);
+    try {
+      if (editingAppUser) {
+        await axiosInstance.put(`/api/admin/app-users/${editingAppUser.id}`, appUserForm);
+      }
+      setShowAppUserModal(false);
+      fetchAllUsers();
+    } catch (err) {
+      setAppUserFormError(err.response?.data?.error || 'Failed to save app user');
+    } finally {
+      setIsSavingAppUser(false);
+    }
+  };
+
+  const handleDeleteAppUser = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this app user?')) return;
+    try {
+      await axiosInstance.delete(`/api/admin/app-users/${id}`);
+      fetchAllUsers();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete app user');
     }
   };
 
@@ -1135,6 +1169,48 @@ const AdminDashboard = () => {
                    <Download size={16} /> Export CSV
                  </button>
                </div>
+               
+               {showAppUserModal && (
+                 <div className="bg-[#151521] border border-white/10 rounded-2xl p-6">
+                   <h3 className="font-bold text-lg mb-4">Edit App User</h3>
+                   <form onSubmit={handleSaveAppUser} className="space-y-4">
+                     {appUserFormError && <p className="text-red-400 text-sm">{appUserFormError}</p>}
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-semibold mb-2">Username</label>
+                          <input type="text" required value={appUserForm.username} onChange={e => setAppUserForm({...appUserForm, username: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-sm outline-none text-white" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold mb-2">Password <span className="text-gray-400 font-normal">(Leave blank to keep current)</span></label>
+                          <input type="password" value={appUserForm.password} onChange={e => setAppUserForm({...appUserForm, password: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-sm outline-none text-white" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold mb-2">Database Name</label>
+                          <input type="text" value={appUserForm.nama_db} onChange={e => setAppUserForm({...appUserForm, nama_db: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-sm outline-none text-white" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold mb-2">Role</label>
+                          <select value={appUserForm.role} onChange={e => setAppUserForm({...appUserForm, role: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-sm outline-none text-white">
+                            <option value="user">User</option>
+                            <option value="superuser">Superuser</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold mb-2">Phone Number</label>
+                          <input type="tel" value={appUserForm.nomor_telpon} onChange={e => setAppUserForm({...appUserForm, nomor_telpon: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-sm outline-none text-white" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold mb-2">Email</label>
+                          <input type="email" value={appUserForm.email} onChange={e => setAppUserForm({...appUserForm, email: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-sm outline-none text-white" />
+                        </div>
+                     </div>
+                     <div className="flex justify-end gap-3 pt-4">
+                       <button type="button" onClick={() => setShowAppUserModal(false)} className="px-4 py-2 rounded-lg font-semibold hover:bg-white/5 transition-colors">Cancel</button>
+                       <button type="submit" disabled={isSavingAppUser} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold transition-colors">Save</button>
+                     </div>
+                   </form>
+                 </div>
+               )}
 
                <div className="bg-[#151521] border border-white/10 rounded-2xl p-4 md:p-6 flex flex-col h-[70vh]">
                  <div className="flex flex-col md:flex-row gap-3 mb-6 shrink-0">
@@ -1172,6 +1248,7 @@ const AdminDashboard = () => {
                          <th className="p-4 font-semibold border-b border-white/5">Email</th>
                          <th className="p-4 font-semibold border-b border-white/5">Role</th>
                          <th className="p-4 font-semibold border-b border-white/5">Registered</th>
+                         <th className="p-4 font-semibold border-b border-white/5 text-right">Actions</th>
                        </tr>
                      </thead>
                      <tbody className="divide-y divide-white/5">
@@ -1194,6 +1271,10 @@ const AdminDashboard = () => {
                              </span>
                            </td>
                            <td className="p-4 text-gray-400">{new Date(u.created_at).toLocaleDateString()}</td>
+                           <td className="p-4 flex justify-end gap-2">
+                             <button onClick={() => { setEditingAppUser(u); setAppUserForm({ username: u.username, password: '', role: u.role, nama_db: u.nama_db || '', nomor_telpon: u.nomor_telpon || '', email: u.email || '' }); setShowAppUserModal(true); }} className="p-2 text-blue-400 hover:bg-blue-900/20 rounded-lg" title="Edit"><Edit2 size={16} /></button>
+                             <button onClick={() => handleDeleteAppUser(u.id)} className="p-2 text-red-400 hover:bg-red-900/20 rounded-lg" title="Delete"><Trash2 size={16} /></button>
+                           </td>
                          </tr>
                        ))}
                      </tbody>
@@ -1211,9 +1292,13 @@ const AdminDashboard = () => {
                        <div key={u.id} className="bg-[#1a1a24] border border-white/5 rounded-2xl p-5 shadow-sm">
                          <div className="flex justify-between items-center mb-4 pb-4 border-b border-white/5">
                            <span className="font-bold text-lg">{u.username}</span>
-                           <span className={`px-3 py-1 rounded-full text-xs font-bold capitalize ${u.role === 'admin' ? 'bg-blue-900/30 border border-blue-500/30 text-blue-400' : u.role === 'superuser' ? 'bg-purple-900/30 border border-purple-500/30 text-purple-400' : 'bg-gray-800 border border-gray-600/30 text-gray-300'}`}>
-                             {u.role}
-                           </span>
+                           <div className="flex items-center gap-2">
+                             <span className={`px-3 py-1 rounded-full text-xs font-bold capitalize ${u.role === 'admin' ? 'bg-blue-900/30 border border-blue-500/30 text-blue-400' : u.role === 'superuser' ? 'bg-purple-900/30 border border-purple-500/30 text-purple-400' : 'bg-gray-800 border border-gray-600/30 text-gray-300'}`}>
+                               {u.role}
+                             </span>
+                             <button onClick={() => { setEditingAppUser(u); setAppUserForm({ username: u.username, password: '', role: u.role, nama_db: u.nama_db || '', nomor_telpon: u.nomor_telpon || '', email: u.email || '' }); setShowAppUserModal(true); }} className="p-1.5 text-blue-400 hover:bg-blue-900/20 rounded-lg" title="Edit"><Edit2 size={14} /></button>
+                             <button onClick={() => handleDeleteAppUser(u.id)} className="p-1.5 text-red-400 hover:bg-red-900/20 rounded-lg" title="Delete"><Trash2 size={14} /></button>
+                           </div>
                          </div>
                          <div className="space-y-3">
                            <div className="flex justify-between items-start gap-4">

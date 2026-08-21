@@ -188,8 +188,8 @@ const TransformerSelection = () => {
                   {/* Top Area */}
                   <div className="relative h-[200px] w-full bg-gray-50/50 dark:bg-white/[0.02] border-b border-[#dfe1e6]/50 dark:border-white/5 flex items-center justify-center shrink-0 overflow-hidden">
                     
-                    {trafo.images ? (
-                      <img src={trafo.images} alt={trafo.nama || trafo.name} className="w-full h-full object-cover" />
+                    {trafo.image_url ? (
+                      <img src={trafo.image_url} alt={trafo.nama || trafo.name} className="w-full h-full object-cover" />
                     ) : (
                       <svg viewBox="0 0 100 40" className={`w-32 h-auto transition-colors duration-500 ${isOnline ? 'text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'text-[#5e6c84] dark:text-gray-600 opacity-40'}`}>
                         <path 

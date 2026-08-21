@@ -33,7 +33,7 @@ const ensureTrafoTable = async (db, dbName) => {
       id INT AUTO_INCREMENT PRIMARY KEY,
       nama VARCHAR(100),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      images VARCHAR(255)
+      image_url VARCHAR(255)
     )
   `);
   checkedTrafoTables.add(dbName);
@@ -64,10 +64,10 @@ router.post('/:id/image', upload.single('image'), async (req, res) => {
     
     if (existing.length === 0) {
       // Jika trafo belum ada di db, insert dulu (meskipun dengan id string sementara, kalau skema int auto increment akan bermasalah. Kita asumsikan id sudah ada dari db.)
-      await db.execute('INSERT INTO trafo (id, nama, images) VALUES (?, ?, ?)', [trafoId, 'Trafo ' + trafoId, imageUrl]);
+      await db.execute('INSERT INTO trafo (id, nama, image_url) VALUES (?, ?, ?)', [trafoId, 'Trafo ' + trafoId, imageUrl]);
     } else {
       // Update image
-      await db.execute('UPDATE trafo SET images = ? WHERE id = ?', [imageUrl, trafoId]);
+      await db.execute('UPDATE trafo SET image_url = ? WHERE id = ?', [imageUrl, trafoId]);
     }
 
     res.json({ success: true, imageUrl, message: 'Image uploaded to Cloudinary successfully' });
@@ -87,7 +87,7 @@ router.delete('/:id/image', async (req, res) => {
     const db = await getDbConnection(dbName);
     await ensureTrafoTable(db, dbName);
     
-    await db.execute('UPDATE trafo SET images = NULL WHERE id = ?', [trafoId]);
+    await db.execute('UPDATE trafo SET image_url = NULL WHERE id = ?', [trafoId]);
     res.json({ success: true, message: 'Image reset successfully' });
   } catch (error) {
     console.error('Error resetting trafo image:', error);
