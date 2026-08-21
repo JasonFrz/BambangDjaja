@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Thermometer, Settings, Zap, Wifi, WifiOff, Camera, Upload, X, Check, Image as ImageIcon } from "lucide-react";
 import Cropper from 'react-easy-crop';
+import Webcam from 'react-webcam';
 
 const getCroppedImg = async (imageSrc, pixelCrop) => {
   const image = new Image();
@@ -69,6 +70,21 @@ const TransformerData = () => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+
+  // Webcam states
+  const [cameraMode, setCameraMode] = useState(false);
+  const webcamRef = useRef(null);
+
+  const captureWebcam = useCallback(() => {
+    if (webcamRef.current) {
+      const imageSrc = webcamRef.current.getScreenshot();
+      if (imageSrc) {
+        setPreviewUrl(imageSrc);
+        setSelectedImage(new File([], 'webcam.jpg')); // Dummy file to pass truthy check
+        setCameraMode(false);
+      }
+    }
+  }, [webcamRef]);
 
   const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
     setCroppedAreaPixels(croppedAreaPixels);
@@ -290,6 +306,7 @@ const TransformerData = () => {
                   setShowUploadModal(false);
                   setSelectedImage(null);
                   setPreviewUrl(null);
+                  setCameraMode(false);
                   setUploadError('');
                   setUploadSuccess('');
                 }} 
@@ -301,16 +318,52 @@ const TransformerData = () => {
             
             <div className="p-6 flex flex-col gap-6">
               
-              {!previewUrl ? (
-                <div 
-                  className="w-full h-48 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl flex flex-col items-center justify-center bg-gray-50 dark:bg-white/5 cursor-pointer hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload size={32} className="text-gray-400 mb-2" />
-                  <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">Tap to browse or take a photo</p>
-                  <p className="text-xs text-gray-400 mt-1">Supports Gallery & Camera</p>
+              {!previewUrl && !cameraMode && (
+                <div className="flex gap-4">
+                  <div 
+                    className="flex-1 h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl flex flex-col items-center justify-center bg-gray-50 dark:bg-white/5 cursor-pointer hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors p-2 text-center"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload size={28} className="text-gray-400 mb-2" />
+                    <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">Browse Gallery</p>
+                  </div>
+                  <div 
+                    className="flex-1 h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl flex flex-col items-center justify-center bg-gray-50 dark:bg-white/5 cursor-pointer hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors p-2 text-center"
+                    onClick={() => setCameraMode(true)}
+                  >
+                    <Camera size={28} className="text-gray-400 mb-2" />
+                    <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">Open Camera</p>
+                  </div>
                 </div>
-              ) : (
+              )}
+
+              {!previewUrl && cameraMode && (
+                <div className="flex flex-col gap-3">
+                  <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black flex items-center justify-center">
+                    <Webcam
+                      audio={false}
+                      ref={webcamRef}
+                      screenshotFormat="image/jpeg"
+                      videoConstraints={{ facingMode: "environment" }}
+                      className="w-full h-full object-cover"
+                    />
+                    <button 
+                      onClick={() => setCameraMode(false)}
+                      className="absolute top-2 right-2 p-1.5 bg-gray-800/60 text-white rounded-full hover:bg-red-500"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <button 
+                    onClick={captureWebcam}
+                    className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+                  >
+                    <Camera size={20} /> Capture Photo
+                  </button>
+                </div>
+              )}
+
+              {previewUrl && (
                 <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 bg-black/10">
                   <Cropper
                     image={previewUrl}
