@@ -95,6 +95,26 @@ router.delete('/:id/image', async (req, res) => {
   }
 });
 
+router.put('/:id/name', async (req, res) => {
+  const trafoId = req.params.id;
+  const dbName = req.headers['x-db-name'];
+  const { name } = req.body;
+  
+  if (!dbName) return res.status(400).json({ error: 'Missing X-DB-Name header' });
+  if (!name || name.trim() === '') return res.status(400).json({ error: 'Name is required' });
+
+  try {
+    const db = await getDbConnection(dbName);
+    await ensureTrafoTable(db, dbName);
+    
+    await db.execute('UPDATE trafo SET nama = ? WHERE id = ?', [name.trim(), trafoId]);
+    res.json({ success: true, message: 'Name updated successfully' });
+  } catch (error) {
+    console.error('Error updating trafo name:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   const trafoId = req.params.id;
   const dbName = req.headers['x-db-name'];
@@ -126,7 +146,27 @@ router.get('/', async (req, res) => {
     await ensureTrafoTable(db, dbName);
     
     const [rows] = await db.execute('SELECT * FROM trafo ORDER BY id ASC');
-    res.json(rows);
+
+    let isOnline = false;
+    try {
+      const [readings] = await db.execute('SELECT timestamp FROM electrical_readings ORDER BY timestamp DESC LIMIT 1');
+      if (readings.length > 0) {
+        const lastDataTime = new Date(readings[0].timestamp).getTime();
+        const now = Date.now();
+        if (now - lastDataTime < 20000) { // 20s threshold to match dashboard's 15s + network buffer
+          isOnline = true;
+        }
+      }
+    } catch (err) {
+      // Ignore error if table doesn't exist yet
+    }
+
+    const transformers = rows.map(t => ({
+      ...t,
+      status: isOnline ? 'Online' : 'Offline'
+    }));
+
+    res.json(transformers);
   } catch (error) {
     console.error('Error fetching all trafos:', error);
     res.status(500).json({ error: 'Server error' });

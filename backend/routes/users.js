@@ -59,13 +59,15 @@ router.post('/', checkAdmin, async (req, res) => {
 
 router.get('/', checkAdmin, async (req, res) => {
   try {
-    const [users] = await req.db.execute('SELECT id, username, ROLE as role, nama_db, nomor_telpon, email, created_at FROM users WHERE nama_db = ? ORDER BY id DESC', [req.dbName]);
+    const [users] = await req.db.execute('SELECT u.id, u.username, u.ROLE as role, u.nama_db, u.nomor_telpon, u.email, u.created_at, c.nama_perusahaan, c.company_code FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.nama_db = ? ORDER BY u.id DESC', [req.dbName]);
     
     const usersWithDetails = users.map(u => ({
       id: u.id,
       username: u.username,
       role: u.role,
       db_name: u.nama_db || '-',
+      company_name: u.nama_perusahaan || u.nama_db || '-',
+      company_code: u.company_code || '',
       nomor_telpon: u.nomor_telpon || '',
       email: u.email || '',
       created_at: u.created_at

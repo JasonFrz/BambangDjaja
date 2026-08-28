@@ -260,7 +260,12 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
             }
           }
         } catch (dbErr) {
-          console.error(`Error polling DB ${dbName} for ${roomName}:`, dbErr.message);
+          if (dbErr.code === 'ER_BAD_DB_ERROR') {
+            console.warn(`Database ${dbName} does not exist. Removing room ${roomName} from active subscriptions to stop polling.`);
+            activeSubscriptions.delete(roomName);
+          } else {
+            console.error(`Error polling DB ${dbName} for ${roomName}:`, dbErr.message);
+          }
         }
       }
     } catch (error) {

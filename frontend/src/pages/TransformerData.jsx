@@ -71,6 +71,11 @@ const TransformerData = () => {
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
+  // Rename states
+  const [trafoName, setTrafoName] = useState('Transformer Data');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editNameValue, setEditNameValue] = useState('');
+
   // Webcam states
   const [cameraMode, setCameraMode] = useState(false);
   const webcamRef = useRef(null);
@@ -109,10 +114,45 @@ const TransformerData = () => {
         if (data && data.image_url) {
           setTrafoImage(data.image_url);
         }
+        if (data && data.nama) {
+          setTrafoName(data.nama);
+        } else if (data && data.name) {
+          setTrafoName(data.name);
+        }
       })
       .catch(err => console.error('Error fetching trafo data:', err));
     }
   }, [trafoId, companyNameHeader, apiUrl, token]);
+
+  const handleRename = async () => {
+    if (!editNameValue || editNameValue.trim() === '' || editNameValue.trim() === trafoName) {
+      setIsEditingName(false);
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${apiUrl}/api/trafo/${trafoId}/name`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-DB-Name': companyNameHeader,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: editNameValue.trim() })
+      });
+      if (response.ok) {
+        setTrafoName(editNameValue.trim());
+        // Trigger event so other components (like navbar/sidebar) can know the name changed
+        window.dispatchEvent(new Event('trafoChanged'));
+      } else {
+        alert('Failed to rename trafo');
+      }
+    } catch (err) {
+      console.error('Failed to rename trafo', err);
+    } finally {
+      setIsEditingName(false);
+    }
+  };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -208,9 +248,27 @@ const TransformerData = () => {
       {/* Header Section */}
       <div className="mb-2 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1 transition-colors flex items-center gap-4">
-            Transformer Data
-          </h2>
+          <div className="flex items-center gap-3">
+            {isEditingName ? (
+              <input 
+                type="text" 
+                value={editNameValue} 
+                onChange={(e) => setEditNameValue(e.target.value)}
+                onBlur={handleRename}
+                onKeyDown={(e) => { if(e.key === 'Enter') handleRename(); if(e.key === 'Escape') setIsEditingName(false); }}
+                autoFocus
+                className="text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1 bg-transparent border-b-2 border-blue-500 outline-none min-w-[300px]"
+              />
+            ) : (
+              <h2 
+                className="text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1 transition-colors flex items-center gap-4 cursor-text"
+                onDoubleClick={() => { setIsEditingName(true); setEditNameValue(trafoName); }}
+                title="Double click to rename"
+              >
+                {trafoName}
+              </h2>
+            )}
+          </div>
           <p className="text-[#5e6c84] dark:text-[#94a3b8] text-[0.95rem] transition-colors mt-1">
             Transformer Location & Specifications
           </p>

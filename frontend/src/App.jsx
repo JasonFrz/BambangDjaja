@@ -4,6 +4,7 @@ import MainLayout from './layouts/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import AddUser from './pages/AddUser';
+
 import ManageUsersSuperuser from './pages/ManageUsersSuperuser';
 import Profile from './pages/Profile';
 import TransformerData from './pages/TransformerData';
@@ -51,6 +52,7 @@ function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/admin" element={<AdminDashboard />} />
+
               <Route path="/" element={
                 <ProtectedRoute>
                   <DataProvidersWrapper>

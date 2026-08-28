@@ -18,6 +18,10 @@ const TransformerSelection = () => {
   const [waSending, setWaSending] = useState(null);
   const [waStatus, setWaStatus] = useState({});
 
+  // Inline rename states
+  const [editingTrafoId, setEditingTrafoId] = useState(null);
+  const [editNameValue, setEditNameValue] = useState("");
+
 
 
   useEffect(() => {
@@ -60,6 +64,38 @@ const TransformerSelection = () => {
     window.dispatchEvent(new Event('trafoChanged'));
     
     navigate('/dashboard', { state: { fromHome: true } });
+  };
+
+  const handleRenameSubmit = async (trafoId, currentName) => {
+    if (!editNameValue || editNameValue.trim() === '' || editNameValue.trim() === currentName) {
+      setEditingTrafoId(null);
+      return;
+    }
+    
+    try {
+      const companyName = sessionStorage.getItem('company_name');
+      const token = sessionStorage.getItem('token');
+      
+      const response = await fetch(`${apiUrl}/api/trafo/${trafoId}/name`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-DB-Name': companyName,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: editNameValue.trim() })
+      });
+      
+      if (response.ok) {
+        setTransformers(prev => prev.map(t => t.id === trafoId ? { ...t, nama: editNameValue.trim() } : t));
+      } else {
+        alert('Gagal mengubah nama trafo');
+      }
+    } catch (err) {
+      console.error('Failed to rename trafo', err);
+    } finally {
+      setEditingTrafoId(null);
+    }
   };
 
   const handleSendWA = async (trafo) => {
@@ -214,9 +250,29 @@ const TransformerSelection = () => {
 
                   {/* Body Area */}
                   <div className="p-5 flex flex-col flex-1 z-10">
-                    <h3 className="font-bold text-[15px] text-[#172b4d] dark:text-white leading-tight truncate">
-                      {trafo.nama || trafo.name}
-                    </h3>
+                    {editingTrafoId === trafo.id ? (
+                      <input 
+                        type="text" 
+                        value={editNameValue}
+                        onChange={(e) => setEditNameValue(e.target.value)}
+                        onBlur={() => handleRenameSubmit(trafo.id, trafo.nama || trafo.name)}
+                        onKeyDown={(e) => { 
+                          if(e.key === 'Enter') handleRenameSubmit(trafo.id, trafo.nama || trafo.name); 
+                          if(e.key === 'Escape') setEditingTrafoId(null); 
+                        }}
+                        autoFocus
+                        className="font-bold text-[15px] text-[#172b4d] dark:text-white leading-tight bg-transparent border-b-2 border-blue-500 outline-none w-full"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <h3 
+                        className="font-bold text-[15px] text-[#172b4d] dark:text-white leading-tight truncate cursor-text"
+                        onDoubleClick={(e) => { e.stopPropagation(); setEditingTrafoId(trafo.id); setEditNameValue(trafo.nama || trafo.name); }}
+                        title="Double click to rename"
+                      >
+                        {trafo.nama || trafo.name}
+                      </h3>
+                    )}
                     <p className="font-mono text-[11px] text-[#5e6c84] dark:text-gray-500 mt-1 truncate">
                       {trafo.id}
                     </p>

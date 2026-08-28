@@ -23,7 +23,7 @@ router.post('/login', loginLimiter, async (req, res) => {
   try {
     const masterDb = await getDbConnection('tmu_master');
     
-    const query = 'SELECT * FROM users WHERE username = ? OR email = ? OR nomor_telpon = ? LIMIT 1';
+    const query = 'SELECT u.*, c.nama_perusahaan, c.company_code FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.username = ? OR u.email = ? OR u.nomor_telpon = ? LIMIT 1';
     const queryParams = [username, username, username];
     
     const [rows] = await masterDb.execute(query, queryParams);
@@ -71,7 +71,8 @@ router.post('/login', loginLimiter, async (req, res) => {
       token,
       username: user.username, 
       role: userRole, 
-      company_name: foundDbName,
+      company_name: user.nama_perusahaan || foundDbName,
+      company_code: user.company_code || '',
       phone: user.nomor_telpon || '' 
     });
   } catch (error) {
@@ -79,6 +80,4 @@ router.post('/login', loginLimiter, async (req, res) => {
     res.status(500).json({ error: 'Server error: ' + error.message });
   }
 });
-
 module.exports = router;
-
