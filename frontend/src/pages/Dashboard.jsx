@@ -28,50 +28,62 @@ const DEFAULT_PANELS = [
   { id: 'p_uline_chart', title: 'Line Voltage Overview', type: 'linechart', metrics: ['lineCA', 'lineBC', 'lineAB'], chartType: 'line' },
   { id: 'p_freq_gauge', title: 'Frequency', type: 'gauge', metrics: ['frequency'], chartType: 'line' },
   { id: 'p_phasea_candle', title: 'Phase A Voltage', type: 'candlestick', metrics: ['phaseA'], chartType: 'line' },
-  { id: 'p_mixed_metrics', title: 'Mixed Metrics Overview', type: 'heatmap', metrics: ['oil_temperature', 'oil_pressure', 'energyActiveTotal', 'energyReactiveTotal', 'efficiency'], chartType: 'line' }
+  { id: 'p_mixed_metrics', title: 'Mixed Metrics Overview', type: 'heatmap', metrics: ['oil_temperature', 'oil_pressure', 'energyActiveTotal', 'energyReactiveTotal', 'efficiency'], chartType: 'line' },
+  { id: 'p_1tgstpm5z', title: 'Oil Overview', type: 'piechart', metrics: ['oil_temperature', 'oil_pressure'], chartType: 'area', colorScheme: 'spectral' },
+  { id: 'p_od6kgu6a0', title: 'Phase Voltage Overview', type: 'barchart', metrics: ['phaseA', 'phaseB', 'lineAB'], chartType: 'area', colorScheme: 'spectral' }
 ];
 
 const DEFAULT_GRID_LAYOUTS = {
   lg: [
-    { i: 'p_uphase_chart', x: 0, y: 0, w: 5, h: 4, minW: 3, minH: 3 },
-    { i: 'p_oilstatus', x: 5, y: 0, w: 2, h: 4, minW: 2, minH: 2 },
-    { i: 'p_uline_chart', x: 7, y: 0, w: 5, h: 4, minW: 3, minH: 3 },
-    { i: 'p_freq_gauge', x: 0, y: 4, w: 2, h: 4, minW: 2, minH: 3 },
-    { i: 'p_phasea_candle', x: 2, y: 4, w: 6, h: 4, minW: 3, minH: 3 },
-    { i: 'p_mixed_metrics', x: 8, y: 4, w: 4, h: 4, minW: 3, minH: 3 },
+    { i: 'p_uphase_chart', x: 0, y: 0, w: 5, h: 4, minW: 3, minH: 3, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_oilstatus', x: 5, y: 0, w: 2, h: 4, minW: 2, minH: 2, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_uline_chart', x: 7, y: 0, w: 5, h: 4, minW: 3, minH: 3, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_freq_gauge', x: 0, y: 4, w: 2, h: 4, minW: 2, minH: 3, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_phasea_candle', x: 2, y: 4, w: 6, h: 4, minW: 3, minH: 3, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_mixed_metrics', x: 8, y: 4, w: 4, h: 4, minW: 3, minH: 3, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_1tgstpm5z', x: 0, y: 8, w: 4, h: 5, minW: 2, minH: 4, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_od6kgu6a0', x: 4, y: 8, w: 8, h: 5, minW: 2, minH: 4, moved: false, isDraggable: true, isResizable: true }
   ],
   md: [
-    { i: 'p_uphase_chart', x: 0, y: 0, w: 4, h: 4, minW: 3, minH: 3 },
-    { i: 'p_oilstatus', x: 4, y: 0, w: 2, h: 4, minW: 2, minH: 2 },
-    { i: 'p_uline_chart', x: 6, y: 0, w: 4, h: 4, minW: 3, minH: 3 },
-    { i: 'p_freq_gauge', x: 0, y: 4, w: 2, h: 4, minW: 2, minH: 3 },
-    { i: 'p_phasea_candle', x: 2, y: 4, w: 4, h: 4, minW: 3, minH: 3 },
-    { i: 'p_mixed_metrics', x: 6, y: 4, w: 4, h: 4, minW: 3, minH: 3 },
+    { i: 'p_uphase_chart', x: 0, y: 0, w: 4, h: 4, minW: 3, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_oilstatus', x: 4, y: 0, w: 2, h: 4, minW: 2, minH: 2, isDraggable: true, isResizable: true },
+    { i: 'p_uline_chart', x: 6, y: 0, w: 4, h: 4, minW: 3, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_freq_gauge', x: 0, y: 4, w: 2, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_phasea_candle', x: 2, y: 4, w: 4, h: 4, minW: 3, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_mixed_metrics', x: 6, y: 4, w: 4, h: 4, minW: 3, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_1tgstpm5z', x: 0, y: 8, w: 5, h: 5, minW: 2, minH: 4, isDraggable: true, isResizable: true },
+    { i: 'p_od6kgu6a0', x: 0, y: 13, w: 5, h: 5, minW: 2, minH: 4, isDraggable: true, isResizable: true }
   ],
   sm: [
-    { i: 'p_uphase_chart', x: 0, y: 0, w: 6, h: 4, minW: 2, minH: 3 },
-    { i: 'p_oilstatus', x: 0, y: 4, w: 6, h: 3, minW: 2, minH: 2 },
-    { i: 'p_uline_chart', x: 0, y: 7, w: 6, h: 4, minW: 2, minH: 3 },
-    { i: 'p_freq_gauge', x: 0, y: 11, w: 6, h: 4, minW: 2, minH: 3 },
-    { i: 'p_phasea_candle', x: 0, y: 15, w: 6, h: 4, minW: 2, minH: 3 },
-    { i: 'p_mixed_metrics', x: 0, y: 19, w: 6, h: 4, minW: 2, minH: 3 },
+    { i: 'p_uphase_chart', x: 0, y: 0, w: 6, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_oilstatus', x: 0, y: 4, w: 6, h: 3, minW: 2, minH: 2, isDraggable: true, isResizable: true },
+    { i: 'p_uline_chart', x: 0, y: 7, w: 6, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_freq_gauge', x: 0, y: 11, w: 6, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_phasea_candle', x: 0, y: 15, w: 6, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_mixed_metrics', x: 0, y: 19, w: 6, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_1tgstpm5z', x: 0, y: 23, w: 6, h: 5, minW: 2, minH: 4, isDraggable: true, isResizable: true },
+    { i: 'p_od6kgu6a0', x: 0, y: 28, w: 6, h: 5, minW: 2, minH: 4, isDraggable: true, isResizable: true }
   ],
   xs: [
-    { i: 'p_uphase_chart', x: 0, y: 0, w: 2, h: 4, minW: 1, minH: 3 },
-    { i: 'p_oilstatus', x: 0, y: 4, w: 2, h: 3, minW: 1, minH: 2 },
-    { i: 'p_uline_chart', x: 0, y: 7, w: 2, h: 4, minW: 1, minH: 3 },
-    { i: 'p_freq_gauge', x: 0, y: 11, w: 2, h: 4, minW: 1, minH: 3 },
-    { i: 'p_phasea_candle', x: 0, y: 15, w: 2, h: 4, minW: 1, minH: 3 },
-    { i: 'p_mixed_metrics', x: 0, y: 19, w: 2, h: 4, minW: 1, minH: 3 },
+    { i: 'p_uphase_chart', x: 0, y: 0, w: 2, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_oilstatus', x: 0, y: 4, w: 2, h: 3, minW: 1, minH: 2, isDraggable: true, isResizable: true },
+    { i: 'p_uline_chart', x: 0, y: 7, w: 2, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_freq_gauge', x: 0, y: 11, w: 2, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_phasea_candle', x: 0, y: 15, w: 2, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_mixed_metrics', x: 0, y: 19, w: 2, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_1tgstpm5z', x: 0, y: 23, w: 2, h: 5, minW: 1, minH: 2, isDraggable: true, isResizable: true },
+    { i: 'p_od6kgu6a0', x: 0, y: 28, w: 2, h: 5, minW: 1, minH: 2, isDraggable: true, isResizable: true }
   ],
   xxs: [
-    { i: 'p_uphase_chart', x: 0, y: 0, w: 1, h: 4, minW: 1, minH: 3 },
-    { i: 'p_oilstatus', x: 0, y: 4, w: 1, h: 3, minW: 1, minH: 2 },
-    { i: 'p_uline_chart', x: 0, y: 7, w: 1, h: 4, minW: 1, minH: 3 },
-    { i: 'p_freq_gauge', x: 0, y: 11, w: 1, h: 4, minW: 1, minH: 3 },
-    { i: 'p_phasea_candle', x: 0, y: 15, w: 1, h: 4, minW: 1, minH: 3 },
-    { i: 'p_mixed_metrics', x: 0, y: 19, w: 1, h: 4, minW: 1, minH: 3 },
-  ],
+    { i: 'p_uphase_chart', x: 0, y: 0, w: 1, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_oilstatus', x: 0, y: 4, w: 1, h: 3, minW: 1, minH: 2, isDraggable: true, isResizable: true },
+    { i: 'p_uline_chart', x: 0, y: 7, w: 1, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_freq_gauge', x: 0, y: 11, w: 1, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_phasea_candle', x: 0, y: 15, w: 1, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_mixed_metrics', x: 0, y: 19, w: 1, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_1tgstpm5z', x: 0, y: 23, w: 1, h: 5, minW: 1, minH: 2, isDraggable: true, isResizable: true },
+    { i: 'p_od6kgu6a0', x: 0, y: 28, w: 1, h: 5, minW: 1, minH: 2, isDraggable: true, isResizable: true }
+  ]
 };
 
 // ─── Storage Keys ────────────────────────────────────────────────────────────
@@ -286,6 +298,9 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
                 <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <Database size={16} className="text-blue-500" /> Metrics Selection 
                   <span className="text-xs bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">{selectedMetrics.length} selected</span>
+                  {panelType === 'barchart' && selectedMetrics.length > 3 && (
+                    <span className="text-[11px] font-bold text-red-500 animate-pulse bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Max 3 metrics (Bar Chart)</span>
+                  )}
                 </h4>
                 <div className="relative w-full md:w-64">
                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
@@ -307,10 +322,12 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                         {filtered.map(m => {
                           const sel = selectedMetrics.includes(m.key);
+                          const isDisabled = panelType === 'barchart' && selectedMetrics.length >= 3 && !sel;
+                          
                           return (
-                            <label key={m.key} className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${sel ? 'bg-blue-50 border-blue-300 dark:bg-blue-500/10 dark:border-blue-500/30 shadow-sm' : 'bg-white border-gray-200 dark:bg-[#151521] dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/50'}`}>
+                            <label key={m.key} className={`flex items-start gap-2.5 p-2.5 rounded-xl border transition-all ${isDisabled ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-200 dark:bg-[#111] dark:border-white/5' : 'cursor-pointer'} ${!isDisabled && sel ? 'bg-blue-50 border-blue-300 dark:bg-blue-500/10 dark:border-blue-500/30 shadow-sm' : ''} ${!isDisabled && !sel ? 'bg-white border-gray-200 dark:bg-[#151521] dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/50' : ''}`}>
                               <div className="relative flex items-center justify-center mt-0.5">
-                                <input type="checkbox" checked={sel} onChange={() => toggleMetric(m.key)} className="peer appearance-none w-4 h-4 border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-black/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer" />
+                                <input type="checkbox" disabled={isDisabled} checked={sel} onChange={() => !isDisabled && toggleMetric(m.key)} className={`peer appearance-none w-4 h-4 border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-black/20 checked:bg-blue-500 checked:border-blue-500 transition-all ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`} />
                                 <Check size={12} className="absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none" />
                               </div>
                               <div className="flex flex-col flex-1 min-w-0">
@@ -847,7 +864,7 @@ const Dashboard = () => {
       setProfilesState(prev => {
         const newProfiles = { ...prev.profiles };
         if (isDefault) {
-          newProfiles['default'] = { id: 'default', name: 'Main Dashboard', panels: null, layouts: { lg: [], md: [], sm: [], xs: [], xxs: [] }, isEditable: false };
+          newProfiles['default'] = { id: 'default', name: 'Main Dashboard', panels: [...DEFAULT_PANELS], layouts: JSON.parse(JSON.stringify(DEFAULT_GRID_LAYOUTS)), isEditable: false };
         } else {
           delete newProfiles[deletedId];
         }

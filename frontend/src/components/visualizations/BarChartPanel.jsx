@@ -5,7 +5,8 @@ import { METRICS } from "../../config/metrics";
 import { ChartTooltip } from "./TimeSeriesPanel";
 
 export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
-  const metrics = panel.metrics || [];
+  const metrics = (panel.metrics || []).slice(0, 3);
+  const displayData = chartData ? chartData.slice(-20) : [];
   return (
     <div className="h-full w-full flex flex-col">
       <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
@@ -14,7 +15,7 @@ export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverAct
       </div>
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined}>
+          <BarChart data={displayData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-gray-200 dark:text-white/10" />
             <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={{ stroke: '#e2e8f033' }} minTickGap={50} />
             <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={50} />

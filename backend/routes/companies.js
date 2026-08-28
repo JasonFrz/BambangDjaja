@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
     const pool = await getDbConnection('tmu_master');
     await ensureCompaniesSchema(pool);
     
-    const [companies] = await pool.execute('SELECT id, nama_perusahaan, company_code, nama_db FROM companies ORDER BY id DESC');
+    const [companies] = await pool.execute('SELECT id, nama_perusahaan, nama_db FROM companies ORDER BY id DESC');
     
     // For each company, we try to fetch its trafos if nama_db is present
     for (let company of companies) {
@@ -49,28 +49,58 @@ router.get('/', async (req, res) => {
 });
 
 
-// PUT update company
-router.put('/:id', async (req, res) => {
-  const { id } = req.params;
-  const { nama_perusahaan, company_code, nama_db } = req.body;
+// POST create company
+router.post('/', async (req, res) => {
+  const { nama_perusahaan, nama_db } = req.body;
   
-  if (!nama_perusahaan || !company_code) {
-    return res.status(400).json({ error: 'Company Name and Code are required' });
+  if (!nama_perusahaan) {
+    return res.status(400).json({ error: 'Company Name is required' });
   }
   
   try {
     const pool = await getDbConnection('tmu_master');
     await ensureCompaniesSchema(pool);
     
-    // Check if company_code is used by another company
-    const [existing] = await pool.execute('SELECT id FROM companies WHERE company_code = ? AND id != ?', [company_code, id]);
+    // Check if nama_perusahaan is used by another company
+    const [existing] = await pool.execute('SELECT id FROM companies WHERE nama_perusahaan = ?', [nama_perusahaan]);
     if (existing.length > 0) {
-      return res.status(400).json({ error: 'Company Code already used by another company' });
+      return res.status(400).json({ error: 'Company Name already used by another company' });
     }
     
     await pool.execute(
-      'UPDATE companies SET nama_perusahaan = ?, company_code = ?, nama_db = ? WHERE id = ?',
-      [nama_perusahaan, company_code, nama_db || null, id]
+      'INSERT INTO companies (nama_perusahaan, nama_db) VALUES (?, ?)',
+      [nama_perusahaan, nama_db || null]
+    );
+    
+    res.json({ success: true, message: 'Company created successfully' });
+  } catch (error) {
+    console.error('Error creating company:', error);
+    res.status(500).json({ error: 'Failed to create company' });
+  }
+});
+
+// PUT update company
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { nama_perusahaan, nama_db } = req.body;
+  
+  if (!nama_perusahaan) {
+    return res.status(400).json({ error: 'Company Name is required' });
+  }
+  
+  try {
+    const pool = await getDbConnection('tmu_master');
+    await ensureCompaniesSchema(pool);
+    
+    // Check if nama_perusahaan is used by another company
+    const [existing] = await pool.execute('SELECT id FROM companies WHERE nama_perusahaan = ? AND id != ?', [nama_perusahaan, id]);
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'Company Name already used by another company' });
+    }
+    
+    await pool.execute(
+      'UPDATE companies SET nama_perusahaan = ?, nama_db = ? WHERE id = ?',
+      [nama_perusahaan, nama_db || null, id]
     );
     
     res.json({ success: true, message: 'Company updated successfully' });

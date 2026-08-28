@@ -242,7 +242,7 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
                 powerActiveTotal: parseFloat(latestElectrical.power_active_total_kw) || 0,
                 powerReactiveTotal: parseFloat(latestElectrical.power_reactive_total_kvar) || 0,
                 powerApparentTotal: parseFloat(latestElectrical.power_apparent_total_kva) || 0,
-                pfTotal: parseFloat(latestElectrical.pf_total) || 0,
+                pfTotal: Number((parseFloat(latestElectrical.pf_total) || 0).toFixed(2)),
                 powerActiveA: parseFloat(latestElectrical.power_active_a) || 0,
                 powerActiveB: parseFloat(latestElectrical.power_active_b) || 0,
                 powerActiveC: parseFloat(latestElectrical.power_active_c) || 0,

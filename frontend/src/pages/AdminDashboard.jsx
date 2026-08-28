@@ -230,7 +230,7 @@ const AdminDashboard = () => {
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
-  const [companyForm, setCompanyForm] = useState({ nama_perusahaan: '', company_code: '', nama_db: '' });
+  const [companyForm, setCompanyForm] = useState({ nama_perusahaan: '', nama_db: '' });
   const [companyFormError, setCompanyFormError] = useState('');
   const [isSavingCompany, setIsSavingCompany] = useState(false);
   const [searchCompany, setSearchCompany] = useState('');
@@ -1419,10 +1419,7 @@ const AdminDashboard = () => {
                         <label className="block text-sm font-semibold mb-2">Company Name</label>
                         <input type="text" required value={companyForm.nama_perusahaan} onChange={e => setCompanyForm({ ...companyForm, nama_perusahaan: e.target.value })} className="w-full bg-gray-100 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2 text-sm outline-none text-[#172b4d] dark:text-white" />
                       </div>
-                      <div>
-                        <label className="block text-sm font-semibold mb-2">Company Code</label>
-                        <input type="text" required value={companyForm.company_code} onChange={e => setCompanyForm({ ...companyForm, company_code: e.target.value })} className="w-full bg-gray-100 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2 text-sm outline-none text-[#172b4d] dark:text-white" />
-                      </div>
+
                       <div>
                         <label className="block text-sm font-semibold mb-2">Database Name (Optional)</label>
                         <input type="text" value={companyForm.nama_db} onChange={e => setCompanyForm({ ...companyForm, nama_db: e.target.value })} className="w-full bg-gray-100 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2 text-sm outline-none text-[#172b4d] dark:text-white" />
@@ -1454,7 +1451,6 @@ const AdminDashboard = () => {
                         <th className="py-4 px-6 font-semibold border-b border-gray-200 dark:border-white/5">ID</th>
                         <th className="py-4 px-6 font-semibold border-b border-gray-200 dark:border-white/5">Company Name</th>
                         <th className="py-4 px-6 font-semibold border-b border-gray-200 dark:border-white/5">DB Name</th>
-                        <th className="py-4 px-6 font-semibold border-b border-gray-200 dark:border-white/5">Company Code</th>
                         <th className="py-4 px-6 font-semibold border-b border-gray-200 dark:border-white/5">Trafo List</th>
                         <th className="py-4 px-6 font-semibold border-b border-gray-200 dark:border-white/5 text-right">Actions</th>
                       </tr>
@@ -1462,19 +1458,16 @@ const AdminDashboard = () => {
                     <tbody className="divide-y divide-white/5">
                       {isLoadingCompanies ? (
                         <tr><td colSpan="6" className="p-8 text-center"><EnergyLoader size="small" /></td></tr>
-                      ) : companies.filter(c => (c.nama_perusahaan || '').toLowerCase().includes(searchCompany.toLowerCase()) || (c.company_code || '').toLowerCase().includes(searchCompany.toLowerCase())).map(c => (
+                      ) : companies.filter(c => (c.nama_perusahaan || '').toLowerCase().includes(searchCompany.toLowerCase())).map(c => (
                         <tr key={c.id} className="hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <td className="py-4 px-6 text-gray-500">#{c.id}</td>
                           <td className="py-4 px-6 font-bold">{c.nama_perusahaan}</td>
                           <td className="py-4 px-6 text-gray-500 dark:text-gray-400">{c.nama_db || '-'}</td>
-                          <td className="py-4 px-6">
-                            <span className="px-2 py-1 rounded text-xs font-bold bg-blue-900/20 text-blue-400 border border-blue-500/20">{c.company_code}</span>
-                          </td>
                           <td className="py-4 px-6 text-gray-500 dark:text-gray-400">
                             <TrafoListPopover company={c} trafos={c.trafos} />
                           </td>
                           <td className="py-4 px-6 flex justify-end gap-2">
-                            <button onClick={() => { setEditingCompany(c); setCompanyForm({ nama_perusahaan: c.nama_perusahaan, company_code: c.company_code, nama_db: c.nama_db || '' }); setShowCompanyModal(true); }} className="p-2 text-blue-400 hover:bg-blue-900/20 rounded-lg" title="Edit"><Edit2 size={16} /></button>
+                            <button onClick={() => { setEditingCompany(c); setCompanyForm({ nama_perusahaan: c.nama_perusahaan, nama_db: c.nama_db || '' }); setShowCompanyModal(true); }} className="p-2 text-blue-400 hover:bg-blue-900/20 rounded-lg" title="Edit"><Edit2 size={16} /></button>
                             <button onClick={() => handleDeleteCompany(c.id)} className="p-2 text-red-400 hover:bg-red-900/20 rounded-lg" title="Delete"><Trash2 size={16} /></button>
                           </td>
                         </tr>

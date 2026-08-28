@@ -82,7 +82,7 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHover
               <XAxis dataKey="time" xAxisId="body" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={{ stroke: '#e2e8f033' }} tickLine={false} minTickGap={30} />
               <XAxis dataKey="time" xAxisId="wick" hide />
               <YAxis yAxisId="price" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => v.toFixed(1)} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#94a3b820' }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#94a3b820' }} isAnimationActive={false} />
               
               <Bar xAxisId="wick" yAxisId="price" dataKey="wick" barSize={2} isAnimationActive={false}>
                  {data.map((entry, index) => <Cell key={`wick-${index}`} fill={entry.color} />)}

@@ -12,11 +12,21 @@ export const HistogramPanel = memo(({ panel, chartData, isEditing, isSyncHoverAc
     if (!chartData || chartData.length === 0 || !metric) return [];
     
     // Extract values
-    const values = chartData.map(d => d[metric]).filter(v => v !== undefined && v !== null);
+    let values = chartData.map(d => d[metric]).filter(v => v !== undefined && v !== null);
+    
+    // Cap efficiency to 100% max
+    if (metric === 'efficiency') {
+      values = values.map(v => Math.min(v, 100));
+    }
     if (values.length === 0) return [];
     
-    const min = Math.min(...values);
-    const max = Math.max(...values);
+    let min = Math.min(...values);
+    let max = Math.max(...values);
+
+    if (metric === 'efficiency') {
+      min = 0;
+      max = 100;
+    }
     
     // Create buckets
     const binSize = (max - min) / buckets || 1;
@@ -54,7 +64,7 @@ export const HistogramPanel = memo(({ panel, chartData, isEditing, isSyncHoverAc
               <XAxis dataKey="bin" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} minTickGap={20} />
               <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip contentStyle={{ backgroundColor: '#1a1a2e', borderColor: '#ffffff20', color: 'white', borderRadius: '8px' }} itemStyle={{ color: '#6366f1' }} cursor={{fill: 'rgba(255,255,255,0.05)'}} />
-              <Bar dataKey="count" fill="#6366f1" radius={[2, 2, 0, 0]} name="Frequency" />
+              <Bar dataKey="count" fill="#6366f1" radius={[2, 2, 0, 0]} name="Count" />
             </BarChart>
           </ResponsiveContainer>
         )}

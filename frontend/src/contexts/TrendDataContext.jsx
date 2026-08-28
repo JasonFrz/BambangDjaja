@@ -55,7 +55,7 @@ export const TrendDataProvider = ({ children }) => {
           powerActiveTotal: parseFloat(reading.power_active_total) || 0,
           powerReactiveTotal: parseFloat(reading.power_reactive_total) || 0,
           powerApparentTotal: parseFloat(reading.power_apparent_total) || 0,
-          pfTotal: parseFloat(reading.pf_total) || 0,
+          pfTotal: Number((parseFloat(reading.pf_total) || 0).toFixed(2)),
           powerActiveA: parseFloat(reading.power_active_a) || 0,
           powerActiveB: parseFloat(reading.power_active_b) || 0,
           powerActiveC: parseFloat(reading.power_active_c) || 0,

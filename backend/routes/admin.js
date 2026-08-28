@@ -137,7 +137,7 @@ router.delete('/databases/:dbName', async (req, res) => {
 router.get('/users', async (req, res) => {
   try {
     const pool = await getDbConnection('tmu_master');
-    const [users] = await pool.execute("SELECT u.id, u.username, u.ROLE as role, u.email, u.nomor_telpon, u.created_at, c.nama_perusahaan, c.company_code FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.role = 'admin' ORDER BY u.created_at DESC");
+    const [users] = await pool.execute("SELECT u.id, u.username, u.ROLE as role, u.email, u.nomor_telpon, u.created_at, c.nama_perusahaan FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.role = 'admin' ORDER BY u.created_at DESC");
     res.json({ success: true, data: users });
   } catch (error) {
     console.error('Error fetching admin users:', error);
@@ -216,7 +216,7 @@ router.delete('/users/:id', async (req, res) => {
 router.get('/all-users', async (req, res) => {
   try {
     const pool = await getDbConnection('tmu_master');
-    const [users] = await pool.execute("SELECT u.id, u.username, u.ROLE as role, u.email, u.nomor_telpon as nomor_telpon, u.nama_db, u.created_at, c.nama_perusahaan, c.company_code FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.ROLE != 'admin' ORDER BY u.created_at DESC");
+    const [users] = await pool.execute("SELECT u.id, u.username, u.ROLE as role, u.email, u.nomor_telpon as nomor_telpon, u.nama_db, u.created_at, c.nama_perusahaan FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.ROLE != 'admin' ORDER BY u.created_at DESC");
     const formattedUsers = users.map(u => ({
       ...u,
       company_name: u.nama_perusahaan || u.nama_db || '-'

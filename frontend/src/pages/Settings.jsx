@@ -51,7 +51,12 @@ const Settings = () => {
         headers: { 'X-DB-Name': dbName }
       });
       if (res.data.success) {
-        setThresholds(res.data.data);
+        const formattedData = res.data.data.map(t => ({
+          ...t,
+          min_value: t.min_value !== null ? Number(parseFloat(t.min_value).toFixed(4)) : null,
+          max_value: t.max_value !== null ? Number(parseFloat(t.max_value).toFixed(4)) : null,
+        }));
+        setThresholds(formattedData);
       }
     } catch (err) {
       console.error('Failed to fetch thresholds:', err);

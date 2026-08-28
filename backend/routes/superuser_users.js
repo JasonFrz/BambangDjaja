@@ -76,7 +76,7 @@ router.post('/', checkSuperuser, async (req, res) => {
 
 router.get('/', checkSuperuser, async (req, res) => {
   try {
-    const query = "SELECT u.id, u.username, u.ROLE as role, u.nama_db, u.nomor_telpon, u.email, u.created_at, c.nama_perusahaan, c.company_code FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.ROLE != 'admin' AND u.nama_db = ? ORDER BY u.id DESC";
+    const query = "SELECT u.id, u.username, u.ROLE as role, u.nama_db, u.nomor_telpon, u.email, u.created_at, c.nama_perusahaan FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.ROLE != 'admin' AND u.nama_db = ? ORDER BY u.id DESC";
     const [users] = await req.db.execute(query, [req.dbName]);
     const formattedUsers = users.map(u => ({
       ...u,
@@ -119,7 +119,13 @@ router.put('/:id', checkSuperuser, async (req, res) => {
       }
     }
 
-    if (username !== undefined) { updates.push('username = ?'); params.push(username); }
+    if (username !== undefined) { 
+      const [existingUser] = await req.db.execute('SELECT id FROM users WHERE username = ? AND id != ? LIMIT 1', [username, id]);
+      if (existingUser.length > 0) {
+        return res.status(400).json({ error: 'Username is already taken' });
+      }
+      updates.push('username = ?'); params.push(username); 
+    }
     if (nomor_telpon !== undefined) { updates.push('nomor_telpon = ?'); params.push(nomor_telpon); }
     if (email !== undefined) { updates.push('email = ?'); params.push(email); }
     if (role !== undefined) { 
