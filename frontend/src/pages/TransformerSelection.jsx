@@ -274,7 +274,7 @@ const TransformerSelection = () => {
                       </h3>
                     )}
                     <p className="font-mono text-[11px] text-[#5e6c84] dark:text-gray-500 mt-1 truncate">
-                      {trafo.id}
+                      {trafo.device_serial || '-'}
                     </p>
 
                     {/* Specs Badges */}

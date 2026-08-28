@@ -25,7 +25,6 @@ const upload = multer({ storage: storage });
 
 const checkedTrafoTables = new Set();
 
-// Fungsi utilitas untuk memastikan tabel ada (mengikuti skema dari user)
 const ensureTrafoTable = async (db, dbName) => {
   if (checkedTrafoTables.has(dbName)) return;
   await db.execute(`
@@ -33,9 +32,20 @@ const ensureTrafoTable = async (db, dbName) => {
       id INT AUTO_INCREMENT PRIMARY KEY,
       nama VARCHAR(100),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      image_url VARCHAR(255)
+      image_url VARCHAR(255),
+      device_serial VARCHAR(100)
     )
   `);
+  
+  try {
+    // Add column to existing tables
+    await db.execute('ALTER TABLE trafo ADD COLUMN device_serial VARCHAR(100)');
+  } catch (err) {
+    if (err.code !== 'ER_DUP_FIELDNAME') {
+      console.error('Error adding device_serial column:', err);
+    }
+  }
+  
   checkedTrafoTables.add(dbName);
 };
 

@@ -6,6 +6,10 @@ const emailClient = require('./emailClient');
 const waCooldowns = new Map(); 
 const COOLDOWN_MS = 15 * 60 * 1000; // 15 Menit Jeda
 
+const schemaCache = new Map(); 
+const thresholdCache = new Map(); 
+const CACHE_TTL_MS = 60 * 1000; // 1 menit cache TTL
+
 const METRIC_MAPPING = {
   v_phase: { type: 'global', keys: ['phase_a_v', 'phase_b_v', 'phase_c_v'], name: 'Phase Voltage' },
   avg_phase_v: { type: 'specific', key: 'avg_phase_v', name: 'Average Phase Voltage' },
@@ -48,8 +52,13 @@ async function sendAlertMessage(db, dbName, trafoId, alert) {
       let emails = [];
 
       // Dapatkan user dari tenant DB
-      const [columnsInfo] = await db.execute("SHOW COLUMNS FROM users");
-      const columns = columnsInfo.map(c => c.Field);
+      const cacheKeyTenant = `${dbName}_users_cols`;
+      let columns = schemaCache.get(cacheKeyTenant);
+      if (!columns) {
+        const [columnsInfo] = await db.execute("SHOW COLUMNS FROM users");
+        columns = columnsInfo.map(c => c.Field);
+        schemaCache.set(cacheKeyTenant, columns);
+      }
       
       let selectCols = [];
       if (columns.includes('nomor_telpon')) selectCols.push('nomor_telpon');
@@ -65,8 +74,13 @@ async function sendAlertMessage(db, dbName, trafoId, alert) {
       
       // Dapatkan superuser dari tmu_master
       const masterDb = await getDbConnection('tmu_master');
-      const [masterColumnsInfo] = await masterDb.execute("SHOW COLUMNS FROM users");
-      const masterColumns = masterColumnsInfo.map(c => c.Field);
+      const cacheKeyMaster = `tmu_master_users_cols`;
+      let masterColumns = schemaCache.get(cacheKeyMaster);
+      if (!masterColumns) {
+        const [masterColumnsInfo] = await masterDb.execute("SHOW COLUMNS FROM users");
+        masterColumns = masterColumnsInfo.map(c => c.Field);
+        schemaCache.set(cacheKeyMaster, masterColumns);
+      }
       
       let masterSelectCols = [];
       if (masterColumns.includes('nomor_telpon')) masterSelectCols.push('nomor_telpon');
@@ -103,10 +117,26 @@ async function checkAndAlert(db, dbName, trafoId, data, isOil = false) {
   if (!whatsappClient.waReady) return;
 
   try {
-      const [tables] = await db.execute("SHOW TABLES LIKE 'threshold_settings'");
-      if (tables.length === 0) return;
+      const cacheKey = `${dbName}_thresholds`;
+      let cached = thresholdCache.get(cacheKey);
+      let thresholds = null;
 
-      const [thresholds] = await db.execute("SELECT * FROM threshold_settings WHERE is_active = 1");
+      if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+        thresholds = cached.data;
+      } else {
+        const [tables] = await db.execute("SHOW TABLES LIKE 'threshold_settings'");
+        if (tables.length === 0) {
+          thresholdCache.set(cacheKey, { timestamp: Date.now(), data: [] });
+          return;
+        }
+
+        const [dbThresholds] = await db.execute("SELECT * FROM threshold_settings WHERE is_active = 1");
+        thresholds = dbThresholds;
+        thresholdCache.set(cacheKey, { timestamp: Date.now(), data: thresholds });
+      }
+
+      if (!thresholds || thresholds.length === 0) return;
+
       let alerts = [];
 
       thresholds.forEach(t => {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
   Database, Table, Trash2, AlertTriangle, ChevronRight, ChevronLeft,
@@ -77,6 +78,117 @@ const BottomNavItem = ({ icon: Icon, label, id, isCustomIcon, activeTab, setActi
     <span className="text-[10px] font-semibold">{label}</span>
   </button>
 );
+
+const TrafoListPopover = ({ company, trafos }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const popoverRef = React.useRef(null);
+  const buttonRef = React.useRef(null);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target) && buttonRef.current && !buttonRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    
+    const handleScroll = () => {
+      if (isOpen) {
+        // Optional: you can close it on scroll or recalculate position
+        // setIsOpen(false); 
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      window.addEventListener('scroll', handleScroll, true);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [isOpen]);
+
+  const togglePopover = (e) => {
+    e.stopPropagation();
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      // Align left edge of popover with left edge of button
+      let left = rect.left;
+      
+      // Ensure it doesn't overflow right edge of screen (w-64 is 256px)
+      if (left + 256 > window.innerWidth) {
+        left = window.innerWidth - 276; // 256px width + 20px padding
+      }
+      
+      setCoords({
+        top: rect.bottom + 8,
+        left: left,
+      });
+    }
+    setIsOpen(!isOpen);
+  };
+
+  if (!trafos || trafos.length === 0) {
+    return <span className="text-gray-500 text-xs italic">No trafos</span>;
+  }
+
+  const filteredTrafos = trafos.filter(t => t.nama.toLowerCase().includes(search.toLowerCase()));
+
+  const popoverContent = isOpen ? createPortal(
+    <div 
+      ref={popoverRef}
+      className="fixed z-[9999] w-64 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] rounded-xl shadow-xl p-4 animate-[fadeIn_0.2s_ease-out]"
+      style={{ top: coords.top, left: coords.left }}
+    >
+      <div className="flex justify-between items-center mb-4">
+        <h4 className="text-[#172b4d] dark:text-white text-sm font-bold">Trafos: {company.nama_perusahaan}</h4>
+        <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-[#172b4d] dark:hover:text-white transition-colors">
+          <X size={16} />
+        </button>
+      </div>
+      
+      <div className="relative mb-3">
+        <input
+          type="text"
+          placeholder="Search trafo..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full bg-gray-50 dark:bg-[#202020] border border-gray-200 dark:border-[#303030] text-sm text-[#172b4d] dark:text-white rounded-lg px-3 py-2 outline-none focus:border-blue-500/50 transition-colors"
+        />
+      </div>
+
+      <div className="max-h-[140px] overflow-y-auto custom-scrollbar pr-1 space-y-1">
+        {filteredTrafos.length > 0 ? (
+          filteredTrafos.map(t => (
+            <div key={t.id} className="flex items-center gap-3 py-2 border-b border-gray-100 dark:border-[#2a2a2a] last:border-0">
+              <RefreshCw size={14} className="text-gray-500 dark:text-gray-400" />
+              <span className="text-sm text-[#172b4d] dark:text-gray-200 font-medium">{t.nama}</span>
+            </div>
+          ))
+        ) : (
+          <p className="text-xs text-gray-500 py-2 text-center">No trafos found</p>
+        )}
+      </div>
+    </div>,
+    document.body
+  ) : null;
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        onClick={togglePopover}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-[#0a1930] dark:text-[#60a5fa] dark:hover:bg-[#0f2444] transition-colors border border-blue-200 dark:border-[#1e3a8a]/30"
+      >
+        <RefreshCw size={14} />
+        <span className="text-sm font-bold">{trafos.length} trafo</span>
+      </button>
+      {popoverContent}
+    </>
+  );
+};
 
 const AdminDashboard = () => {
   const { apiUrl } = useApi();
@@ -1359,18 +1471,7 @@ const AdminDashboard = () => {
                             <span className="px-2 py-1 rounded text-xs font-bold bg-blue-900/20 text-blue-400 border border-blue-500/20">{c.company_code}</span>
                           </td>
                           <td className="py-4 px-6 text-gray-500 dark:text-gray-400">
-                            {c.trafos && c.trafos.length > 0 ? (
-                              <div className="flex gap-1 flex-wrap max-w-xs">
-                                {c.trafos.slice(0, 3).map(t => (
-                                  <span key={t.id} className="px-2 py-0.5 rounded-full text-[10px] bg-gray-200 dark:bg-gray-700 text-[#172b4d] dark:text-gray-300 border border-gray-300 dark:border-gray-600">{t.nama}</span>
-                                ))}
-                                {c.trafos.length > 3 && (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-gray-200 dark:bg-gray-700 text-[#172b4d] dark:text-gray-300 border border-gray-300 dark:border-gray-600">+{c.trafos.length - 3}</span>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-gray-500 text-xs italic">No trafos</span>
-                            )}
+                            <TrafoListPopover company={c} trafos={c.trafos} />
                           </td>
                           <td className="py-4 px-6 flex justify-end gap-2">
                             <button onClick={() => { setEditingCompany(c); setCompanyForm({ nama_perusahaan: c.nama_perusahaan, company_code: c.company_code, nama_db: c.nama_db || '' }); setShowCompanyModal(true); }} className="p-2 text-blue-400 hover:bg-blue-900/20 rounded-lg" title="Edit"><Edit2 size={16} /></button>
