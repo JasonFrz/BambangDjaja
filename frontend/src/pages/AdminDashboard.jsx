@@ -234,6 +234,15 @@ const AdminDashboard = () => {
   const [companyFormError, setCompanyFormError] = useState('');
   const [isSavingCompany, setIsSavingCompany] = useState(false);
   const [searchCompany, setSearchCompany] = useState('');
+  const [sortCompany, setSortCompany] = useState({ key: 'nama_perusahaan', direction: 'asc' });
+
+  const handleSortCompany = (key) => {
+    if (sortCompany.key === key) {
+      setSortCompany({ key, direction: sortCompany.direction === 'asc' ? 'desc' : 'asc' });
+    } else {
+      setSortCompany({ key, direction: 'asc' });
+    }
+  };
 
   // Modal & Form States
   const [showAdminModal, setShowAdminModal] = useState(false);
@@ -1448,19 +1457,42 @@ const AdminDashboard = () => {
                   <table className="w-full text-left text-sm whitespace-nowrap relative">
                     <thead className="bg-[#f4f7fe] dark:bg-[#1a1a24] text-gray-500 dark:text-gray-400 sticky top-0 z-10">
                       <tr>
-                        <th className="py-4 px-6 font-semibold border-b border-gray-200 dark:border-white/5">ID</th>
-                        <th className="py-4 px-6 font-semibold border-b border-gray-200 dark:border-white/5">Company Name</th>
+                        <th className="py-4 px-6 font-semibold border-b border-gray-200 dark:border-white/5">No.</th>
+                        <th className="py-4 px-6 font-semibold border-b border-gray-200 dark:border-white/5 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors" onClick={() => handleSortCompany('nama_perusahaan')}>
+                          <div className="flex items-center gap-2">
+                            Company Name
+                            {sortCompany.key === 'nama_perusahaan' && <ChevronDown size={14} className={`transition-transform ${sortCompany.direction === 'asc' ? 'rotate-180' : ''}`} />}
+                          </div>
+                        </th>
                         <th className="py-4 px-6 font-semibold border-b border-gray-200 dark:border-white/5">DB Name</th>
-                        <th className="py-4 px-6 font-semibold border-b border-gray-200 dark:border-white/5">Trafo List</th>
+                        <th className="py-4 px-6 font-semibold border-b border-gray-200 dark:border-white/5 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors" onClick={() => handleSortCompany('trafo')}>
+                          <div className="flex items-center gap-2">
+                            Trafo List
+                            {sortCompany.key === 'trafo' && <ChevronDown size={14} className={`transition-transform ${sortCompany.direction === 'asc' ? 'rotate-180' : ''}`} />}
+                          </div>
+                        </th>
                         <th className="py-4 px-6 font-semibold border-b border-gray-200 dark:border-white/5 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
                       {isLoadingCompanies ? (
                         <tr><td colSpan="6" className="p-8 text-center"><EnergyLoader size="small" /></td></tr>
-                      ) : companies.filter(c => (c.nama_perusahaan || '').toLowerCase().includes(searchCompany.toLowerCase())).map(c => (
+                      ) : companies.filter(c => (c.nama_perusahaan || '').toLowerCase().includes(searchCompany.toLowerCase())).sort((a, b) => {
+                        if (sortCompany.key === 'nama_perusahaan') {
+                          const valA = (a.nama_perusahaan || '').toLowerCase();
+                          const valB = (b.nama_perusahaan || '').toLowerCase();
+                          if (valA < valB) return sortCompany.direction === 'asc' ? -1 : 1;
+                          if (valA > valB) return sortCompany.direction === 'asc' ? 1 : -1;
+                          return 0;
+                        } else if (sortCompany.key === 'trafo') {
+                          const valA = a.trafos?.length || 0;
+                          const valB = b.trafos?.length || 0;
+                          return sortCompany.direction === 'asc' ? valA - valB : valB - valA;
+                        }
+                        return 0;
+                      }).map((c, index) => (
                         <tr key={c.id} className="hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                          <td className="py-4 px-6 text-gray-500">#{c.id}</td>
+                          <td className="py-4 px-6 text-gray-500">{index + 1}</td>
                           <td className="py-4 px-6 font-bold">{c.nama_perusahaan}</td>
                           <td className="py-4 px-6 text-gray-500 dark:text-gray-400">{c.nama_db || '-'}</td>
                           <td className="py-4 px-6 text-gray-500 dark:text-gray-400">

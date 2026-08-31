@@ -23,8 +23,8 @@ router.get('/', async (req, res) => {
     
     const [companies] = await pool.execute('SELECT id, nama_perusahaan, nama_db FROM companies ORDER BY id DESC');
     
-    // For each company, we try to fetch its trafos if nama_db is present
-    for (let company of companies) {
+    // Fetch trafos for all companies in parallel
+    await Promise.all(companies.map(async (company) => {
       company.trafos = [];
       if (company.nama_db) {
         try {
@@ -39,7 +39,7 @@ router.get('/', async (req, res) => {
           console.error(`Could not fetch trafos for db ${company.nama_db}:`, dbErr.message);
         }
       }
-    }
+    }));
     
     res.json({ success: true, data: companies });
   } catch (error) {
