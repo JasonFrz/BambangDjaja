@@ -491,7 +491,7 @@ const Dashboard = () => {
       try {
         const username = sessionStorage.getItem('username');
         const role = sessionStorage.getItem('role');
-        const companyName = sessionStorage.getItem('company_name');
+        const companyName = sessionStorage.getItem('db_name');
         
         if (!username || !companyName) {
           setIsLayoutsLoading(false);
@@ -638,7 +638,7 @@ const Dashboard = () => {
     try {
       const username = sessionStorage.getItem('username');
       const role = sessionStorage.getItem('role');
-      const companyName = sessionStorage.getItem('company_name');
+      const companyName = sessionStorage.getItem('db_name');
       if (!username || !companyName) return;
 
       const trafoId = sessionStorage.getItem('selectedTrafoId');
@@ -670,7 +670,7 @@ const Dashboard = () => {
     try {
       const username = sessionStorage.getItem('username');
       const role = sessionStorage.getItem('role');
-      const companyName = sessionStorage.getItem('company_name');
+      const companyName = sessionStorage.getItem('db_name');
       if (!username || !companyName) return;
 
       const trafoId = sessionStorage.getItem('selectedTrafoId');
@@ -695,7 +695,7 @@ const Dashboard = () => {
     try {
       const username = sessionStorage.getItem('username');
       const role = sessionStorage.getItem('role');
-      const companyName = sessionStorage.getItem('company_name');
+      const companyName = sessionStorage.getItem('db_name');
       if (!username || !companyName) return;
 
       const trafoId = sessionStorage.getItem('selectedTrafoId');
@@ -718,7 +718,7 @@ const Dashboard = () => {
     try {
       const username = sessionStorage.getItem('username');
       const role = sessionStorage.getItem('role');
-      const companyName = sessionStorage.getItem('company_name');
+      const companyName = sessionStorage.getItem('db_name');
       if (!username || !companyName) return;
 
       const trafoId = sessionStorage.getItem('selectedTrafoId');
@@ -1242,7 +1242,7 @@ const Dashboard = () => {
   // ─── WA notification (preserved) ─────────────────────────────────────
   const handleTestWA = async () => {
     try {
-      const dbName = sessionStorage.getItem('company_name');
+      const dbName = sessionStorage.getItem('db_name');
       const username = sessionStorage.getItem('username');
       if (!dbName || !username) return;
       await axios.post(`${apiUrl}/api/whatsapp/test`, { frequency: latestData.frequency || 0, dbName, username });

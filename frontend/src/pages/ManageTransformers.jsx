@@ -26,7 +26,7 @@ const ManageTransformers = () => {
   const navigate = useNavigate();
   const currentRole = sessionStorage.getItem('role');
   const usernameHeader = sessionStorage.getItem('username');
-  const companyNameHeader = sessionStorage.getItem('company_name');
+  const companyNameHeader = sessionStorage.getItem('db_name');
   useEffect(() => {
     if (currentRole !== 'admin') {
       navigate('/');

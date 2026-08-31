@@ -29,7 +29,7 @@ const TransformerSelection = () => {
       try {
         const username = sessionStorage.getItem('username');
         const role = sessionStorage.getItem('role');
-        const companyName = sessionStorage.getItem('company_name');
+        const companyName = sessionStorage.getItem('db_name');
         const token = sessionStorage.getItem('token');
 
         const response = await fetch(`${apiUrl}/api/trafo`, {
@@ -73,7 +73,7 @@ const TransformerSelection = () => {
     }
     
     try {
-      const companyName = sessionStorage.getItem('company_name');
+      const companyName = sessionStorage.getItem('db_name');
       const token = sessionStorage.getItem('token');
       
       const response = await fetch(`${apiUrl}/api/trafo/${trafoId}/name`, {
@@ -105,7 +105,7 @@ const TransformerSelection = () => {
     try {
       const username = sessionStorage.getItem('username');
       const role = sessionStorage.getItem('role');
-      const companyName = sessionStorage.getItem('company_name');
+      const companyName = sessionStorage.getItem('db_name');
 
       const response = await fetch(`${apiUrl}/api/whatsapp/send`, {
         method: 'POST',
@@ -143,7 +143,7 @@ const TransformerSelection = () => {
     }
   };
 
-  const companyName = sessionStorage.getItem('company_name');
+  const companyName = sessionStorage.getItem('db_name');
   const totalUnits = transformers.length;
   const onlineUnits = transformers.filter(t => t.status !== 'Offline' && t.status !== undefined).length;
   const offlineUnits = totalUnits - onlineUnits;

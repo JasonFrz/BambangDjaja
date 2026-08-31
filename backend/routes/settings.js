@@ -19,8 +19,23 @@ router.use(extractDb);
 router.get('/thresholds', async (req, res) => {
   try {
     const db = await getDbConnection(req.dbName);
+    const { trafo_id } = req.query;
     
-    const [rows] = await db.execute('SELECT * FROM threshold_settings ORDER BY id ASC');
+    let rows = [];
+    if (trafo_id) {
+        try {
+            [rows] = await db.execute('SELECT * FROM threshold_settings WHERE trafo_id = ? ORDER BY id ASC', [trafo_id]);
+        } catch (e) {
+            if (e.code === 'ER_BAD_FIELD_ERROR') {
+                [rows] = await db.execute('SELECT * FROM threshold_settings ORDER BY id ASC');
+            } else {
+                throw e;
+            }
+        }
+    } else {
+        [rows] = await db.execute('SELECT * FROM threshold_settings ORDER BY id ASC');
+    }
+    
     res.json({ success: true, data: rows });
   } catch (error) {
     console.error('Error fetching threshold settings:', error);

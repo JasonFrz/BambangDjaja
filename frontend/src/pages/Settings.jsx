@@ -32,6 +32,7 @@ const TABS = ['Voltage', 'Current', 'Power', 'Frequency', 'Oil and env'];
 const Settings = () => {
   const { apiUrl } = useApi();
   const dbName = sessionStorage.getItem('tenant_db');
+  const selectedTrafoId = sessionStorage.getItem('selectedTrafoId');
   
   const [thresholds, setThresholds] = useState([]);
   const [activeTab, setActiveTab] = useState('Voltage');
@@ -41,13 +42,15 @@ const Settings = () => {
   const [editValues, setEditValues] = useState({ min_value: '', max_value: '', is_active: 1 });
 
   useEffect(() => {
-    fetchThresholds();
-  }, [dbName]);
+    if (selectedTrafoId) {
+      fetchThresholds();
+    }
+  }, [selectedTrafoId, dbName]);
 
   const fetchThresholds = async () => {
     try {
       setIsLoading(true);
-      const res = await axios.get(`${apiUrl}/api/settings/thresholds`, {
+      const res = await axios.get(`${apiUrl}/api/settings/thresholds?trafo_id=${selectedTrafoId}`, {
         headers: { 'X-DB-Name': dbName }
       });
       if (res.data.success) {
@@ -111,7 +114,7 @@ const Settings = () => {
         <h2 className="text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1 transition-colors">
           Threshold settings
         </h2>
-        <p className="text-[#5e6c84] dark:text-[#94a3b8] text-[0.95rem] transition-colors mt-1">
+        <p className="text-[#5e6c84] dark:text-[#94a3b8] text-[0.95rem] transition-colors mt-1 mb-4">
           Set safety limits per metric for Safe, Warning, and Trip status.
         </p>
       </div>

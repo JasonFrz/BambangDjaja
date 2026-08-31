@@ -26,7 +26,7 @@ export const TrendDataProvider = ({ children }) => {
   const lastDataRef = useRef(null);
 
   useEffect(() => {
-    const dbName = sessionStorage.getItem('company_name');
+    const dbName = sessionStorage.getItem('db_name');
     if (!dbName) return;
 
     axios.get(`${apiUrl}/api/trends/meter`, {

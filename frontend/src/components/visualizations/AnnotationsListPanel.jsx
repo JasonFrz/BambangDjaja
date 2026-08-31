@@ -11,7 +11,7 @@ export const AnnotationsListPanel = memo(({ panel, isEditing }) => {
     let isMounted = true;
     const fetchAlerts = async () => {
       try {
-        const dbName = sessionStorage.getItem('company_name');
+        const dbName = sessionStorage.getItem('db_name');
         if (!dbName) return;
 
         const res = await axios.get(`${apiUrl}/api/alerts?limit=20`, {

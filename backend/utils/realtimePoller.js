@@ -29,51 +29,28 @@ const METRIC_MAPPING = {
   oil_pressure: { type: 'specific', key: 'oil_pressure', name: 'Oil Pressure' }
 };
 
-async function sendAlertMessage(db, dbName, trafoId, alert) {
+async function sendAlertMessage(db, dbName, trafoId, alerts) {
   try {
-      const condition = alert.type === 'OVER' ? 'Melebihi Batas Maksimal' : 'Kurang Dari Batas Minimal';
-      const msg = `⚠️ *[TMU ALERT - ABNORMAL PARAMETER]*\n\nTrafo *${trafoId}* (DB: ${dbName}) mendeteksi anomali pada sensor!\nParameter: *${alert.name} ${alert.sub ? '('+alert.sub+')' : ''}*\nKondisi: *${alert.type}* (${condition})\n\nNilai Saat Saat Ini: *${alert.val}*\nBatas Toleransi: *${alert.limit}*\n\nSilakan segera periksa sistem Anda.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
-      
+      if (!Array.isArray(alerts)) alerts = [alerts];
+      if (alerts.length === 0) return;
+
+      const lines = alerts.map((alert, index) => {
+        const condition = alert.type === 'OVER' ? 'Melebihi Batas Maksimal' : 'Kurang Dari Batas Minimal';
+        const val = typeof alert.val === 'number' ? (Math.round(alert.val * 100) / 100) : alert.val;
+        const namePart = alert.sub ? `${alert.name} (${alert.sub})` : alert.name;
+        return `${index + 1}. *${namePart}*\n   Nilai Saat Ini: *${val}*\n   Batas Toleransi: ${alert.limit}\n   Kondisi: ${condition}`;
+      }).join('\n\n');
+
+      // Placeholder for later construction inside the loop
       const emailSubject = `[TMU ALERT] Abnormal Parameter pada Trafo ${trafoId}`;
-      const emailMsg = `Peringatan: Anomali sensor terdeteksi!\n\nTrafo: ${trafoId}\nDatabase: ${dbName}\nParameter: ${alert.name} ${alert.sub ? '('+alert.sub+')' : ''}\nKondisi: ${alert.type} (${condition})\nNilai Saat Ini: ${alert.val}\nBatas Toleransi: ${alert.limit}\n\nSilakan segera periksa sistem Anda.\n\nPesan otomatis dari PT. Bambang Djaja - TMU System`;
 
-      // Log alert to DB
-      try {
-
-        await db.execute(
-          `INSERT INTO alert_logs (alert_type, parameter_name, condition_text, current_value, threshold_limit) VALUES (?, ?, ?, ?, ?)`,
-          [alert.type, `${alert.name} ${alert.sub ? '('+alert.sub+')' : ''}`, condition, alert.val.toString(), alert.limit.toString()]
-        );
-      } catch (dbErr) {
-        console.error("Failed to log alert to DB:", dbErr.message);
-      }
       
       let phones = [];
       let emails = [];
 
-      // Dapatkan user dari tenant DB
-      const cacheKeyTenant = `${dbName}_users_cols`;
-      let columns = schemaCache.get(cacheKeyTenant);
-      if (!columns) {
-        const [columnsInfo] = await db.execute("SHOW COLUMNS FROM users");
-        columns = columnsInfo.map(c => c.Field);
-        schemaCache.set(cacheKeyTenant, columns);
-      }
-      
-      let selectCols = [];
-      if (columns.includes('nomor_telpon')) selectCols.push('nomor_telpon');
-      if (columns.includes('email')) selectCols.push('email');
-      
-      if (selectCols.length > 0) {
-          const [tenantUsers] = await db.execute(`SELECT ${selectCols.join(', ')} FROM users`);
-          tenantUsers.forEach(u => {
-              if (u.nomor_telpon && u.nomor_telpon.length >= 10) phones.push(u.nomor_telpon.trim());
-              if (u.email && u.email.includes('@')) emails.push(u.email.trim());
-          });
-      }
-      
-      // Dapatkan superuser dari tmu_master
+      // Dapatkan user (tenant) dan superuser dari tmu_master
       const masterDb = await getDbConnection('tmu_master');
+      
       const cacheKeyMaster = `tmu_master_users_cols`;
       let masterColumns = schemaCache.get(cacheKeyMaster);
       if (!masterColumns) {
@@ -85,28 +62,46 @@ async function sendAlertMessage(db, dbName, trafoId, alert) {
       let masterSelectCols = [];
       if (masterColumns.includes('nomor_telpon')) masterSelectCols.push('nomor_telpon');
       if (masterColumns.includes('email')) masterSelectCols.push('email');
+      if (masterColumns.includes('username')) masterSelectCols.push('username');
       
+      let userContacts = [];
       if (masterSelectCols.length > 0) {
-          const [superusers] = await masterDb.execute(`SELECT ${masterSelectCols.join(', ')} FROM users WHERE role = 'superuser'`);
-          superusers.forEach(u => {
-              if (u.nomor_telpon && u.nomor_telpon.length >= 10) phones.push(u.nomor_telpon.trim());
-              if (u.email && u.email.includes('@')) emails.push(u.email.trim());
+          const [allUsers] = await masterDb.execute(`SELECT ${masterSelectCols.join(', ')} FROM users WHERE nama_db = ?`, [dbName]);
+          allUsers.forEach(u => {
+              const phone = (u.nomor_telpon && u.nomor_telpon.length >= 10) ? u.nomor_telpon.trim() : null;
+              const email = (u.email && u.email.includes('@')) ? u.email.trim() : null;
+              const username = u.username || 'User';
+              if (phone || email) {
+                  userContacts.push({ phone, email, username });
+              }
           });
       }
       
-      // Hilangkan duplikat
-      phones = [...new Set(phones)];
-      emails = [...new Set(emails)];
+      // Determine greeting
+      const now = new Date();
+      const hour = (now.getUTCHours() + 7) % 24; // WIB
+      let greeting = 'pagi';
+      if (hour >= 11 && hour < 15) greeting = 'siang';
+      else if (hour >= 15 && hour < 18) greeting = 'sore';
+      else if (hour >= 18 || hour < 4) greeting = 'malam';
       
-      // Kirim WhatsApp satu-satu dengan jeda 3 detik
-      for (const phone of phones) {
-          await whatsappClient.sendWhatsAppMessage(phone, msg).catch(() => {});
-          await new Promise(resolve => setTimeout(resolve, 3000));
-      }
-
-      // Kirim Email
-      for (const email of emails) {
-          await emailClient.sendEmailMessage(email, emailSubject, emailMsg).catch(() => {});
+      // Send alerts
+      for (const contact of userContacts) {
+          if (contact.phone) {
+              const msg = `Halo Pak/Bu *${contact.username}*, selamat ${greeting}.\n\nPada trafo *${trafoId}* mendeteksi anomali pada sensor!\n\nParameter yang bermasalah:\n${lines}\n\nSilakan segera periksa sistem Anda.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
+              await whatsappClient.sendWhatsAppMessage(contact.phone, msg).catch(() => {});
+              await new Promise(resolve => setTimeout(resolve, 3000));
+          }
+          if (contact.email) {
+              const emailLines = alerts.map((alert, index) => {
+                  const condition = alert.type === 'OVER' ? 'Melebihi Batas Maksimal' : 'Kurang Dari Batas Minimal';
+                  const val = typeof alert.val === 'number' ? (Math.round(alert.val * 100) / 100) : alert.val;
+                  const namePart = alert.sub ? `${alert.name} (${alert.sub})` : alert.name;
+                  return `${index + 1}. ${namePart}\n   Nilai Saat Ini: ${val}\n   Batas Toleransi: ${alert.limit}\n   Kondisi: ${condition}`;
+              }).join('\n\n');
+              const emailMsg = `Halo Pak/Bu ${contact.username}, selamat ${greeting}.\n\nPada trafo: ${trafoId}\n\nParameter yang bermasalah:\n${emailLines}\n\nSilakan segera periksa sistem Anda.\n\nPesan otomatis dari PT. Bambang Djaja - TMU System`;
+              await emailClient.sendEmailMessage(contact.email, emailSubject, emailMsg).catch(() => {});
+          }
       }
   } catch (err) {
       console.error("Error sending alert:", err.message);
@@ -114,10 +109,10 @@ async function sendAlertMessage(db, dbName, trafoId, alert) {
 }
 
 async function checkAndAlert(db, dbName, trafoId, data, isOil = false) {
-  if (!whatsappClient.waReady) return;
+  if (!whatsappClient.waReady) return [];
 
   try {
-      const cacheKey = `${dbName}_thresholds`;
+      const cacheKey = `${dbName}_${trafoId}_thresholds`;
       let cached = thresholdCache.get(cacheKey);
       let thresholds = null;
 
@@ -127,10 +122,22 @@ async function checkAndAlert(db, dbName, trafoId, data, isOil = false) {
         const [tables] = await db.execute("SHOW TABLES LIKE 'threshold_settings'");
         if (tables.length === 0) {
           thresholdCache.set(cacheKey, { timestamp: Date.now(), data: [] });
-          return;
+          return [];
         }
 
-        const [dbThresholds] = await db.execute("SELECT * FROM threshold_settings WHERE is_active = 1");
+        let dbThresholds = [];
+        try {
+          const [rows] = await db.execute("SELECT * FROM threshold_settings WHERE is_active = 1 AND trafo_id = ?", [trafoId]);
+          dbThresholds = rows;
+        } catch (e) {
+          if (e.code === 'ER_BAD_FIELD_ERROR') {
+            const [rows] = await db.execute("SELECT * FROM threshold_settings WHERE is_active = 1");
+            dbThresholds = rows;
+          } else {
+            throw e;
+          }
+        }
+        
         thresholds = dbThresholds;
         thresholdCache.set(cacheKey, { timestamp: Date.now(), data: thresholds });
       }
@@ -168,6 +175,7 @@ async function checkAndAlert(db, dbName, trafoId, data, isOil = false) {
           }
       });
 
+      let activeAlerts = [];
       for (const alert of alerts) {
           const cooldownKey = `${dbName}_${trafoId}_${alert.key}_${alert.sub}_${alert.type}`;
           const lastSent = waCooldowns.get(cooldownKey) || 0;
@@ -175,12 +183,14 @@ async function checkAndAlert(db, dbName, trafoId, data, isOil = false) {
           
           if (now - lastSent > COOLDOWN_MS) {
               waCooldowns.set(cooldownKey, now);
-              // Jalankan secara asinkron agar tidak mem-blokir poller
-              sendAlertMessage(db, dbName, trafoId, alert);
+              activeAlerts.push(alert);
           }
       }
+
+      return activeAlerts;
   } catch (err) {
       console.error("Error checking thresholds:", err.message);
+      return [];
   }
 }
 
@@ -216,6 +226,7 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
 
         try {
           const db = await getDbConnection(dbName);
+          let allAlerts = [];
 
           const [elecRows] = await db.execute(
             'SELECT * FROM electrical_readings ORDER BY timestamp DESC LIMIT 1'
@@ -262,7 +273,8 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
               });
 
               // Check thresholds
-              checkAndAlert(db, dbName, trafoId, latestElectrical, false);
+              const elecAlerts = await checkAndAlert(db, dbName, trafoId, latestElectrical, false);
+              if (elecAlerts && elecAlerts.length > 0) allAlerts.push(...elecAlerts);
             }
           }
 
@@ -286,8 +298,13 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
               });
 
               // Check thresholds
-              checkAndAlert(db, dbName, trafoId, latestOil, true);
+              const oilAlerts = await checkAndAlert(db, dbName, trafoId, latestOil, true);
+              if (oilAlerts && oilAlerts.length > 0) allAlerts.push(...oilAlerts);
             }
+          }
+          
+          if (allAlerts.length > 0) {
+            sendAlertMessage(db, dbName, trafoId, allAlerts);
           }
         } catch (dbErr) {
           if (dbErr.code === 'ER_BAD_DB_ERROR') {

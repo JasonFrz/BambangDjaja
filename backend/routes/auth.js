@@ -72,6 +72,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       username: user.username, 
       role: userRole, 
       company_name: user.nama_perusahaan || foundDbName,
+      db_name: foundDbName,
       phone: user.nomor_telpon || '' 
     });
   } catch (error) {

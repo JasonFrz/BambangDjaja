@@ -49,7 +49,7 @@ export const TemperatureDataProvider = ({ children }) => {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    const dbName = sessionStorage.getItem('company_name');
+    const dbName = sessionStorage.getItem('db_name');
     if (!dbName) return;
 
     axios.get(`${apiUrl}/api/trends/oil`, {
@@ -102,7 +102,7 @@ export const TemperatureDataProvider = ({ children }) => {
     socket.on("connect", () => {
       setIsConnected(true);
       const trafoId = sessionStorage.getItem('selectedTrafoId') || '1';
-      const dbName = sessionStorage.getItem('company_name');
+      const dbName = sessionStorage.getItem('db_name');
       if (trafoId) {
         socket.emit("subscribe_transformer", { trafoId, dbName });
       }
@@ -169,7 +169,7 @@ export const TemperatureDataProvider = ({ children }) => {
     const handleTrafoChange = () => {
       if (socket.connected) {
         const trafoId = sessionStorage.getItem('selectedTrafoId') || '1';
-        const dbName = sessionStorage.getItem('company_name');
+        const dbName = sessionStorage.getItem('db_name');
         if (trafoId && dbName) {
           socket.emit("subscribe_transformer", { trafoId, dbName });
         }

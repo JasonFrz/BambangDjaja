@@ -25,7 +25,7 @@ const PerformanceReport = () => {
     setLoading(true);
     setError(null);
     try {
-      const dbName = sessionStorage.getItem('company_name');
+      const dbName = sessionStorage.getItem('db_name');
       if (!dbName) throw new Error("Database name not found in session");
 
       let url = `${apiUrl}/api/trends/report`;
@@ -77,7 +77,7 @@ const PerformanceReport = () => {
     if (!reportData) return;
 
     const doc = new jsPDF();
-    const dbName = sessionStorage.getItem('company_name') || 'Company';
+    const dbName = sessionStorage.getItem('db_name') || 'Company';
     
     // Add header
     doc.setFontSize(18);

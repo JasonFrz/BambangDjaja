@@ -27,7 +27,7 @@ const ManageUsersSuperuser = () => {
   const { apiUrl } = useApi();
   const navigate = useNavigate();
   const currentRole = sessionStorage.getItem('role');
-  const dbName = sessionStorage.getItem('company_name');
+  const dbName = sessionStorage.getItem('db_name');
   const sessionUsername = sessionStorage.getItem('username');
   
   useEffect(() => {

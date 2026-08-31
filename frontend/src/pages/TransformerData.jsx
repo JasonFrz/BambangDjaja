@@ -97,7 +97,7 @@ const TransformerData = () => {
   const [trafoImage, setTrafoImage] = useState(null);
 
   const trafoId = sessionStorage.getItem('selectedTrafoId');
-  const companyNameHeader = sessionStorage.getItem('company_name');
+  const companyNameHeader = sessionStorage.getItem('db_name');
   const token = sessionStorage.getItem('token');
 
   useEffect(() => {

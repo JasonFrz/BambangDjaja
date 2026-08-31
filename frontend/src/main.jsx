@@ -6,7 +6,7 @@ import axios from 'axios';
 
 axios.interceptors.request.use((config) => {
   config.headers['ngrok-skip-browser-warning'] = '69420';
-  const dbName = sessionStorage.getItem('company_name');
+  const dbName = sessionStorage.getItem('db_name');
   const username = sessionStorage.getItem('username');
   const token = sessionStorage.getItem('token');
   
@@ -35,7 +35,7 @@ window.fetch = async (...args) => {
   if (!config) config = {};
   if (!config.headers) config.headers = {};
   
-  const dbName = sessionStorage.getItem('company_name');
+  const dbName = sessionStorage.getItem('db_name');
   const username = sessionStorage.getItem('username');
   const token = sessionStorage.getItem('token');
 
