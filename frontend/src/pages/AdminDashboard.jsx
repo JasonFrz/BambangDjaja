@@ -580,7 +580,7 @@ const AdminDashboard = () => {
     if (!isConfirmed) return;
     try {
       await axiosInstance.delete(`/api/admin/companies/${id}`);
-      fetchCompanies();
+      setCompanies(prev => prev.filter(company => company.id !== id));
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to delete company');
     }

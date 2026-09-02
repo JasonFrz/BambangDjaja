@@ -208,7 +208,11 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
         if (roomName.startsWith("trafo_") && clients.size > 0) {
           const dbName = activeSubscriptions.get(roomName);
           if (dbName) {
-            const trafoId = roomName.replace("trafo_", "");
+            let trafoId = roomName.replace("trafo_", "");
+            const prefix = `${dbName}_`;
+            if (trafoId.startsWith(prefix)) {
+              trafoId = trafoId.substring(prefix.length);
+            }
             activeTrafos.push({ trafoId, dbName, roomName });
           }
         }
@@ -216,12 +220,12 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
 
       const now = Date.now();
 
-      for (const { trafoId, dbName, roomName } of activeTrafos) {
+      await Promise.allSettled(activeTrafos.map(async ({ trafoId, dbName, roomName }) => {
         const interval = roomIntervals.get(roomName) ?? 5000; 
         const lastEmit = lastEmitTime[roomName] || 0;
         
         if (interval > 0 && now - lastEmit < interval) {
-          continue; 
+          return; 
         }
 
         try {
@@ -229,7 +233,8 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
           let allAlerts = [];
 
           const [elecRows] = await db.execute(
-            'SELECT * FROM electrical_readings ORDER BY timestamp DESC LIMIT 1'
+            'SELECT * FROM electrical_readings WHERE trafo_id = ? ORDER BY timestamp DESC LIMIT 1',
+            [trafoId]
           );
           
           if (elecRows.length > 0) {
@@ -279,7 +284,8 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
           }
 
           const [oilRows] = await db.execute(
-            'SELECT * FROM oil_readings ORDER BY timestamp DESC LIMIT 1'
+            'SELECT * FROM oil_readings WHERE trafo_id = ? ORDER BY timestamp DESC LIMIT 1',
+            [trafoId]
           );
 
           if (oilRows.length > 0) {
@@ -314,7 +320,7 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
             console.error(`Error polling DB ${dbName} for ${roomName}:`, dbErr.message);
           }
         }
-      }
+      }));
     } catch (error) {
       console.error("Realtime poller error:", error);
     }
