@@ -127,7 +127,7 @@ const analyticsRoutes = require("./routes/analytics");
 const layoutsRoutes = require("./routes/layouts");
 const settingsRoutes = require("./routes/settings");
 const { verifyToken } = require("./utils/authMiddleware");
-const { router: alertsRoutes } = require("./routes/alerts");
+
 const trafoRoutes = require("./routes/trafo");
 const companiesRoutes = require("./routes/companies");
 
@@ -141,7 +141,7 @@ app.use("/api/profile", verifyToken, profileRoutes);
 app.use("/api/analytics", verifyToken, analyticsRoutes);
 app.use("/api/layouts", verifyToken, layoutsRoutes);
 app.use("/api/settings", verifyToken, settingsRoutes);
-app.use("/api/alerts", verifyToken, alertsRoutes);
+
 app.use("/api/trafo", verifyToken, trafoRoutes);
 app.use("/api/admin/companies", verifyToken, companiesRoutes);
 

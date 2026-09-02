@@ -18,7 +18,7 @@ import {
   TimeSeriesPanel, StatPanel, GaugePanel, StatusPanel,
   BarChartPanel, BarGaugePanel, TablePanel, PieChartPanel,
   StateTimelinePanel, HeatmapPanel, StatusHistoryPanel,
-  HistogramPanel, NewsPanel, AnnotationsListPanel, CandlestickPanel, OilStatusPanel
+  HistogramPanel, NewsPanel, CandlestickPanel, OilStatusPanel
 } from "../components/visualizations";
 import TransformerMapCard from '../components/TransformerMapCard';
 
@@ -113,7 +113,7 @@ const PanelRenderer = memo(({ panel, latestData, chartData, tempData, isLive, is
     case 'histogram': return <HistogramPanel panel={panel} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
 
     case 'news': return <NewsPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
-    case 'annotations': return <AnnotationsListPanel panel={panel} chartData={chartData} isEditing={isEditing} />;
+
     case 'candlestick': return <CandlestickPanel panel={panel} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
     case 'oilstatus': return <OilStatusPanel panel={panel} tempData={tempData || {}} isEditing={isEditing} />;
     default:
@@ -395,7 +395,6 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     { v: 'statushistory', l: 'Status History', d: 'Periodic health status', i: Activity },
     { v: 'histogram', l: 'Histogram', d: 'Value distributions', i: BarChart3 },
     { v: 'news', l: 'News', d: 'RSS feeds & updates', i: Rss },
-    { v: 'annotations', l: 'Annotations List', d: 'Events & logs', i: MessageSquareWarning },
     { v: 'candlestick', l: 'Candlestick', d: 'OHLC financial data', i: CandlestickChart },
     { v: 'oilstatus', l: 'Oil Status', d: 'Oil Trip & Alarm Status', i: AlertTriangle }
   ].filter(t => t.l.toLowerCase().includes(visSearchQuery.toLowerCase()) || t.d.toLowerCase().includes(visSearchQuery.toLowerCase())).map(t => (
