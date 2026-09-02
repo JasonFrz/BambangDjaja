@@ -561,6 +561,52 @@ const Dashboard = () => {
   const [panels, setPanels] = useState(activeProfile.panels);
   const [gridLayouts, setGridLayouts] = useState(activeProfile.layouts);
 
+  const skipLayoutChangeRef = useRef(false);
+  const [layoutGeneration, setLayoutGeneration] = useState(0);
+
+  // ─── Undo History State ──────────────────────────────────────────────
+  const historyRef = useRef([]);
+
+  const pushToHistory = useCallback((currentPanels, currentLayouts) => {
+    historyRef.current.push({
+      panels: JSON.parse(JSON.stringify(currentPanels || [])),
+      layouts: JSON.parse(JSON.stringify(currentLayouts || {}))
+    });
+    if (historyRef.current.length > 50) historyRef.current.shift();
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    if (historyRef.current.length === 0) return;
+    
+    // Disable layout saving temporarily while we undo
+    skipLayoutChangeRef.current = true;
+
+    const previousState = historyRef.current.pop();
+    
+    setPanels(previousState.panels);
+    setGridLayouts(previousState.layouts);
+    
+    setTimeout(() => {
+      skipLayoutChangeRef.current = false;
+      setLayoutGeneration(g => g + 1);
+    }, 100);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        const activeElement = document.activeElement;
+        const isInput = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable);
+        if (!isInput) {
+          e.preventDefault();
+          handleUndo();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo]);
+
   // Sync state when profile is switched or profiles are updated from API
   useEffect(() => {
     const prof = profilesState.profiles[profilesState.activeProfileId];
@@ -1054,8 +1100,6 @@ const Dashboard = () => {
   };
 
   // ─── Grid layout change handler ──────────────────────────────────────
-  const skipLayoutChangeRef = useRef(false);
-  const [layoutGeneration, setLayoutGeneration] = useState(0);
 
   const handleLayoutChange = useCallback((currentLayout, allLayouts) => {
     if (skipLayoutChangeRef.current) return;
@@ -1122,6 +1166,7 @@ const Dashboard = () => {
 
   // ─── Panel CRUD ──────────────────────────────────────────────────────
   const handleSavePanel = (panelConfig) => {
+    pushToHistory(panels, gridLayouts);
     const panelId = String(panelConfig.id);
     const isNew = !panels?.find(p => String(p.id) === panelId);
 
@@ -1173,6 +1218,7 @@ const Dashboard = () => {
   };
 
   const handleDeletePanel = (panelId) => {
+    pushToHistory(panels, gridLayouts);
     const pid = String(panelId);
     setPanels(prev => (prev || []).filter(p => String(p.id) !== pid));
     setGridLayouts(prev => {
@@ -1563,6 +1609,8 @@ const Dashboard = () => {
           cols={{ lg: 12, md: 10, sm: 6, xs: 2, xxs: 1 }}
           rowHeight={50}
           onLayoutChange={handleLayoutChange}
+          onDragStart={() => pushToHistory(panels, gridLayouts)}
+          onResizeStart={() => pushToHistory(panels, gridLayouts)}
           draggableHandle=".drag-handle"
           margin={[8, 8]}
           isDraggable={isEditing}
