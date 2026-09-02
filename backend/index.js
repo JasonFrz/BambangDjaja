@@ -23,10 +23,8 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 5000;
 
-// Security Headers
 app.use(helmet());
 
-// Rate Limiting (Maksimal 200 request per 15 menit per IP)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
   max: 1000, 
@@ -35,12 +33,10 @@ const limiter = rateLimit({
   legacyHeaders: false, 
 });
 
-// Apply rate limiter global (atau bisa ditaruh di app.use("/api", limiter) saja)
 app.use("/api/", limiter);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow any origin for development/ngrok
     callback(null, origin || "*");
   },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -50,7 +46,7 @@ app.use(express.json());
 app.set("io", io);
 
 const activeSubscriptions = new Map();
-const roomIntervals = new Map(); // stores polling interval per room
+const roomIntervals = new Map();
 
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
@@ -60,7 +56,6 @@ io.on("connection", (socket) => {
     const dbName = data.dbName;
 
     if (trafoId && dbName) {
-      // Leave previous trafo rooms to prevent multiple subscriptions from one client
       for (const room of socket.rooms) {
         if (room.startsWith("trafo_")) {
           socket.leave(room);
@@ -82,7 +77,6 @@ io.on("connection", (socket) => {
 
   socket.on("set_poll_interval", (interval) => {
     const ms = parseInt(interval, 10);
-    // Find which trafo room this socket belongs to
     for (const roomName of socket.rooms) {
       if (roomName.startsWith("trafo_")) {
         roomIntervals.set(roomName, ms >= 0 ? ms : 5000);
@@ -138,7 +132,7 @@ const trafoRoutes = require("./routes/trafo");
 const companiesRoutes = require("./routes/companies");
 
 
-app.use("/api", authRoutes); // /api/login is inside here, so it remains unprotected
+app.use("/api", authRoutes); 
 app.use("/api/users", verifyToken, userRoutes);
 app.use("/api/trends", verifyToken, trendRoutes);
 app.use("/api/admin", verifyToken, adminRoutes);
@@ -162,7 +156,6 @@ app.use("/api/whatsapp", verifyToken, whatsappRoutes);
 server.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
   
-  // Otomatis tambahkan index di database baru saat server menyala
   autoAddIndexes();
   
   startRealtimePoller(io, activeSubscriptions, roomIntervals);

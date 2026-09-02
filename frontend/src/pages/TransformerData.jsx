@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Thermometer, Settings, Zap, Wifi, WifiOff, Camera, Upload, X, Check, Image as ImageIcon } from "lucide-react";
 import Cropper from 'react-easy-crop';
 import Webcam from 'react-webcam';
+import imageCompression from 'browser-image-compression';
 
 const getCroppedImg = async (imageSrc, pixelCrop) => {
   const image = new Image();
@@ -180,8 +181,16 @@ const TransformerData = () => {
 
     try {
       const croppedBlob = await getCroppedImg(previewUrl, croppedAreaPixels);
+      
+      const options = {
+        maxSizeMB: 2,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true
+      };
+      const compressedFile = await imageCompression(croppedBlob, options);
+
       const formData = new FormData();
-      formData.append('image', croppedBlob, 'trafo_image.jpg');
+      formData.append('image', compressedFile, 'trafo_image.jpg');
 
       const response = await fetch(`${apiUrl}/api/trafo/${trafoId}/image`, {
         method: 'POST',
