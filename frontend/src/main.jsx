@@ -39,16 +39,21 @@ window.fetch = async (...args) => {
   const username = sessionStorage.getItem('username');
   const token = sessionStorage.getItem('token');
 
-  if (config.headers instanceof Headers) {
-    if (token) config.headers.set('Authorization', `Bearer ${token}`);
-    config.headers.append('ngrok-skip-browser-warning', '69420');
-    if (dbName) config.headers.append('X-DB-Name', dbName);
-    if (username) config.headers.append('X-Username', username);
-  } else {
-    config.headers['ngrok-skip-browser-warning'] = '69420';
-    if (token) config.headers['Authorization'] = `Bearer ${token}`;
-    if (dbName) config.headers['X-DB-Name'] = dbName;
-    if (username) config.headers['X-Username'] = username;
+  const urlStr = typeof resource === 'string' ? resource : (resource instanceof URL ? resource.toString() : resource?.url || '');
+  const isMapApi = urlStr && (urlStr.includes('openfreemap.org') || urlStr.includes('cartocdn.com') || urlStr.includes('openstreetmap.org') || urlStr.includes('basemaps'));
+
+  if (!isMapApi) {
+    if (config.headers instanceof Headers) {
+      if (token) config.headers.set('Authorization', `Bearer ${token}`);
+      config.headers.append('ngrok-skip-browser-warning', '69420');
+      if (dbName) config.headers.append('X-DB-Name', dbName);
+      if (username) config.headers.append('X-Username', username);
+    } else {
+      config.headers['ngrok-skip-browser-warning'] = '69420';
+      if (token) config.headers['Authorization'] = `Bearer ${token}`;
+      if (dbName) config.headers['X-DB-Name'] = dbName;
+      if (username) config.headers['X-Username'] = username;
+    }
   }
   
   const response = await originalFetch(resource, config);

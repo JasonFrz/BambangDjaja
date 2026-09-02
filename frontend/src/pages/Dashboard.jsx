@@ -20,6 +20,7 @@ import {
   StateTimelinePanel, HeatmapPanel, StatusHistoryPanel,
   HistogramPanel, NewsPanel, AnnotationsListPanel, CandlestickPanel, OilStatusPanel
 } from "../components/visualizations";
+import TransformerMapCard from '../components/TransformerMapCard';
 
 
 const DEFAULT_PANELS = [
