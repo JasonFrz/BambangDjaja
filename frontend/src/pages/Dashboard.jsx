@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from "react";
 import { useSearchParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Plus, X, Settings2, Trash2, RefreshCw, GripVertical, Edit3, Send, LogOut, Download, Loader2, ChevronDown, Check, Search, Layers, RotateCcw, Thermometer, TrendingUp, BarChart3, Eye, AlertTriangle, Maximize2, Minimize2, MousePointer2, BellRing, Power, FileDown, Monitor, Crosshair, LayoutGrid, PlusSquare, Database, PieChart as PieChartIcon, FileText, Table, AlignLeft, CalendarClock, List, Rss, MessageSquareWarning, CandlestickChart, ActivitySquare, LayoutPanelLeft, BoxSelect, Calendar } from 'lucide-react';
+import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Plus, X, Settings2, Trash2, RefreshCw, GripVertical, Edit3, Send, LogOut, Download, Loader2, ChevronDown, Check, Search, Layers, RotateCcw, Thermometer, TrendingUp, BarChart3, Eye, AlertTriangle, Maximize2, Minimize2, MousePointer2, BellRing, Power, FileDown, Monitor, Crosshair, LayoutGrid, PlusSquare, Database, PieChart as PieChartIcon, FileText, Table, AlignLeft, CalendarClock, List, Rss, MessageSquareWarning, CandlestickChart, ActivitySquare, LayoutPanelLeft, BoxSelect, Calendar, Compass, GitCommit, HeartPulse, Terminal } from 'lucide-react';
 import { useTrendData } from "../contexts/TrendDataContext";
 import { useTemperatureData } from "../contexts/TemperatureDataContext";
 import { useDialog } from "../contexts/DialogContext";
@@ -18,12 +18,18 @@ import {
   TimeSeriesPanel, StatPanel, GaugePanel, StatusPanel,
   BarChartPanel, BarGaugePanel, TablePanel, PieChartPanel,
   StateTimelinePanel, HeatmapPanel, StatusHistoryPanel,
-  HistogramPanel, NewsPanel, CandlestickPanel, OilStatusPanel
+  HistogramPanel, NewsPanel, CandlestickPanel, OilStatusPanel,
+  PhasorDiagramPanel, TransformerSLDPanel, HealthIndexPanel, EventStreamPanel
 } from "../components/visualizations";
+import { UniversalTimePicker } from "../components/UniversalTimePicker";
 import TransformerMapCard from '../components/TransformerMapCard';
 
 
 const DEFAULT_PANELS = [
+  { id: 'p_sld_transformer', title: 'Transformer Single Line Diagram (SLD)', type: 'sld', metrics: ['phaseA', 'phaseB', 'phaseC', 'currentA', 'currentB', 'currentC', 'powerActiveTotal'], chartType: 'line' },
+  { id: 'p_health_index', title: 'Transformer Health Index (THI)', type: 'healthindex', metrics: ['currentUnbalance', 'powerActiveTotal', 'pfTotal', 'frequency'], chartType: 'line' },
+  { id: 'p_phasor_diagram', title: '3-Phase Phasor Diagram', type: 'phasor', metrics: ['phaseA', 'phaseB', 'phaseC'], chartType: 'line' },
+  { id: 'p_event_stream', title: 'Live Event & Alarm Stream', type: 'eventstream', metrics: ['phaseA', 'phaseB', 'phaseC', 'currentA', 'frequency'], chartType: 'line' },
   { id: 'p_uphase_chart', title: 'Phase Voltage Overview', type: 'linechart', metrics: ['phaseA', 'phaseC', 'phaseB'], chartType: 'line' },
   { id: 'p_oilstatus', title: 'Oil Status', type: 'oilstatus', metrics: [], chartType: 'line' },
   { id: 'p_uline_chart', title: 'Line Voltage Overview', type: 'linechart', metrics: ['lineCA', 'lineBC', 'lineAB'], chartType: 'line' },
@@ -36,54 +42,74 @@ const DEFAULT_PANELS = [
 
 const DEFAULT_GRID_LAYOUTS = {
   lg: [
-    { i: 'p_uphase_chart', x: 0, y: 0, w: 5, h: 4, minW: 3, minH: 3, moved: false, isDraggable: true, isResizable: true },
-    { i: 'p_oilstatus', x: 5, y: 0, w: 2, h: 4, minW: 2, minH: 2, moved: false, isDraggable: true, isResizable: true },
-    { i: 'p_uline_chart', x: 7, y: 0, w: 5, h: 4, minW: 3, minH: 3, moved: false, isDraggable: true, isResizable: true },
-    { i: 'p_freq_gauge', x: 0, y: 4, w: 2, h: 4, minW: 2, minH: 3, moved: false, isDraggable: true, isResizable: true },
-    { i: 'p_phasea_candle', x: 2, y: 4, w: 6, h: 4, minW: 3, minH: 3, moved: false, isDraggable: true, isResizable: true },
-    { i: 'p_mixed_metrics', x: 8, y: 4, w: 4, h: 4, minW: 3, minH: 3, moved: false, isDraggable: true, isResizable: true },
-    { i: 'p_1tgstpm5z', x: 0, y: 8, w: 4, h: 5, minW: 2, minH: 4, moved: false, isDraggable: true, isResizable: true },
-    { i: 'p_od6kgu6a0', x: 4, y: 8, w: 8, h: 5, minW: 2, minH: 4, moved: false, isDraggable: true, isResizable: true }
+    { i: 'p_sld_transformer', x: 0, y: 0, w: 7, h: 5, minW: 4, minH: 4, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_health_index', x: 7, y: 0, w: 5, h: 5, minW: 3, minH: 4, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_phasor_diagram', x: 0, y: 5, w: 6, h: 5, minW: 3, minH: 4, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_event_stream', x: 6, y: 5, w: 6, h: 5, minW: 3, minH: 3, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_uphase_chart', x: 0, y: 10, w: 5, h: 4, minW: 3, minH: 3, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_oilstatus', x: 5, y: 10, w: 2, h: 4, minW: 2, minH: 2, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_uline_chart', x: 7, y: 10, w: 5, h: 4, minW: 3, minH: 3, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_od6kgu6a0', x: 0, y: 14, w: 8, h: 5, minW: 2, minH: 4, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_freq_gauge', x: 8, y: 14, w: 4, h: 5, minW: 2, minH: 3, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_phasea_candle', x: 0, y: 19, w: 6, h: 4, minW: 3, minH: 3, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_mixed_metrics', x: 6, y: 19, w: 6, h: 4, minW: 3, minH: 3, moved: false, isDraggable: true, isResizable: true },
+    { i: 'p_1tgstpm5z', x: 0, y: 23, w: 4, h: 5, minW: 2, minH: 4, moved: false, isDraggable: true, isResizable: true }
   ],
   md: [
-    { i: 'p_uphase_chart', x: 0, y: 0, w: 4, h: 4, minW: 3, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_oilstatus', x: 4, y: 0, w: 2, h: 4, minW: 2, minH: 2, isDraggable: true, isResizable: true },
-    { i: 'p_uline_chart', x: 6, y: 0, w: 4, h: 4, minW: 3, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_freq_gauge', x: 0, y: 4, w: 2, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_phasea_candle', x: 2, y: 4, w: 4, h: 4, minW: 3, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_mixed_metrics', x: 6, y: 4, w: 4, h: 4, minW: 3, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_1tgstpm5z', x: 0, y: 8, w: 5, h: 5, minW: 2, minH: 4, isDraggable: true, isResizable: true },
-    { i: 'p_od6kgu6a0', x: 0, y: 13, w: 5, h: 5, minW: 2, minH: 4, isDraggable: true, isResizable: true }
+    { i: 'p_sld_transformer', x: 0, y: 0, w: 6, h: 5, minW: 4, minH: 4, isDraggable: true, isResizable: true },
+    { i: 'p_health_index', x: 6, y: 0, w: 4, h: 5, minW: 3, minH: 4, isDraggable: true, isResizable: true },
+    { i: 'p_phasor_diagram', x: 0, y: 5, w: 5, h: 5, minW: 3, minH: 4, isDraggable: true, isResizable: true },
+    { i: 'p_event_stream', x: 5, y: 5, w: 5, h: 5, minW: 3, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_uphase_chart', x: 0, y: 10, w: 4, h: 4, minW: 3, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_oilstatus', x: 4, y: 10, w: 2, h: 4, minW: 2, minH: 2, isDraggable: true, isResizable: true },
+    { i: 'p_uline_chart', x: 6, y: 10, w: 4, h: 4, minW: 3, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_od6kgu6a0', x: 0, y: 14, w: 6, h: 5, minW: 2, minH: 4, isDraggable: true, isResizable: true },
+    { i: 'p_freq_gauge', x: 6, y: 14, w: 4, h: 5, minW: 2, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_phasea_candle', x: 0, y: 19, w: 5, h: 4, minW: 3, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_mixed_metrics', x: 5, y: 19, w: 5, h: 4, minW: 3, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_1tgstpm5z', x: 0, y: 23, w: 5, h: 5, minW: 2, minH: 4, isDraggable: true, isResizable: true }
   ],
   sm: [
-    { i: 'p_uphase_chart', x: 0, y: 0, w: 6, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_oilstatus', x: 0, y: 4, w: 6, h: 3, minW: 2, minH: 2, isDraggable: true, isResizable: true },
-    { i: 'p_uline_chart', x: 0, y: 7, w: 6, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_freq_gauge', x: 0, y: 11, w: 6, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_phasea_candle', x: 0, y: 15, w: 6, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_mixed_metrics', x: 0, y: 19, w: 6, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_1tgstpm5z', x: 0, y: 23, w: 6, h: 5, minW: 2, minH: 4, isDraggable: true, isResizable: true },
-    { i: 'p_od6kgu6a0', x: 0, y: 28, w: 6, h: 5, minW: 2, minH: 4, isDraggable: true, isResizable: true }
+    { i: 'p_sld_transformer', x: 0, y: 0, w: 6, h: 5, minW: 2, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_health_index', x: 0, y: 5, w: 6, h: 5, minW: 2, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_phasor_diagram', x: 0, y: 10, w: 6, h: 5, minW: 2, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_event_stream', x: 0, y: 15, w: 6, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_uphase_chart', x: 0, y: 19, w: 6, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_oilstatus', x: 0, y: 23, w: 6, h: 3, minW: 2, minH: 2, isDraggable: true, isResizable: true },
+    { i: 'p_uline_chart', x: 0, y: 26, w: 6, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_freq_gauge', x: 0, y: 30, w: 6, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_phasea_candle', x: 0, y: 34, w: 6, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_mixed_metrics', x: 0, y: 38, w: 6, h: 4, minW: 2, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_1tgstpm5z', x: 0, y: 42, w: 6, h: 5, minW: 2, minH: 4, isDraggable: true, isResizable: true },
+    { i: 'p_od6kgu6a0', x: 0, y: 47, w: 6, h: 5, minW: 2, minH: 4, isDraggable: true, isResizable: true }
   ],
   xs: [
-    { i: 'p_uphase_chart', x: 0, y: 0, w: 2, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_oilstatus', x: 0, y: 4, w: 2, h: 3, minW: 1, minH: 2, isDraggable: true, isResizable: true },
-    { i: 'p_uline_chart', x: 0, y: 7, w: 2, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_freq_gauge', x: 0, y: 11, w: 2, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_phasea_candle', x: 0, y: 15, w: 2, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_mixed_metrics', x: 0, y: 19, w: 2, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_1tgstpm5z', x: 0, y: 23, w: 2, h: 5, minW: 1, minH: 2, isDraggable: true, isResizable: true },
-    { i: 'p_od6kgu6a0', x: 0, y: 28, w: 2, h: 5, minW: 1, minH: 2, isDraggable: true, isResizable: true }
+    { i: 'p_sld_transformer', x: 0, y: 0, w: 2, h: 5, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_health_index', x: 0, y: 5, w: 2, h: 5, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_phasor_diagram', x: 0, y: 10, w: 2, h: 5, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_event_stream', x: 0, y: 15, w: 2, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_uphase_chart', x: 0, y: 19, w: 2, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_oilstatus', x: 0, y: 23, w: 2, h: 3, minW: 1, minH: 2, isDraggable: true, isResizable: true },
+    { i: 'p_uline_chart', x: 0, y: 26, w: 2, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_freq_gauge', x: 0, y: 30, w: 2, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_phasea_candle', x: 0, y: 34, w: 2, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_mixed_metrics', x: 0, y: 38, w: 2, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_1tgstpm5z', x: 0, y: 42, w: 2, h: 5, minW: 1, minH: 2, isDraggable: true, isResizable: true },
+    { i: 'p_od6kgu6a0', x: 0, y: 47, w: 2, h: 5, minW: 1, minH: 2, isDraggable: true, isResizable: true }
   ],
   xxs: [
-    { i: 'p_uphase_chart', x: 0, y: 0, w: 1, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_oilstatus', x: 0, y: 4, w: 1, h: 3, minW: 1, minH: 2, isDraggable: true, isResizable: true },
-    { i: 'p_uline_chart', x: 0, y: 7, w: 1, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_freq_gauge', x: 0, y: 11, w: 1, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_phasea_candle', x: 0, y: 15, w: 1, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_mixed_metrics', x: 0, y: 19, w: 1, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
-    { i: 'p_1tgstpm5z', x: 0, y: 23, w: 1, h: 5, minW: 1, minH: 2, isDraggable: true, isResizable: true },
-    { i: 'p_od6kgu6a0', x: 0, y: 28, w: 1, h: 5, minW: 1, minH: 2, isDraggable: true, isResizable: true }
+    { i: 'p_sld_transformer', x: 0, y: 0, w: 1, h: 5, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_health_index', x: 0, y: 5, w: 1, h: 5, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_phasor_diagram', x: 0, y: 10, w: 1, h: 5, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_event_stream', x: 0, y: 15, w: 1, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_uphase_chart', x: 0, y: 19, w: 1, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_oilstatus', x: 0, y: 23, w: 1, h: 3, minW: 1, minH: 2, isDraggable: true, isResizable: true },
+    { i: 'p_uline_chart', x: 0, y: 26, w: 1, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_freq_gauge', x: 0, y: 30, w: 1, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_phasea_candle', x: 0, y: 34, w: 1, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_mixed_metrics', x: 0, y: 38, w: 1, h: 4, minW: 1, minH: 3, isDraggable: true, isResizable: true },
+    { i: 'p_1tgstpm5z', x: 0, y: 42, w: 1, h: 5, minW: 1, minH: 2, isDraggable: true, isResizable: true },
+    { i: 'p_od6kgu6a0', x: 0, y: 47, w: 1, h: 5, minW: 1, minH: 2, isDraggable: true, isResizable: true }
   ]
 };
 
@@ -116,6 +142,10 @@ const PanelRenderer = memo(({ panel, latestData, chartData, tempData, isLive, is
 
     case 'candlestick': return <CandlestickPanel panel={panel} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
     case 'oilstatus': return <OilStatusPanel panel={panel} tempData={tempData || {}} isEditing={isEditing} />;
+    case 'phasor': return <PhasorDiagramPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
+    case 'sld': return <TransformerSLDPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
+    case 'healthindex': return <HealthIndexPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
+    case 'eventstream': return <EventStreamPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
     default:
       return (
         <div className="h-full w-full flex items-center justify-center bg-gray-50 dark:bg-white/5 rounded-xl border border-dashed border-gray-300 dark:border-white/20">
@@ -135,36 +165,90 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
   const [searchQuery, setSearchQuery] = useState('');
   const [visSearchQuery, setVisSearchQuery] = useState('');
 
-  const DRAFT_KEY = 'grafana_panel_editor_draft';
+  const DRAFT_KEY = 'panel_editor_draft';
+  const SPLIT_KEY = 'panel_editor_split_ratio';
+  const DEFAULT_SPLIT_RATIO = 55;
+
+  const [splitRatio, setSplitRatio] = useState(() => {
+    try {
+      const saved = localStorage.getItem(SPLIT_KEY);
+      if (saved) {
+        const parsed = parseFloat(saved);
+        if (!isNaN(parsed) && parsed >= 20 && parsed <= 85) return parsed;
+      }
+    } catch {}
+    return DEFAULT_SPLIT_RATIO;
+  });
+
+  const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+  const leftColumnRef = useRef(null);
 
   const handleResetDraft = () => {
     localStorage.removeItem(DRAFT_KEY);
+    localStorage.removeItem(SPLIT_KEY);
+    setSplitRatio(DEFAULT_SPLIT_RATIO);
     setTitle(''); setPanelType('areachart'); setSelectedMetrics([]); setChartType('area'); setColorScheme('spectral');
   };
 
+  const handleSplitMouseDown = (e) => {
+    e.preventDefault();
+    setIsDraggingSplit(true);
+  };
+
+  useEffect(() => {
+    if (!isDraggingSplit) return;
+
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (e) => {
+      if (!leftColumnRef.current) return;
+      const rect = leftColumnRef.current.getBoundingClientRect();
+      const newHeight = e.clientY - rect.top;
+      const newPct = (newHeight / rect.height) * 100;
+      const clamped = Math.min(85, Math.max(20, newPct));
+      setSplitRatio(clamped);
+    };
+
+    const handleMouseUp = () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      setIsDraggingSplit(false);
+      setSplitRatio((current) => {
+        try {
+          localStorage.setItem(SPLIT_KEY, JSON.stringify(current));
+        } catch {}
+        return current;
+      });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingSplit]);
+
   useEffect(() => {
     if (editingPanel) {
-      setTitle(editingPanel.title);
-      setPanelType(editingPanel.type || 'chart');
+      setTitle(editingPanel.title || '');
+      setPanelType(editingPanel.type || 'areachart');
       setSelectedMetrics([...(editingPanel.metrics || [])]);
       setChartType(editingPanel.chartType || 'area');
       setColorScheme(editingPanel.colorScheme || 'spectral');
     } else {
-      const draft = localStorage.getItem(DRAFT_KEY);
-      if (draft) {
-        try {
-          const parsed = JSON.parse(draft);
-          setTitle(parsed.title || '');
-          setPanelType(parsed.panelType || 'areachart');
-          setSelectedMetrics(parsed.selectedMetrics || []);
-          setChartType(parsed.chartType || 'area');
-          setColorScheme(parsed.colorScheme || 'spectral');
-        } catch (e) {
-          setTitle(''); setPanelType('areachart'); setSelectedMetrics([]); setChartType('area'); setColorScheme('spectral');
-        }
-      } else {
-        setTitle(''); setPanelType('areachart'); setSelectedMetrics([]); setChartType('area'); setColorScheme('spectral');
-      }
+      // When opening Add Panel, always start clean and empty so user can select metrics freely
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch {}
+      setTitle('');
+      setPanelType('areachart');
+      setSelectedMetrics([]);
+      setChartType('area');
+      setColorScheme('spectral');
     }
     setSearchQuery('');
     setVisSearchQuery('');
@@ -187,26 +271,44 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  const PANEL_METRIC_LIMITS = {
+    gauge: 1,
+    bargauge: 1,
+    candlestick: 1,
+    histogram: 1,
+    barchart: 3,
+    phasor: 3,        // 3 Fasa (R-S-T)
+    healthindex: 6,   // Max 6 health index parameters
+    sld: 8,           // Max 8 SLD parameters
+  };
   const SINGLE_METRIC_PANELS = ['gauge', 'bargauge', 'candlestick', 'histogram'];
-  const NO_METRIC_PANELS = ['oilstatus'];
+  const NO_METRIC_PANELS = ['oilstatus', 'eventstream', 'news'];
+  const OPTIONAL_METRIC_PANELS = ['phasor', 'sld', 'healthindex'];
 
   const toggleMetric = (key) => {
     setSelectedMetrics(prev => {
       if (prev.includes(key)) return prev.filter(m => m !== key);
-      if (SINGLE_METRIC_PANELS.includes(panelType)) return [key]; // Only allow 1 metric, replace if new selected
+      const limit = PANEL_METRIC_LIMITS[panelType];
+      if (limit === 1) return [key];
+      if (limit && prev.length >= limit) return prev;
       return [...prev, key];
     });
   };
 
-  // Enforce single metric if user switches type to a restricted panel after selecting multiple
+  // Enforce single or panel-specific metric limits if user switches type
   useEffect(() => {
-    if (SINGLE_METRIC_PANELS.includes(panelType) && selectedMetrics.length > 1) {
-      setSelectedMetrics([selectedMetrics[0]]);
+    const limit = PANEL_METRIC_LIMITS[panelType];
+    if (limit && selectedMetrics.length > limit) {
+      setSelectedMetrics(selectedMetrics.slice(0, limit));
     }
   }, [panelType, selectedMetrics]);
 
   const derivedTitle = useMemo(() => {
     if (panelType === 'oilstatus') return 'Oil Status';
+    if (panelType === 'phasor') return '3-Phase Phasor Diagram';
+    if (panelType === 'sld') return 'Transformer SLD';
+    if (panelType === 'healthindex') return 'Transformer Health Index';
+    if (panelType === 'eventstream') return 'Live Event Stream';
     if (selectedMetrics.length === 0) return 'Custom Panel';
     if (selectedMetrics.length === 1) return METRICS[selectedMetrics[0]]?.label || selectedMetrics[0];
 
@@ -221,7 +323,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
   }, [selectedMetrics, panelType]);
 
   const handleSave = () => {
-    if (selectedMetrics.length === 0 && !NO_METRIC_PANELS.includes(panelType)) return;
+    if (selectedMetrics.length === 0 && !NO_METRIC_PANELS.includes(panelType) && !OPTIONAL_METRIC_PANELS.includes(panelType)) return;
 
     if (!editingPanel) {
       localStorage.removeItem(DRAFT_KEY);
@@ -273,67 +375,93 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-y-auto lg:overflow-hidden flex-col lg:flex-row">
-        {/* Main Left Content (Preview Top + Metrics Bottom) */}
-        <div className="contents lg:flex lg:flex-1 flex-col lg:overflow-hidden lg:border-r border-gray-200 dark:border-white/10">
+      <div className="flex flex-1 overflow-y-auto lg:overflow-hidden flex-col lg:flex-row min-h-0">
+        {/* Main Left Content (Preview Top + Splitter + Metrics Bottom) */}
+        <div ref={leftColumnRef} className="contents lg:flex lg:flex-1 flex-col lg:h-full lg:overflow-hidden lg:border-r border-gray-200 dark:border-white/10 relative">
           
-          {/* Top: Preview Area */}
-          <div className="order-2 lg:order-none flex-1 p-4 lg:p-6 flex flex-col min-h-[300px] bg-gray-50/50 dark:bg-black/20">
-             <div className="mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Preview</div>
-             <div className="flex-1 bg-white dark:bg-[#151521] border border-gray-200 dark:border-white/5 shadow-sm rounded-xl p-4 overflow-hidden relative group">
-                {(selectedMetrics.length === 0 && !NO_METRIC_PANELS.includes(panelType)) ? (
-                  <div className="h-full w-full flex flex-col items-center justify-center text-gray-400">
-                    <BarChart3 size={48} className="mb-3 opacity-20" />
-                    <span className="text-sm font-medium">Select metrics below to see preview</span>
-                  </div>
-                ) : (
-                  <PanelRenderer panel={previewPanel} latestData={latestData || {}} chartData={previewChartData} tempData={tempData || {}} isLive={isLive} isEditing={false} isSyncHoverActive={false} />
-                )}
+          {/* Top: Preview Area (Resizable) */}
+          <div
+            className={`order-2 lg:order-none p-4 lg:p-5 flex flex-col bg-gray-50/50 dark:bg-black/20 overflow-hidden ${
+              NO_METRIC_PANELS.includes(panelType) ? 'flex-1 h-full' : 'shrink-0'
+            }`}
+            style={!NO_METRIC_PANELS.includes(panelType) ? { height: `${splitRatio}%` } : undefined}
+          >
+             <div className="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider shrink-0">Preview</div>
+             <div className="flex-1 min-h-0 bg-white dark:bg-[#151521] border border-gray-200 dark:border-white/5 shadow-sm rounded-xl p-4 overflow-hidden relative group">
+                <PanelRenderer panel={previewPanel} latestData={latestData || {}} chartData={previewChartData} tempData={tempData || {}} isLive={isLive} isEditing={false} isSyncHoverActive={false} />
              </div>
           </div>
 
-          {/* Bottom: Metrics Selection Area */}
+          {/* Resizable Divider Handle (Drag Up / Down) */}
           {!NO_METRIC_PANELS.includes(panelType) && (
-            <div className="order-4 lg:order-none lg:h-[45%] min-h-[250px] p-4 lg:p-6 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#1a1a2e] flex flex-col">
-               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
-                <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Database size={16} className="text-blue-500" /> Metrics Selection 
-                  <span className="text-xs bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">{selectedMetrics.length} selected</span>
-                  {panelType === 'barchart' && selectedMetrics.length > 3 && (
-                    <span className="text-[11px] font-bold text-red-500 animate-pulse bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Max 3 metrics (Bar Chart)</span>
+            <div
+              onMouseDown={handleSplitMouseDown}
+              onDoubleClick={() => {
+                setSplitRatio(DEFAULT_SPLIT_RATIO);
+                try { localStorage.removeItem(SPLIT_KEY); } catch {}
+              }}
+              title="Drag up / down to resize (Double-click to reset)"
+              className={`order-3 lg:order-none h-3 group cursor-row-resize flex items-center justify-center bg-gray-200/90 hover:bg-blue-500/20 dark:bg-white/5 dark:hover:bg-blue-500/30 transition-colors border-y border-gray-300/70 dark:border-white/10 shrink-0 select-none z-20 ${
+                isDraggingSplit ? 'bg-blue-500/30 dark:bg-blue-500/40' : ''
+              }`}
+            >
+              <div className="w-14 h-1 rounded-full bg-gray-400 dark:bg-white/30 group-hover:bg-blue-500 transition-colors flex items-center justify-center gap-1">
+                <div className="w-1 h-1 rounded-full bg-white/70" />
+                <div className="w-1 h-1 rounded-full bg-white/70" />
+                <div className="w-1 h-1 rounded-full bg-white/70" />
+              </div>
+            </div>
+          )}
+
+          {/* Bottom: Metrics Selection Area (Dynamically Resized & Scrollable) */}
+          {!NO_METRIC_PANELS.includes(panelType) && (
+            <div className="order-4 lg:order-none flex-1 min-h-0 p-3 lg:p-4 bg-white dark:bg-[#1a1a2e] flex flex-col overflow-hidden">
+               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 shrink-0">
+                <h4 className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <Database size={14} className="text-blue-500" /> Metrics Selection 
+                  <span className="text-[10px] bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-full font-mono">{selectedMetrics.length} selected</span>
+                  {PANEL_METRIC_LIMITS[panelType] && PANEL_METRIC_LIMITS[panelType] > 1 && (
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                      selectedMetrics.length >= PANEL_METRIC_LIMITS[panelType] 
+                        ? 'text-amber-500 bg-amber-500/10 border-amber-500/20' 
+                        : 'text-blue-500 bg-blue-500/10 border-blue-500/20'
+                    }`}>
+                      Max {PANEL_METRIC_LIMITS[panelType]} metrics ({selectedMetrics.length}/{PANEL_METRIC_LIMITS[panelType]})
+                    </span>
                   )}
                 </h4>
-                <div className="relative w-full md:w-64">
-                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                   <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search metrics..." className="w-full pl-8 pr-4 py-1.5 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white" />
+                <div className="relative w-full sm:w-56">
+                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={12} />
+                   <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Filter metrics..." className="w-full pl-7 pr-3 py-1 rounded-lg bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 text-xs focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white" />
                 </div>
              </div>
 
-             <div className="max-h-[350px] lg:max-h-none flex-1 overflow-y-auto custom-scrollbar pr-2">
+             <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1.5 space-y-2.5">
                 {Object.entries(METRIC_GROUPS).map(([gName, gMetrics]) => {
                   const filtered = gMetrics.filter(m => m.label.toLowerCase().includes(searchQuery.toLowerCase()) || m.key.toLowerCase().includes(searchQuery.toLowerCase()));
                   if (filtered.length === 0) return null;
                   
                   return (
-                    <div key={gName} className="mb-6 last:mb-0">
-                      <div className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                        {gName}
-                        <div className="flex-1 h-px bg-gray-200 dark:bg-white/5" />
+                    <div key={gName}>
+                      <div className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-2">
+                        <span>{gName}</span>
+                        <div className="flex-1 h-px bg-gray-200 dark:border-white/5" />
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
                         {filtered.map(m => {
                           const sel = selectedMetrics.includes(m.key);
-                          const isDisabled = panelType === 'barchart' && selectedMetrics.length >= 3 && !sel;
+                          const limit = PANEL_METRIC_LIMITS[panelType];
+                          const isDisabled = limit && limit > 1 && selectedMetrics.length >= limit && !sel;
                           
                           return (
-                            <label key={m.key} className={`flex items-start gap-2.5 p-2.5 rounded-xl border transition-all ${isDisabled ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-200 dark:bg-[#111] dark:border-white/5' : 'cursor-pointer'} ${!isDisabled && sel ? 'bg-blue-50 border-blue-300 dark:bg-blue-500/10 dark:border-blue-500/30 shadow-sm' : ''} ${!isDisabled && !sel ? 'bg-white border-gray-200 dark:bg-[#151521] dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/50' : ''}`}>
-                              <div className="relative flex items-center justify-center mt-0.5">
-                                <input type="checkbox" disabled={isDisabled} checked={sel} onChange={() => !isDisabled && toggleMetric(m.key)} className={`peer appearance-none w-4 h-4 border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-black/20 checked:bg-blue-500 checked:border-blue-500 transition-all ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`} />
-                                <Check size={12} className="absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none" />
+                            <label key={m.key} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg border text-left transition-all select-none ${isDisabled ? 'opacity-40 cursor-not-allowed bg-gray-100 border-gray-200 dark:bg-[#111] dark:border-white/5' : 'cursor-pointer'} ${!isDisabled && sel ? 'bg-blue-50/80 border-blue-400 dark:bg-blue-500/15 dark:border-blue-500/40 shadow-2xs' : ''} ${!isDisabled && !sel ? 'bg-white border-gray-200/80 dark:bg-[#151521] dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/40' : ''}`}>
+                              <div className="relative flex items-center justify-center shrink-0">
+                                <input type="checkbox" disabled={isDisabled} checked={sel} onChange={() => !isDisabled && toggleMetric(m.key)} className={`peer appearance-none w-4 h-4 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-black/20 checked:bg-blue-500 checked:border-blue-500 transition-all ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`} />
+                                <Check size={11} className="absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none" />
                               </div>
-                              <div className="flex flex-col flex-1 min-w-0">
-                                <span className={`text-xs font-semibold truncate ${sel ? 'text-blue-900 dark:text-blue-100' : 'text-gray-700 dark:text-gray-300'}`}>{m.label}</span>
-                                {m.unit && <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{m.unit}</span>}
+                              <div className="flex items-center justify-between gap-1.5 flex-1 min-w-0">
+                                <span className={`text-xs sm:text-[12.5px] truncate ${sel ? 'text-blue-900 dark:text-blue-100 font-bold' : 'text-gray-800 dark:text-gray-200 font-medium'}`}>{m.label}</span>
+                                {m.unit && <span className="text-[10px] font-mono text-gray-400 dark:text-gray-500 shrink-0 font-normal">[{m.unit}]</span>}
                               </div>
                             </label>
                           )
@@ -396,10 +524,19 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     { v: 'histogram', l: 'Histogram', d: 'Value distributions', i: BarChart3 },
     { v: 'news', l: 'News', d: 'RSS feeds & updates', i: Rss },
     { v: 'candlestick', l: 'Candlestick', d: 'OHLC financial data', i: CandlestickChart },
-    { v: 'oilstatus', l: 'Oil Status', d: 'Oil Trip & Alarm Status', i: AlertTriangle }
+    { v: 'oilstatus', l: 'Oil Status', d: 'Oil Trip & Alarm Status', i: AlertTriangle },
+    { v: 'phasor', l: 'Phasor Diagram', d: '3-Phase vector polar plot', i: Compass },
+    { v: 'sld', l: 'Transformer SLD', d: 'Single Line Diagram & power flow', i: GitCommit },
+    { v: 'healthindex', l: 'Health Index', d: 'Composite THI & IEEE Aging', i: HeartPulse },
+    { v: 'eventstream', l: 'Event Stream', d: 'Real-time terminal log & alert', i: Terminal }
   ].filter(t => t.l.toLowerCase().includes(visSearchQuery.toLowerCase()) || t.d.toLowerCase().includes(visSearchQuery.toLowerCase())).map(t => (
                     <div key={t.v} className={`rounded-xl border transition-all flex flex-col overflow-hidden ${panelType === t.v ? 'bg-blue-50 border-blue-500 dark:bg-blue-500/10 dark:border-blue-500 shadow-sm' : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#151521] hover:border-blue-300 dark:hover:border-blue-500/50'}`}>
-                      <button onClick={() => setPanelType(t.v)} className={`flex items-start gap-3 p-3 w-full text-left ${panelType === t.v ? 'text-blue-800 dark:text-blue-200' : 'text-gray-700 dark:text-gray-300'}`}>
+                      <button
+                        onClick={() => {
+                          setPanelType(t.v);
+                        }}
+                        className={`flex items-start gap-3 p-3 w-full text-left ${panelType === t.v ? 'text-blue-800 dark:text-blue-200' : 'text-gray-700 dark:text-gray-300'}`}
+                      >
                         <div className={`mt-0.5 p-1.5 rounded-lg ${panelType === t.v ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-white/5 text-gray-500'}`}>
                           <t.i size={16} />
                         </div>
@@ -1026,7 +1163,7 @@ const Dashboard = () => {
 
   // ─── Chart data (live from WebSocket) ────────────────────────────────
   const chartData = useMemo(() => {
-    const maxPoints = 60;
+    const maxPoints = 15; // default 15s window across all panels
     const data = liveData && liveData.length > 0
       ? liveData.slice(-maxPoints)
       : [];
@@ -1035,7 +1172,7 @@ const Dashboard = () => {
 
   // Oil chart data
   const oilChartData = useMemo(() => {
-    return oilLiveData ? oilLiveData.slice(-60) : [];
+    return oilLiveData ? oilLiveData.slice(-15) : [];
   }, [oilLiveData]);
 
   // ─── Get chart data for a panel ──────────────────────────────────────
@@ -1437,6 +1574,9 @@ const Dashboard = () => {
 
         {/* Right Side: Toolbar */}
         <div className="flex flex-1 items-center gap-2 flex-wrap lg:flex-nowrap xl:justify-end">
+          {/* Universal Time Picker (Grafana Style) */}
+          <UniversalTimePicker />
+
           {/* --- Text/Dropdown Buttons (Top Group) --- */}
           {/* Profile Selector (Custom Dropdown) */}
           <div className="relative" ref={profileDropdownRef}>

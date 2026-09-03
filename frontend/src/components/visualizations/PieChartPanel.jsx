@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
-import { GripVertical } from "lucide-react";
+import { GripVertical, PieChart as PieChartIcon } from "lucide-react";
 import { METRICS } from "../../config/metrics";
 
 export const PieChartPanel = memo(({ panel, latestData, isEditing }) => {
@@ -17,12 +17,18 @@ export const PieChartPanel = memo(({ panel, latestData, isEditing }) => {
   return (
     <div className="h-full w-full flex flex-col">
       <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-        <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 font-sans text-center truncate flex-1 tracking-wide">{panel.title}</h3>
+        <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-200 font-sans tracking-wide">{panel.title}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 flex flex-col h-full w-full">
         {data.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-gray-500 text-xs">Select metrics to display</div>
+          <div className="h-full w-full flex-1 flex flex-col items-center justify-center p-4 text-center">
+            <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500 mb-2">
+              <PieChartIcon size={24} />
+            </div>
+            <span className="text-xs font-bold text-gray-700 dark:text-gray-200 mb-1">No Metrics Selected</span>
+            <span className="text-[11px] text-gray-400 max-w-xs">Please select metrics below to view proportion and percentage distribution.</span>
+          </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>

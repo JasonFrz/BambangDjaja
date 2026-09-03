@@ -10,8 +10,8 @@ import { ChartTooltip } from "./TimeSeriesPanel";
 export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
   const metrics = (panel.metrics || []).slice(0, 3);
   
-  // Window selector state: 15 points (spacious), 30 points (balanced), 60 points (all)
-  const [timeWindow, setTimeWindow] = useState(20);
+  // Window selector state: 15s default
+  const [timeWindow, setTimeWindow] = useState(15);
 
   // Sliced data based on selected window
   const displayData = useMemo(() => {
@@ -19,12 +19,6 @@ export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverAct
     if (timeWindow >= chartData.length) return chartData;
     return chartData.slice(-timeWindow);
   }, [chartData, timeWindow]);
-
-  // Latest readings for header live metrics display
-  const latestPoint = useMemo(() => {
-    if (!chartData || chartData.length === 0) return null;
-    return chartData[chartData.length - 1];
-  }, [chartData]);
 
   // Bulletproof syncMethod for synchronized hover across all charts
   const handleSyncMethod = useCallback((tooltipTicks, syncData) => {
@@ -38,13 +32,13 @@ export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverAct
 
     // 2. If hovering on the far-right (latest data) on any other chart, lock to our far-right
     if (typeof syncData.activeTooltipIndex === 'number') {
-      if (syncData.activeTooltipIndex >= 55) {
+      if (syncData.activeTooltipIndex >= 12) {
         return tooltipTicks.length - 1;
       }
       // 3. Proportional position fallback for synchronized movement
-      const ratio = syncData.activeTooltipIndex / 60;
-      const mappedIdx = Math.round(ratio * (tooltipTicks.length - 1));
-      return Math.max(0, Math.min(tooltipTicks.length - 1, mappedIdx));
+      const ratio = syncData.activeTooltipIndex / 15;
+      const targetIdx = Math.round(ratio * (tooltipTicks.length - 1));
+      return Math.min(tooltipTicks.length - 1, Math.max(0, targetIdx));
     }
 
     return -1;
@@ -60,6 +54,29 @@ export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverAct
 
   const panelId = panel.id || 'bar';
 
+  if (metrics.length === 0) {
+    return (
+      <div className="h-full w-full flex flex-col transition-colors duration-300">
+        <div className={`flex items-center gap-2 px-1 mb-1.5 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
+          <div className="p-1 rounded-md bg-blue-500/10 text-blue-500 dark:text-blue-400 shrink-0">
+            <BarChart3 size={14} />
+          </div>
+          <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-200 font-sans truncate tracking-wide">
+            {panel.title}
+          </h3>
+          {isEditing && <GripVertical size={16} className="text-gray-400 shrink-0 ml-auto" />}
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
+          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 mb-2">
+            <BarChart3 size={24} />
+          </div>
+          <span className="text-xs font-bold text-gray-700 dark:text-gray-200 mb-1">No Metrics Selected</span>
+          <span className="text-[11px] text-gray-400 max-w-xs">Please select up to 3 metrics below to compare values in the bar chart.</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full w-full flex flex-col transition-colors duration-300">
       {/* ─── Premium Header Bar ─── */}
@@ -71,33 +88,9 @@ export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverAct
           <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-200 font-sans truncate tracking-wide">
             {panel.title}
           </h3>
-        </div>
-
-        {/* Header Right: Live Metric Badges & Window Selector */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Latest Metric Chips */}
-          {latestPoint && (
-            <div className="hidden sm:flex items-center gap-1.5">
-              {metrics.map(m => {
-                const val = latestPoint[m];
-                const meta = METRICS[m];
-                if (val === undefined || val === null) return null;
-                return (
-                  <span
-                    key={m}
-                    className="inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/5 border border-gray-200/60 dark:border-white/10"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: meta?.color || '#3b82f6' }} />
-                    <span className="text-gray-500 dark:text-gray-400 font-sans text-[9px]">{meta?.label?.split(' ')[0] || m}:</span>
-                    <span className="font-bold text-gray-800 dark:text-gray-100">{Number(val).toFixed(1)}</span>
-                  </span>
-                );
-              })}
-            </div>
-          )}
 
           {/* Time Window Pills (15s / 30s / 60s) */}
-          <div className="inline-flex p-0.5 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[10px] font-medium">
+          <div className="inline-flex p-0.5 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[10px] font-medium shrink-0 ml-1">
             {[
               { label: '15s', val: 15 },
               { label: '30s', val: 30 },
@@ -110,7 +103,7 @@ export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverAct
                   e.stopPropagation();
                   setTimeWindow(tab.val);
                 }}
-                className={`px-1.5 py-0.5 rounded transition-all duration-200 ${
+                className={`px-1.5 py-0.5 rounded transition-all duration-200 cursor-pointer ${
                   timeWindow === tab.val
                     ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-xs font-semibold'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
@@ -121,7 +114,10 @@ export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverAct
               </button>
             ))}
           </div>
+        </div>
 
+        {/* Header Right */}
+        <div className="flex items-center gap-2 shrink-0 pr-14">
           {isEditing && <GripVertical size={16} className="text-gray-400 dark:text-gray-500 shrink-0" />}
         </div>
       </div>

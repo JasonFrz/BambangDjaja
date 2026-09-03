@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { GripVertical } from "lucide-react";
+import { GripVertical, Gauge } from "lucide-react";
 import { METRICS } from "../../config/metrics";
 
 const SvgGauge = ({ percent, value, unit, isDanger, color }) => {
@@ -57,6 +57,25 @@ const SvgGauge = ({ percent, value, unit, isDanger, color }) => {
 
 export const GaugePanel = memo(({ panel, latestData, isEditing }) => {
   const metrics = panel.metrics || [];
+
+  if (metrics.length === 0) {
+    return (
+      <div className="h-full w-full flex flex-col">
+        <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
+          <h3 className="font-medium text-[#172b4d] dark:text-white text-sm font-heading tracking-tight truncate flex-1">{panel.title}</h3>
+          {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
+          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 mb-2">
+            <Gauge size={24} />
+          </div>
+          <span className="text-xs font-bold text-gray-700 dark:text-gray-200 mb-1">No Metric Selected</span>
+          <span className="text-[11px] text-gray-400 max-w-xs">Please select 1 metric below to display the circular gauge dial.</span>
+        </div>
+      </div>
+    );
+  }
+
   const meta = METRICS[metrics[0]];
   const val = latestData[metrics[0]] ?? 0;
 

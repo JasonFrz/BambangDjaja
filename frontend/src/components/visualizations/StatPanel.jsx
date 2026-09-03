@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { GripVertical } from "lucide-react";
+import { GripVertical, TrendingUp } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { METRICS } from "../../config/metrics";
 
@@ -13,7 +13,15 @@ export const StatPanel = memo(({ panel, latestData, chartData, isEditing }) => {
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
 
-      {metrics.length === 1 ? (
+      {metrics.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
+          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 mb-2">
+            <TrendingUp size={24} />
+          </div>
+          <span className="text-xs font-bold text-gray-700 dark:text-gray-200 mb-1">No Metrics Selected</span>
+          <span className="text-[11px] text-gray-400 max-w-xs">Please select one or more metrics below to display live stats.</span>
+        </div>
+      ) : metrics.length === 1 ? (
         <div className="flex-1 flex flex-col min-h-0 relative group" style={{ containerType: 'inline-size' }}>
           <div className="absolute inset-0 flex flex-col items-center justify-center pb-8 z-10 pointer-events-none">
             <span className="font-bold text-[#172b4d] dark:text-white font-mono tracking-tight drop-shadow-md leading-none" style={{ fontSize: 'clamp(24px, 20cqi, 72px)' }}>

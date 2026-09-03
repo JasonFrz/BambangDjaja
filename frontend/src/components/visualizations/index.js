@@ -13,3 +13,7 @@ export * from './HistogramPanel';
 export * from './NewsPanel';
 export * from './CandlestickPanel';
 export * from './OilStatusPanel';
+export * from './PhasorDiagramPanel';
+export * from './TransformerSLDPanel';
+export * from './HealthIndexPanel';
+export * from './EventStreamPanel';

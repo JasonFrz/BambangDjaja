@@ -1,13 +1,32 @@
 import React, { memo } from 'react';
-import { GripVertical } from "lucide-react";
+import { GripVertical, LayoutPanelLeft } from "lucide-react";
 import { METRICS } from "../../config/metrics";
 
 export const BarGaugePanel = memo(({ panel, latestData, isEditing }) => {
   const metrics = panel.metrics || [];
+
+  if (metrics.length === 0) {
+    return (
+      <div className="h-full w-full flex flex-col">
+        <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
+          <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-200 font-sans tracking-wide">{panel.title}</h3>
+          {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
+          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 mb-2">
+            <LayoutPanelLeft size={24} />
+          </div>
+          <span className="text-xs font-bold text-gray-700 dark:text-gray-200 mb-1">No Metric Selected</span>
+          <span className="text-[11px] text-gray-400 max-w-xs">Please select 1 metric below to display the horizontal progress bar.</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full w-full flex flex-col">
       <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-        <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 font-sans text-center truncate flex-1 tracking-wide">{panel.title}</h3>
+        <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-200 font-sans tracking-wide">{panel.title}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-3 justify-center">

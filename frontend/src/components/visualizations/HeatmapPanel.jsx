@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useState } from 'react';
-import { GripVertical, Palette } from "lucide-react";
+import { GripVertical, Palette, BoxSelect } from "lucide-react";
 import { METRICS } from "../../config/metrics";
 import EnergyLoader from "../../components/EnergyLoader";
 import { useTrendData } from "../../contexts/TrendDataContext";
@@ -110,10 +110,28 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
     setTooltip(prev => ({ ...prev, show: false }));
   };
 
+  if (metrics.length === 0) {
+    return (
+      <div className="h-full w-full flex flex-col transition-colors duration-500 rounded-none overflow-hidden heatmap-container relative">
+        <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
+          <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-200 font-sans tracking-wide">{panel.title}</h3>
+          {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
+          <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-500 mb-2">
+            <BoxSelect size={24} />
+          </div>
+          <span className="text-xs font-bold text-gray-700 dark:text-gray-200 mb-1">No Metrics Selected</span>
+          <span className="text-[11px] text-gray-400 max-w-xs">Please select metrics below to render the 2D distribution heatmap.</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full w-full flex flex-col transition-colors duration-500 rounded-none overflow-hidden heatmap-container relative">
       <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-        <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 font-sans text-center truncate flex-1 tracking-wide">{panel.title}</h3>
+        <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-200 font-sans tracking-wide">{panel.title}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
       <div className="flex-1 flex overflow-hidden pl-3 pb-3">
