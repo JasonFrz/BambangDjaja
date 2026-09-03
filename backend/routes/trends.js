@@ -561,87 +561,136 @@ router.get("/thi", extractDb, async (req, res) => {
       }
 
       let score = 100;
-      let status = 'NORMAL';
+      let status = 'OPTIMAL';
       let color = '#10b981';
       let thresholdLabel = 'Operasi Normal';
 
-      if (tMin !== null && tMax !== null) {
-        thresholdLabel = `Batas: ${tMin} - ${tMax}`;
-        const center = (tMin + tMax) / 2;
-        const span = (tMax - tMin) / 2 || 1;
-        const dev = Math.abs(val - center);
+      // ─── 1. Power Factor (Higher is Better, 1.0 is Unity/Optimal) ───────────
+      if (key === 'pfTotal' || dbKey === 'pf_total') {
+        const pfMin = tMin !== null ? tMin : 0.85;
+        thresholdLabel = `Min: ${pfMin}`;
+        if (val >= 0.90) {
+          score = 100;
+          status = 'OPTIMAL';
+          color = '#10b981';
+        } else if (val >= pfMin) {
+          score = Math.round(85 + ((val - pfMin) / (0.90 - pfMin)) * 14);
+          status = 'NORMAL';
+          color = '#10b981';
+        } else {
+          const breach = pfMin - val;
+          score = breach <= 0.10 ? 65 : 35;
+          status = breach <= 0.10 ? 'WARNING' : 'CRITICAL';
+          color = breach <= 0.10 ? '#f59e0b' : '#ef4444';
+        }
+      }
+      // ─── 2. Symmetrical Tolerances (Voltages & Frequency: Center is Ideal) ───
+      else if (
+        ['phaseA', 'phaseB', 'phaseC', 'lineAB', 'lineBC', 'lineCA', 'frequency'].includes(key) ||
+        ['v_phase', 'v_line', 'avg_phase_v', 'avg_line_v', 'frequency'].includes(dbKey)
+      ) {
+        if (tMin !== null && tMax !== null) {
+          thresholdLabel = `Limit: ${tMin} - ${tMax}`;
+          const center = (tMin + tMax) / 2;
+          const span = (tMax - tMin) / 2 || 1;
+          const dev = Math.abs(val - center);
+          const ratio = dev / span;
 
-        if (val >= tMin && val <= tMax) {
-          if (dev <= span * 0.5) {
+          if (val >= tMin && val <= tMax) {
+            if (ratio <= 0.85) {
+              score = 100;
+              status = 'OPTIMAL';
+              color = '#10b981';
+            } else {
+              const edgeTaper = (ratio - 0.85) / 0.15;
+              score = Math.max(85, Math.round(95 - edgeTaper * 10));
+              status = 'NORMAL';
+              color = '#10b981';
+            }
+          } else {
+            const breach = val < tMin ? tMin - val : val - tMax;
+            const breachPct = (breach / span) * 100;
+            score = breachPct <= 15 ? 65 : 35;
+            status = breachPct <= 15 ? 'WARNING' : 'CRITICAL';
+            color = breachPct <= 15 ? '#f59e0b' : '#ef4444';
+          }
+        }
+      }
+      // ─── 3. Upper-Bounded Quantities (Currents, Power, Unbalance, Oil Temp) ──
+      // Low values (or safe operational load <= 85% capacity) are completely optimal!
+      else if (
+        ['currentA', 'currentB', 'currentC', 'currentN', 'currentUnbalance', 'powerActiveTotal', 'powerReactiveTotal', 'powerApparentTotal', 'oil_temperature'].includes(key) ||
+        ['current', 'avg_current', 'current_n', 'current_unbalance', 'power_active_total_kw', 'power_reactive_total_kvar', 'power_apparent_total_kva', 'oil_temperature'].includes(dbKey)
+      ) {
+        const maxLimit = tMax !== null ? tMax : (key === 'currentUnbalance' ? 15 : (key.includes('power') ? 1500 : 3000));
+        thresholdLabel = `Max: ${maxLimit}`;
+
+        if (val <= maxLimit) {
+          if (val <= maxLimit * 0.85) {
             score = 100;
             status = 'OPTIMAL';
             color = '#10b981';
           } else {
-            score = 85;
+            const taper = (val - maxLimit * 0.85) / (maxLimit * 0.15);
+            score = Math.max(85, Math.round(95 - taper * 10));
             status = 'NORMAL';
             color = '#10b981';
           }
         } else {
-          const breach = val < tMin ? tMin - val : val - tMax;
-          const breachPct = (breach / span) * 100;
-          if (breachPct <= 15) {
-            score = 65;
-            status = 'WARNING';
-            color = '#f59e0b';
-          } else {
-            score = 35;
-            status = 'CRITICAL';
-            color = '#ef4444';
-          }
+          const breachPct = ((val - maxLimit) / (maxLimit || 1)) * 100;
+          score = breachPct <= 15 ? 65 : 35;
+          status = breachPct <= 15 ? 'WARNING' : 'CRITICAL';
+          color = breachPct <= 15 ? '#f59e0b' : '#ef4444';
         }
-      } else if (tMin !== null) {
-        thresholdLabel = `Min: ${tMin}`;
-        if (val >= tMin) {
-          score = val >= tMin * 1.05 ? 100 : 85;
-          status = 'NORMAL';
+      }
+      // ─── 4. Oil Pressure (Nominal operating window 0.5 - 2.5 Bar) ───────────
+      else if (key === 'oil_pressure' || dbKey === 'oil_pressure') {
+        const minP = tMin !== null ? tMin : 0.5;
+        const maxP = tMax !== null ? tMax : 2.5;
+        thresholdLabel = `Limit: ${minP} - ${maxP}`;
+        if (val >= minP && val <= maxP) {
+          score = 100;
+          status = 'OPTIMAL';
           color = '#10b981';
         } else {
-          const breachPct = ((tMin - val) / (Math.abs(tMin) || 1)) * 100;
-          if (breachPct <= 10) {
-            score = 65;
-            status = 'WARNING';
-            color = '#f59e0b';
-          } else {
-            score = 35;
-            status = 'CRITICAL';
-            color = '#ef4444';
-          }
+          score = 60;
+          status = 'WARNING';
+          color = '#f59e0b';
         }
-      } else if (tMax !== null) {
-        thresholdLabel = `Maks: ${tMax}`;
-        if (val <= tMax) {
-          score = val <= tMax * 0.75 ? 100 : 85;
-          status = 'NORMAL';
-          color = '#10b981';
+      }
+      // ─── 5. General Fallback ───────────────────────────────────────────────
+      else {
+        if (tMin !== null && tMax !== null) {
+          thresholdLabel = `Limit: ${tMin} - ${tMax}`;
+          if (val >= tMin && val <= tMax) {
+            score = 100; status = 'OPTIMAL'; color = '#10b981';
+          } else {
+            score = 65; status = 'WARNING'; color = '#f59e0b';
+          }
+        } else if (tMax !== null) {
+          thresholdLabel = `Max: ${tMax}`;
+          score = val <= tMax ? 100 : 60;
+          status = score === 100 ? 'OPTIMAL' : 'WARNING';
+          color = score === 100 ? '#10b981' : '#f59e0b';
         } else {
-          const breachPct = ((val - tMax) / (Math.abs(tMax) || 1)) * 100;
-          if (breachPct <= 15) {
-            score = 65;
-            status = 'WARNING';
-            color = '#f59e0b';
-          } else {
-            score = 35;
-            status = 'CRITICAL';
-            color = '#ef4444';
-          }
+          thresholdLabel = 'Active';
+          score = 100;
+          status = 'OPTIMAL';
+          color = '#10b981';
         }
-      } else {
-        thresholdLabel = 'Beban Aktif';
-        score = val > 0 ? 95 : 80;
-        status = 'ACTIVE';
-        color = '#10b981';
+      }
+
+      // Format decimals according to metric nature
+      let displayVal = Number(val).toFixed(1);
+      if (['pfTotal', 'frequency', 'oil_pressure', 'currentUnbalance'].includes(key)) {
+        displayVal = Number(val).toFixed(2);
       }
 
       return {
         key,
         dbKey,
         val,
-        displayVal: Number(val).toFixed(1),
+        displayVal,
         tMin,
         tMax,
         score,
