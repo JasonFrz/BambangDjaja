@@ -15,7 +15,9 @@ export const HealthIndexPanel = memo(({ panel, latestData, isEditing }) => {
     if (userMetrics.length === 0) return;
 
     try {
-      setIsLoading(true);
+      if (!thiData) {
+        setIsLoading(true);
+      }
       const dbName = sessionStorage.getItem('db_name');
       const trafoId = sessionStorage.getItem('selected_trafo_id') || 1;
       if (!dbName) return;
@@ -24,27 +26,44 @@ export const HealthIndexPanel = memo(({ panel, latestData, isEditing }) => {
       const res = await axios.get(`${apiUrl}/api/trends/thi?trafo_id=${trafoId}&metrics=${metricsParam}`);
 
       if (res.data?.success) {
-        setThiData(res.data);
+        setThiData(prev => {
+          // Avoid re-renders if score and timestamp are unchanged
+          if (prev && prev.overallScore === res.data.overallScore && prev.timestamp === res.data.timestamp) {
+            return prev;
+          }
+          return res.data;
+        });
       }
     } catch (err) {
       console.warn("Could not fetch THI from webservice:", err.message);
     } finally {
       setIsLoading(false);
     }
-  }, [apiUrl, userMetrics]);
+  }, [apiUrl, userMetrics, thiData]);
 
-  // Fetch on mount, when metrics change, or periodically
+  // Fetch on mount or when metrics change
   useEffect(() => {
     fetchThiWebservice();
   }, [fetchThiWebservice]);
 
-  // Periodic refresh from database every 5 seconds to sync with realtime meter & settings
+  // Periodic refresh (every 6 seconds, paused when tab is hidden)
   useEffect(() => {
     if (userMetrics.length === 0) return;
     const interval = setInterval(() => {
-      fetchThiWebservice();
-    }, 5000);
-    return () => clearInterval(interval);
+      if (!document.hidden) {
+        fetchThiWebservice();
+      }
+    }, 6000);
+
+    const handleVisibility = () => {
+      if (!document.hidden) fetchThiWebservice();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [fetchThiWebservice, userMetrics.length]);
 
   // Determine icon for metric

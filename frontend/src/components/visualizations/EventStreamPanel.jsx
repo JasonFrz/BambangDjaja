@@ -13,27 +13,54 @@ export const EventStreamPanel = memo(({ panel, latestData, isEditing }) => {
   // Fetch events directly from MySQL backend database webservice
   const fetchDbEvents = useCallback(async () => {
     try {
-      setIsDbLoading(true);
+      // Only show loading indicator on initial cold load
+      if (events.length === 0) {
+        setIsDbLoading(true);
+      }
       const dbName = sessionStorage.getItem('db_name');
       const trafoId = sessionStorage.getItem('selected_trafo_id') || 1;
       if (!dbName) return;
 
       const res = await axios.get(`${apiUrl}/api/trends/events?trafo_id=${trafoId}&limit=50`);
       if (res.data?.success && Array.isArray(res.data.events)) {
-        setEvents(res.data.events);
+        setEvents(prev => {
+          // Avoid re-rendering if events have not changed
+          if (
+            prev.length === res.data.events.length &&
+            prev[0]?.id === res.data.events[0]?.id &&
+            prev[prev.length - 1]?.id === res.data.events[res.data.events.length - 1]?.id
+          ) {
+            return prev;
+          }
+          return res.data.events;
+        });
       }
     } catch (err) {
       console.warn("Could not fetch events from database webservice:", err.message);
     } finally {
       setIsDbLoading(false);
     }
-  }, [apiUrl]);
+  }, [apiUrl, events.length]);
 
-  // Initial fetch and periodic polling (every 4 seconds) from MySQL DB
+  // Initial fetch and smart background polling (every 6 seconds, paused when tab hidden)
   useEffect(() => {
     fetchDbEvents();
-    const interval = setInterval(fetchDbEvents, 4000);
-    return () => clearInterval(interval);
+
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        fetchDbEvents();
+      }
+    }, 6000);
+
+    const handleVisibility = () => {
+      if (!document.hidden) fetchDbEvents();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [fetchDbEvents]);
 
   const filteredEvents = useMemo(() => {

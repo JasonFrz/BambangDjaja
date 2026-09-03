@@ -12,26 +12,50 @@ export const NewsPanel = memo(({ panel, latestData, isEditing }) => {
   const fetchNews = useCallback(async () => {
     try {
       setIsLoading(true);
+      if (!bulletins.length) setIsLoading(true);
       const dbName = sessionStorage.getItem('db_name');
       const trafoId = sessionStorage.getItem('selected_trafo_id') || 1;
       if (!dbName) return;
 
       const res = await axios.get(`${apiUrl}/api/trends/news?trafo_id=${trafoId}`);
       if (res.data?.success && Array.isArray(res.data.bulletins)) {
-        setBulletins(res.data.bulletins);
+        setBulletins(prev => {
+          if (
+            prev.length === res.data.bulletins.length &&
+            prev[0]?.id === res.data.bulletins[0]?.id &&
+            prev[0]?.date === res.data.bulletins[0]?.date
+          ) {
+            return prev;
+          }
+          return res.data.bulletins;
+        });
       }
     } catch (err) {
       console.warn("Could not fetch operational news from database webservice:", err.message);
     } finally {
       setIsLoading(false);
     }
-  }, [apiUrl]);
+  }, [apiUrl, bulletins.length]);
 
-  // Initial fetch and poll every 30 seconds
+  // Initial fetch and poll every 30 seconds (paused when tab hidden)
   useEffect(() => {
     fetchNews();
-    const interval = setInterval(fetchNews, 30000);
-    return () => clearInterval(interval);
+
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        fetchNews();
+      }
+    }, 30000);
+
+    const handleVisibility = () => {
+      if (!document.hidden) fetchNews();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [fetchNews]);
 
   const getTagIcon = (tag) => {

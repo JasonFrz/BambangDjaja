@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from "react";
 import { useSearchParams, useLocation } from 'react-router-dom';
-import axios from 'axios';
-import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Plus, X, Settings2, Trash2, RefreshCw, GripVertical, Edit3, Send, LogOut, Download, Loader2, ChevronDown, Check, Search, Layers, RotateCcw, Thermometer, TrendingUp, BarChart3, Eye, AlertTriangle, Maximize2, Minimize2, MousePointer2, BellRing, Power, FileDown, Monitor, Crosshair, LayoutGrid, PlusSquare, Database, PieChart as PieChartIcon, FileText, Table, AlignLeft, CalendarClock, List, Rss, MessageSquareWarning, CandlestickChart, ActivitySquare, LayoutPanelLeft, BoxSelect, Calendar, Compass, GitCommit, HeartPulse, Terminal } from 'lucide-react';
+import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Plus, X, Settings2, Trash2, RefreshCw, GripVertical, Edit3, Send, LogOut, Download, Loader2, ChevronDown, Check, Search, Layers, RotateCcw, Thermometer, TrendingUp, BarChart3, Eye, AlertTriangle, Maximize2, Minimize2, MousePointer2, BellRing, Power, FileDown, Monitor, Crosshair, LayoutGrid, PlusSquare, Database, PieChart as PieChartIcon, FileText, Table, AlignLeft, CalendarClock, List, Rss, MessageSquareWarning, CandlestickChart, ActivitySquare, LayoutPanelLeft, BoxSelect, Calendar, Compass, GitCommit, HeartPulse, Terminal, Undo2, Redo2 } from 'lucide-react';
 import { useTrendData } from "../contexts/TrendDataContext";
 import { useTemperatureData } from "../contexts/TemperatureDataContext";
 import { useDialog } from "../contexts/DialogContext";
@@ -701,48 +700,145 @@ const Dashboard = () => {
   const skipLayoutChangeRef = useRef(false);
   const [layoutGeneration, setLayoutGeneration] = useState(0);
 
-  // ─── Undo History State ──────────────────────────────────────────────
-  const historyRef = useRef([]);
+  // ─── Ref trackers to eliminate closure staleness ─────────────────────
+  const panelsRef = useRef(panels);
+  const gridLayoutsRef = useRef(gridLayouts);
+  useEffect(() => { panelsRef.current = panels; }, [panels]);
+  useEffect(() => { gridLayoutsRef.current = gridLayouts; }, [gridLayouts]);
 
-  const pushToHistory = useCallback((currentPanels, currentLayouts) => {
-    historyRef.current.push({
-      panels: JSON.parse(JSON.stringify(currentPanels || [])),
-      layouts: JSON.parse(JSON.stringify(currentLayouts || {}))
-    });
-    if (historyRef.current.length > 50) historyRef.current.shift();
+  // ─── Multi-Step Undo / Redo History System ───────────────────────────
+  const undoStackRef = useRef([]);
+  const redoStackRef = useRef([]);
+  const [undoCount, setUndoCount] = useState(0);
+  const [redoCount, setRedoCount] = useState(0);
+  const MAX_HISTORY_STEPS = 50;
+
+  const updateHistoryCounts = useCallback(() => {
+    const uLen = undoStackRef.current.length;
+    const rLen = redoStackRef.current.length;
+    setUndoCount(prev => prev === uLen ? prev : uLen);
+    setRedoCount(prev => prev === rLen ? prev : rLen);
   }, []);
 
+  const pushToHistory = useCallback((currentPanels, currentLayouts) => {
+    const p = currentPanels || panelsRef.current || [];
+    const l = currentLayouts || gridLayoutsRef.current || {};
+
+    // Don't push identical consecutive snapshots
+    const last = undoStackRef.current[undoStackRef.current.length - 1];
+    if (last) {
+      try {
+        const isSameP = JSON.stringify(last.panels) === JSON.stringify(p);
+        const isSameL = JSON.stringify(last.layouts) === JSON.stringify(l);
+        if (isSameP && isSameL) return;
+      } catch {}
+    }
+
+    undoStackRef.current.push({
+      panels: JSON.parse(JSON.stringify(p)),
+      layouts: JSON.parse(JSON.stringify(l))
+    });
+
+    if (undoStackRef.current.length > MAX_HISTORY_STEPS) {
+      undoStackRef.current.shift();
+    }
+
+    // Any new user modification clears the redo stack
+    redoStackRef.current = [];
+    updateHistoryCounts();
+  }, [updateHistoryCounts]);
+
   const handleUndo = useCallback(() => {
-    if (historyRef.current.length === 0) return;
-    
-    // Disable layout saving temporarily while we undo
+    if (undoStackRef.current.length === 0) return;
+
     skipLayoutChangeRef.current = true;
 
-    const previousState = historyRef.current.pop();
-    
+    // 1. Push current state into redo stack
+    const currentSnapshot = {
+      panels: JSON.parse(JSON.stringify(panelsRef.current || [])),
+      layouts: JSON.parse(JSON.stringify(gridLayoutsRef.current || {}))
+    };
+    redoStackRef.current.push(currentSnapshot);
+    if (redoStackRef.current.length > MAX_HISTORY_STEPS) {
+      redoStackRef.current.shift();
+    }
+
+    // 2. Pop previous state from undo stack
+    const previousState = undoStackRef.current.pop();
     setPanels(previousState.panels);
     setGridLayouts(previousState.layouts);
-    
+    panelsRef.current = previousState.panels;
+    gridLayoutsRef.current = previousState.layouts;
+
+    updateHistoryCounts();
+
     setTimeout(() => {
       skipLayoutChangeRef.current = false;
       setLayoutGeneration(g => g + 1);
     }, 100);
-  }, []);
+  }, [updateHistoryCounts]);
 
+  const handleRedo = useCallback(() => {
+    if (redoStackRef.current.length === 0) return;
+
+    skipLayoutChangeRef.current = true;
+
+    // 1. Push current state into undo stack
+    const currentSnapshot = {
+      panels: JSON.parse(JSON.stringify(panelsRef.current || [])),
+      layouts: JSON.parse(JSON.stringify(gridLayoutsRef.current || {}))
+    };
+    undoStackRef.current.push(currentSnapshot);
+    if (undoStackRef.current.length > MAX_HISTORY_STEPS) {
+      undoStackRef.current.shift();
+    }
+
+    // 2. Pop next state from redo stack
+    const nextState = redoStackRef.current.pop();
+    setPanels(nextState.panels);
+    setGridLayouts(nextState.layouts);
+    panelsRef.current = nextState.panels;
+    gridLayoutsRef.current = nextState.layouts;
+
+    updateHistoryCounts();
+
+    setTimeout(() => {
+      skipLayoutChangeRef.current = false;
+      setLayoutGeneration(g => g + 1);
+    }, 100);
+  }, [updateHistoryCounts]);
+
+  // Global Keyboard Shortcuts (Ctrl+Z for Undo, Ctrl+Y or Ctrl+Shift+Z for Redo)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-        const activeElement = document.activeElement;
-        const isInput = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable);
-        if (!isInput) {
-          e.preventDefault();
-          handleUndo();
-        }
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+      if (!isCtrlOrMeta) return;
+
+      const activeElement = document.activeElement;
+      const isInput = activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.isContentEditable
+      );
+      if (isInput) return;
+
+      const key = e.key.toLowerCase();
+
+      // Redo: Ctrl + Y or Ctrl + Shift + Z
+      if (key === 'y' || (key === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        handleRedo();
+      }
+      // Undo: Ctrl + Z (without Shift)
+      else if (key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleUndo]);
+  }, [handleUndo, handleRedo]);
 
   // Sync state when profile is switched or profiles are updated from API
   useEffect(() => {
@@ -1369,6 +1465,7 @@ const Dashboard = () => {
 
   // ─── Load default dashboard preset ──────────────────────────────────
   const loadDefaults = () => {
+    pushToHistory(panels, gridLayouts);
     setPanels([...DEFAULT_PANELS]);
     setGridLayouts(JSON.parse(JSON.stringify(DEFAULT_GRID_LAYOUTS)));
   };
@@ -1707,6 +1804,34 @@ const Dashboard = () => {
               {/* Sync Hover Toggle */}
               <button onClick={() => setIsSyncHoverActive(!isSyncHoverActive)} className={`p-2 rounded-xl border transition-colors shadow-sm ${isSyncHoverActive ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-[#1f2937] border-gray-200 dark:border-white/10 text-gray-500 hover:text-[#172b4d] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#374151]'}`} title={isSyncHoverActive ? "Sync Hover: On" : "Sync Hover: Off"}>
                 <Crosshair strokeWidth={2.5} size={16} />
+              </button>
+
+              {/* Undo Button */}
+              <button 
+                onClick={handleUndo} 
+                disabled={undoCount === 0}
+                className={`p-2 rounded-xl border transition-colors shadow-sm ${
+                  undoCount === 0 
+                    ? 'opacity-40 cursor-not-allowed bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-400' 
+                    : 'bg-white dark:bg-[#1f2937] border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-[#374151]'
+                }`} 
+                title={undoCount > 0 ? `Undo (Ctrl+Z) - ${undoCount} step(s)` : 'Undo (Ctrl+Z)'}
+              >
+                <Undo2 strokeWidth={2.5} size={16} />
+              </button>
+
+              {/* Redo Button */}
+              <button 
+                onClick={handleRedo} 
+                disabled={redoCount === 0}
+                className={`p-2 rounded-xl border transition-colors shadow-sm ${
+                  redoCount === 0 
+                    ? 'opacity-40 cursor-not-allowed bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-400' 
+                    : 'bg-white dark:bg-[#1f2937] border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-[#374151]'
+                }`} 
+                title={redoCount > 0 ? `Redo (Ctrl+Y / Ctrl+Shift+Z) - ${redoCount} step(s)` : 'Redo (Ctrl+Y)'}
+              >
+                <Redo2 strokeWidth={2.5} size={16} />
               </button>
 
               {/* Reset */}
