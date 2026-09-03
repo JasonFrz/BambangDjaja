@@ -2,6 +2,7 @@ import React, { memo, useMemo, useState } from 'react';
 import { GripVertical, Palette } from "lucide-react";
 import { METRICS } from "../../config/metrics";
 import EnergyLoader from "../../components/EnergyLoader";
+import { useTrendData } from "../../contexts/TrendDataContext";
 
 const COLOR_SCHEMES = {
   spectral: {
@@ -27,6 +28,7 @@ const COLOR_SCHEMES = {
 };
 
 export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
+  const { isLoading } = useTrendData() || { isLoading: false };
   const metrics = panel.metrics || [];
   const colorScheme = panel.colorScheme || 'spectral';
 
@@ -135,8 +137,8 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
             </div>
           ))}
           {heatmapData.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <EnergyLoader size="small" text="Loading data..." />
+            <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-xs font-semibold">
+              {isLoading ? <EnergyLoader size="small" text="Loading data..." /> : "Data not found"}
             </div>
           )}
         </div>

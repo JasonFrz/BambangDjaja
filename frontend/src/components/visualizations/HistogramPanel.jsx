@@ -3,8 +3,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Toolti
 import { GripVertical } from "lucide-react";
 import { METRICS } from "../../config/metrics";
 import EnergyLoader from "../../components/EnergyLoader";
+import { useTrendData } from "../../contexts/TrendDataContext";
 
 export const HistogramPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
+  const { isLoading } = useTrendData() || { isLoading: false };
   const metric = panel.metrics?.[0]; // Restrict to 1 metric
   const buckets = panel.buckets || 10;
   
@@ -54,8 +56,8 @@ export const HistogramPanel = memo(({ panel, chartData, isEditing, isSyncHoverAc
       </div>
       <div className="flex-1 min-h-0">
         {!metric || histogramData.length === 0 ? (
-           <div className="h-full flex items-center justify-center">
-             <EnergyLoader size="small" text="Loading data..." />
+           <div className="h-full flex items-center justify-center text-gray-500 text-xs font-semibold">
+             {isLoading ? <EnergyLoader size="small" text="Loading data..." /> : "Data not found"}
            </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">

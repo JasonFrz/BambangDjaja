@@ -1040,27 +1040,22 @@ const Dashboard = () => {
 
   // ─── Get chart data for a panel ──────────────────────────────────────
   const getChartDataForPanel = useCallback((panel) => {
-    const hasOil = panel.metrics.some(m => METRICS[m]?.source === 'oil');
-    const hasElec = panel.metrics.some(m => METRICS[m]?.source !== 'oil');
-    
-    if (hasOil && hasElec) {
-      // Align arrays by the end (latest data) to prevent time mismatches when lengths differ
-      const maxLen = Math.max(chartData.length, oilChartData.length);
-      const merged = [];
-      for (let i = 1; i <= maxLen; i++) {
-        const dElec = chartData[chartData.length - i] || {};
-        const dOil = oilChartData[oilChartData.length - i] || {};
-        merged.unshift({
-          ...dElec,
-          ...dOil,
-          time: dElec.time || dOil.time
-        });
-      }
-      return merged;
+    // Always align arrays by the end (latest data) to a uniform max length
+    // This ensures that ALL panels (whether oil, electrical, or mixed) 
+    // receive an array of the exact same length. 
+    // This is CRITICAL for Recharts syncId to work perfectly.
+    const maxLen = Math.max(chartData.length, oilChartData.length);
+    const merged = [];
+    for (let i = 1; i <= maxLen; i++) {
+      const dElec = chartData[chartData.length - i] || {};
+      const dOil = oilChartData[oilChartData.length - i] || {};
+      merged.unshift({
+        ...dElec,
+        ...dOil,
+        time: dElec.time || dOil.time
+      });
     }
-    
-    if (hasOil && !hasElec) return oilChartData;
-    return chartData;
+    return merged;
   }, [chartData, oilChartData]);
 
   // ─── Compact layout vertically to Y:0 (Eliminates all empty Y gaps) ───

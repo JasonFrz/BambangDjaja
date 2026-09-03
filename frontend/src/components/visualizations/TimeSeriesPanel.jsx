@@ -6,6 +6,7 @@ import {
 import { Activity, BarChart3, GripVertical } from "lucide-react";
 import { METRICS } from "../../config/metrics";
 import EnergyLoader from "../../components/EnergyLoader";
+import { useTrendData } from "../../contexts/TrendDataContext";
 
 export const ChartTooltip = ({ active, payload, label }) => {
   if (!active || !payload || !payload.length) return null;
@@ -31,6 +32,7 @@ export const ChartTooltip = ({ active, payload, label }) => {
 };
 
 export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
+  const { isLoading } = useTrendData() || { isLoading: false };
   const metrics = panel.metrics || [];
   
   const commonXAxis = {
@@ -45,9 +47,16 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
 
   const renderChart = () => {
     if (!chartData || chartData.length === 0) {
+      if (isLoading) {
+        return (
+          <div className="flex items-center justify-center h-full">
+            <EnergyLoader size="small" text="Loading data..." />
+          </div>
+        );
+      }
       return (
         <div className="flex items-center justify-center h-full">
-          <EnergyLoader size="small" text="Loading data..." />
+          <span className="text-gray-500 dark:text-gray-400 text-xs font-semibold">Data not found</span>
         </div>
       );
     }
@@ -62,7 +71,7 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
             <RechartsTooltip content={<ChartTooltip />} />
             <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
             {metrics.map(m => (
-              <Bar key={m} dataKey={m} name={METRICS[m]?.label || m} fill={METRICS[m]?.color || '#8884d8'} radius={[3, 3, 0, 0]} maxBarSize={16} isAnimationActive={false} />
+              <Bar key={m} dataKey={m} name={METRICS[m]?.label || m} fill={METRICS[m]?.color || '#8884d8'} radius={[3, 3, 0, 0]} maxBarSize={16} isAnimationActive={true} animationDuration={400} animationEasing="ease-out" />
             ))}
           </BarChart>
         </ResponsiveContainer>
@@ -79,7 +88,7 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
             <RechartsTooltip content={<ChartTooltip />} />
             <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
             {metrics.map(m => (
-              <Line key={m} type="monotone" dataKey={m} name={METRICS[m]?.label || m} stroke={METRICS[m]?.color || '#8884d8'} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls isAnimationActive={false} />
+              <Line key={m} type="monotone" dataKey={m} name={METRICS[m]?.label || m} stroke={METRICS[m]?.color || '#8884d8'} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls isAnimationActive={true} animationDuration={400} animationEasing="ease-out" />
             ))}
             {metrics.includes('frequency') && <ReferenceLine y={50.5} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: 'Limit (50.5)', fill: '#ef4444', fontSize: 10 }} />}
           </LineChart>
@@ -105,7 +114,7 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
           <RechartsTooltip content={<ChartTooltip />} />
           <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
           {metrics.map(m => (
-            <Area key={m} type="monotone" dataKey={m} name={METRICS[m]?.label || m} stroke={METRICS[m]?.color || '#8884d8'} fill={`url(#areaGrad-${m})`} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls isAnimationActive={false} />
+            <Area key={m} type="monotone" dataKey={m} name={METRICS[m]?.label || m} stroke={METRICS[m]?.color || '#8884d8'} fill={`url(#areaGrad-${m})`} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls isAnimationActive={true} animationDuration={400} animationEasing="ease-out" />
           ))}
           {metrics.includes('frequency') && <ReferenceLine y={50.5} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: 'Limit (50.5)', fill: '#ef4444', fontSize: 10 }} />}
         </AreaChart>
