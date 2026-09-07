@@ -63,7 +63,6 @@ const Login = () => {
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#050B14] relative overflow-hidden font-sans">
 
-      {/* Background Image with Gradient Fade */}
       <div
         className="absolute inset-0 z-0 pointer-events-none opacity-20"
         style={{
@@ -78,7 +77,6 @@ const Login = () => {
 
       <div className="w-full max-w-[1200px] mx-auto flex flex-col lg:flex-row items-center lg:items-center justify-between gap-8 md:gap-12 p-6 lg:p-12 relative z-10">
 
-        {/* Mobile/Tablet Branding (Hidden on Desktop) */}
         <div className="flex flex-col items-center justify-center lg:hidden w-full mb-4 md:mb-8 animate-slide-up-fade">
           <div className="flex flex-col md:flex-row items-center gap-3 md:gap-4">
             <img
@@ -92,7 +90,6 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Left Section (Desktop Only) */}
         <div className="hidden lg:flex flex-col flex-1 text-white/90 w-full animate-slide-up-fade lg:pr-10">
           <div className="flex items-center gap-4 mb-16 lg:mb-24">
             <img
@@ -124,10 +121,8 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Right Section: Login Card */}
         <div className="w-full max-w-[460px] animate-slide-up-fade relative mx-auto lg:mx-0" style={{ animationDelay: '200ms' }}>
 
-          {/* Ambient Glow behind the card */}
           <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-[#0052cc]/15 blur-[80px] rounded-full pointer-events-none -z-10" />
 
           <div className="bg-transparent md:bg-[#0b101e]/80 md:backdrop-blur-2xl p-0 md:p-8 lg:p-10 rounded-none md:rounded-[24px] border-none md:border-solid md:border-white/5 md:shadow-[0_20px_60px_rgba(0,0,0,0.8)] relative overflow-hidden z-10 w-full">
@@ -147,10 +142,8 @@ const Login = () => {
               )}
             </div>
 
-            {/* Form */}
             <form onSubmit={handleLogin} className="flex flex-col gap-6">
 
-              {/* Username */}
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-semibold text-[#8e9bb0] uppercase tracking-wider">
                   Username or Email
@@ -172,7 +165,6 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Password */}
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-semibold text-[#8e9bb0] uppercase tracking-wider">
                   Password
@@ -201,7 +193,6 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Remember me */}
               <div className="flex items-center mt-1">
                 <label className="flex items-center gap-3 cursor-pointer group">
                   <div className="relative flex items-center justify-center w-5 h-5 rounded border border-white/10 bg-[#13192b] group-hover:border-[#0052cc] transition-colors">
@@ -221,7 +212,6 @@ const Login = () => {
                 </label>
               </div>
 
-              {/* Submit */}
               <button
                 type="submit"
                 className="mt-4 flex items-center justify-center gap-3 w-full py-3.5 rounded-xl bg-[#0052cc] hover:bg-[#0065ff] active:bg-[#0047b3] transition-colors duration-200"
@@ -233,7 +223,6 @@ const Login = () => {
               </button>
             </form>
 
-            {/* System Status Footer */}
             <div className="mt-10 pt-6 border-t border-white/5 flex items-center justify-between">
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-2">
@@ -254,7 +243,6 @@ const Login = () => {
 
       </div>
 
-      {/* Copyright Footer */}
       <div className="absolute bottom-6 left-0 w-full text-center lg:text-left lg:left-12 z-10">
         <p className="text-[#8e9bb0] text-xs font-sans">
           &copy; {new Date().getFullYear()} PT. Bambang Djaja. All rights reserved.

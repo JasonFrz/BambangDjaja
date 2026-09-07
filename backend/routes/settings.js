@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { getDbConnection } = require('../utils/db');
+const { invalidateThresholdCache } = require('../utils/realtimePoller');
 
-// Middleware to extract DB name
 const extractDb = (req, res, next) => {
   const dbName = req.headers['x-db-name'];
   if (!dbName) {
@@ -14,8 +14,6 @@ const extractDb = (req, res, next) => {
 
 router.use(extractDb);
 
-
-// GET all threshold settings
 router.get('/thresholds', async (req, res) => {
   try {
     const db = await getDbConnection(req.dbName);
@@ -43,7 +41,6 @@ router.get('/thresholds', async (req, res) => {
   }
 });
 
-// PUT update a specific threshold
 router.put('/thresholds/:id', async (req, res) => {
   const { id } = req.params;
   const { min_value, max_value, is_active } = req.body;
@@ -51,7 +48,6 @@ router.put('/thresholds/:id', async (req, res) => {
   try {
     const db = await getDbConnection(req.dbName);
     
-    // Convert undefined to null for DB insertion if needed, or build dynamic query
     let updateFields = [];
     let queryParams = [];
     
@@ -76,6 +72,15 @@ router.put('/thresholds/:id', async (req, res) => {
     const updateQuery = `UPDATE threshold_settings SET ${updateFields.join(', ')} WHERE id = ?`;
     
     await db.execute(updateQuery, queryParams);
+
+    if (typeof invalidateThresholdCache === 'function') {
+      try {
+        invalidateThresholdCache(req.dbName);
+      } catch (cacheErr) {
+        console.warn('Could not invalidate poller threshold cache:', cacheErr.message);
+      }
+    }
+
     res.json({ success: true, message: 'Setting updated successfully' });
   } catch (error) {
     console.error(`Error updating threshold ${id}:`, error);

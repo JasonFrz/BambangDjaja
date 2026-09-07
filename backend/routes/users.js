@@ -6,10 +6,8 @@ const formatPhoneNumber = require('../utils/phoneFormatter');
 
 const checkAdmin = async (req, res, next) => {
   try {
-    const { username, role, dbName } = req.user; // Injected by verifyToken
+    const { username, role, dbName } = req.user;
     
-    // In database the column is ROLE, but we normalize it to lowercase 'role' in auth.js
-    // Still, let's be case insensitive
     const userRole = (role || '').toLowerCase();
     if (userRole !== 'admin' && userRole !== 'superuser') {
       return res.status(403).json({ error: 'Unauthorized. Admin or Superuser role required.' });
@@ -89,7 +87,6 @@ router.put('/:username/password', checkAdmin, async (req, res) => {
   
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    // Ensure they only update users in their own DB
     await req.db.execute('UPDATE users SET password = ? WHERE username = ? AND nama_db = ?', [hashedPassword, username, req.dbName]);
     
     res.json({ message: 'Password updated successfully' });

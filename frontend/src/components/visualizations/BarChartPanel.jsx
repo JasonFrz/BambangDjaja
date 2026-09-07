@@ -10,32 +10,26 @@ import { ChartTooltip } from "./TimeSeriesPanel";
 export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
   const metrics = (panel.metrics || []).slice(0, 3);
   
-  // Window selector state: 15s default
   const [timeWindow, setTimeWindow] = useState(15);
 
-  // Sliced data based on selected window
   const displayData = useMemo(() => {
     if (!chartData || chartData.length === 0) return [];
     if (timeWindow >= chartData.length) return chartData;
     return chartData.slice(-timeWindow);
   }, [chartData, timeWindow]);
 
-  // Bulletproof syncMethod for synchronized hover across all charts
   const handleSyncMethod = useCallback((tooltipTicks, syncData) => {
     if (!syncData || !tooltipTicks || tooltipTicks.length === 0) return -1;
 
-    // 1. Direct match by time label
     if (syncData.activeLabel) {
       const exactIdx = tooltipTicks.findIndex(t => t.value === syncData.activeLabel);
       if (exactIdx !== -1) return exactIdx;
     }
 
-    // 2. If hovering on the far-right (latest data) on any other chart, lock to our far-right
     if (typeof syncData.activeTooltipIndex === 'number') {
       if (syncData.activeTooltipIndex >= 12) {
         return tooltipTicks.length - 1;
       }
-      // 3. Proportional position fallback for synchronized movement
       const ratio = syncData.activeTooltipIndex / 15;
       const targetIdx = Math.round(ratio * (tooltipTicks.length - 1));
       return Math.min(tooltipTicks.length - 1, Math.max(0, targetIdx));
@@ -44,7 +38,6 @@ export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverAct
     return -1;
   }, []);
 
-  // Compute responsive bar sizing based on density
   const barSize = useMemo(() => {
     if (timeWindow <= 15) return 14;
     if (timeWindow <= 25) return 10;
@@ -79,7 +72,7 @@ export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverAct
 
   return (
     <div className="h-full w-full flex flex-col transition-colors duration-300">
-      {/* ─── Premium Header Bar ─── */}
+     
       <div className={`flex items-center justify-between gap-2 px-1 mb-1.5 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
         <div className="flex items-center gap-2 min-w-0">
           <div className="p-1 rounded-md bg-blue-500/10 text-blue-500 dark:text-blue-400 shrink-0">
@@ -89,7 +82,6 @@ export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverAct
             {panel.title}
           </h3>
 
-          {/* Time Window Pills (15s / 30s / 60s) */}
           <div className="inline-flex p-0.5 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[10px] font-medium shrink-0 ml-1">
             {[
               { label: '15s', val: 15 },
@@ -116,13 +108,11 @@ export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverAct
           </div>
         </div>
 
-        {/* Header Right */}
         <div className="flex items-center gap-2 shrink-0 pr-14">
           {isEditing && <GripVertical size={16} className="text-gray-400 dark:text-gray-500 shrink-0" />}
         </div>
       </div>
 
-      {/* ─── Chart Area ─── */}
       <div className="flex-1 min-h-0 relative">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart

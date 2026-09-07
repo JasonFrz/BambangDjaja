@@ -1,8 +1,10 @@
 import React, { memo } from 'react';
 import { GripVertical, CalendarClock } from "lucide-react";
 import { METRICS } from "../../config/metrics";
+import { useThresholds } from "../../contexts/ThresholdContext";
 
 export const StateTimelinePanel = memo(({ panel, chartData, isEditing }) => {
+  const { getThreshold } = useThresholds();
   const metrics = panel.metrics || [];
   
   return (
@@ -23,8 +25,9 @@ export const StateTimelinePanel = memo(({ panel, chartData, isEditing }) => {
         ) : (
          metrics.map(m => {
           const meta = METRICS[m];
-          const tMin = meta?.thresholds?.min;
-          const tMax = meta?.thresholds?.max;
+          const threshold = getThreshold(m);
+          const tMin = (threshold.is_active && threshold.min !== null) ? threshold.min : undefined;
+          const tMax = (threshold.is_active && threshold.max !== null) ? threshold.max : undefined;
           
           return (
             <div key={m} className="flex flex-col gap-1.5">

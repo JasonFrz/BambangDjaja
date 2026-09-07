@@ -15,6 +15,7 @@ import TransformerSelection from './pages/TransformerSelection';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { TrendDataProvider } from './contexts/TrendDataContext';
 import { TemperatureDataProvider } from './contexts/TemperatureDataContext';
+import { ThresholdProvider } from './contexts/ThresholdContext';
 import { ApiProvider } from './contexts/ApiContext';
 import { DialogProvider } from './contexts/DialogContext';
 
@@ -36,11 +37,13 @@ const ProtectedRoute = ({ children }) => {
 };
 
 const DataProvidersWrapper = ({ children }) => (
-  <TrendDataProvider>
-    <TemperatureDataProvider>
-      {children}
-    </TemperatureDataProvider>
-  </TrendDataProvider>
+  <ThresholdProvider>
+    <TrendDataProvider>
+      <TemperatureDataProvider>
+        {children}
+      </TemperatureDataProvider>
+    </TrendDataProvider>
+  </ThresholdProvider>
 );
 
 function App() {

@@ -12,7 +12,7 @@ export const OilStatusPanel = memo(({ panel, tempData, isEditing }) => {
   let Icon = AlertTriangle;
 
   if (Number.isNaN(trip) || Number.isNaN(alarm)) {
-    // Keep UNKNOWN
+   
   } else if (trip === 0) {
     statusText = "TRIP";
     colorClass = "bg-red-50 text-red-600 border-red-200";

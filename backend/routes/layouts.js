@@ -38,7 +38,6 @@ const generateRandomLayoutId = async (masterDb) => {
   }
   return newId;
 };
-// GET layout by ID for export/import
 router.get('/export/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -56,7 +55,6 @@ router.get('/export/:id', async (req, res) => {
   }
 });
 
-// GET all layouts for the current user AND trafo
 router.get('/', async (req, res) => {
   try {
     const dbName = req.headers['x-db-name'];
@@ -89,7 +87,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST to create or update a layout
 router.post('/', async (req, res) => {
   try {
     const { id, layout_name, layout_data, is_active } = req.body;
@@ -108,7 +105,6 @@ router.post('/', async (req, res) => {
     const userId = req.user?.id;
     if (!userId) return res.status(403).json({ error: 'User ID missing from token' });
     
-    // Check if layout exists
     let existing = [];
     let isUpdate = false;
     let actualId = id;
@@ -129,7 +125,6 @@ router.post('/', async (req, res) => {
     }
     
     if (!isUpdate) {
-      // Try to find by name
       [existing] = await masterDb.execute(baseQuery + ' AND layout_name = ?', [...baseParams, layout_name]);
       if (existing.length > 0) {
         isUpdate = true;
@@ -140,13 +135,11 @@ router.post('/', async (req, res) => {
     const finalTrafoId = trafoId || '';
     
     if (isUpdate) {
-      // Update
       await masterDb.execute(
         'UPDATE user_layouts SET layout_name = ?, layout_data = ?, is_active = ? WHERE id = ? AND user_id = ?',
         [layout_name, JSON.stringify(layout_data), is_active ? 1 : 0, actualId, userId]
       );
     } else {
-      // Insert
       actualId = await generateRandomLayoutId(masterDb);
       await masterDb.execute(
         'INSERT INTO user_layouts (id, user_id, trafo_id, layout_name, layout_data, is_active) VALUES (?, ?, ?, ?, ?, ?)',
@@ -161,7 +154,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT to set active layout
 router.put('/active', async (req, res) => {
   try {
     const { id } = req.body;
@@ -175,7 +167,6 @@ router.put('/active', async (req, res) => {
     const userId = req.user?.id;
     if (!userId) return res.status(403).json({ error: 'User ID missing from token' });
     
-    // Deactivate all layouts for user and trafo
     let deactivateQuery = 'UPDATE user_layouts SET is_active = 0 WHERE user_id = ?';
     let params = [userId];
     if (trafoId) {
@@ -187,7 +178,6 @@ router.put('/active', async (req, res) => {
     
     await masterDb.execute(deactivateQuery, params);
     
-    // Activate specific layout
     let result = { affectedRows: 0 };
     if (id === 'default') {
       [result] = await masterDb.execute("UPDATE user_layouts SET is_active = 1 WHERE layout_name = 'Main Dashboard' AND user_id = ?", [userId]);
@@ -195,7 +185,6 @@ router.put('/active', async (req, res) => {
       [result] = await masterDb.execute('UPDATE user_layouts SET is_active = 1 WHERE id = ? AND user_id = ?', [id, userId]);
     }
     
-    // Removed affectedRows check because MySQL returns 0 if is_active was already 1
     
     res.json({ success: true, message: 'Active layout updated' });
   } catch (error) {
@@ -204,7 +193,6 @@ router.put('/active', async (req, res) => {
   }
 });
 
-// PUT to rename a layout
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -234,7 +222,6 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE a layout
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;

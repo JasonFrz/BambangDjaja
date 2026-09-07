@@ -11,7 +11,6 @@ const extractDb = (req, res, next) => {
   next();
 };
 
-// All available metrics with metadata
 const METRICS_CATALOG = {
   electrical: {
     table: 'electrical_readings',
@@ -45,7 +44,6 @@ const METRICS_CATALOG = {
   }
 };
 
-// GET /api/analytics/metrics — Return available metrics catalog
 router.get("/metrics", (req, res) => {
   const result = {};
   for (const [category, info] of Object.entries(METRICS_CATALOG)) {
@@ -57,14 +55,6 @@ router.get("/metrics", (req, res) => {
   res.json(result);
 });
 
-// GET /api/analytics/query — Query data with flexible params
-// Query params:
-//   metrics: comma-separated metric keys (e.g. "phase_a_v,phase_b_v,current_a")
-//   table: "electrical" or "oil" (default: auto-detect from metrics)
-//   start: ISO datetime string
-//   end: ISO datetime string
-//   interval: aggregation interval in seconds (0 = raw data)
-//   limit: max number of rows (default 5000)
 router.get("/query", extractDb, async (req, res) => {
   const { metrics, start, end, interval, limit } = req.query;
 
@@ -77,7 +67,6 @@ router.get("/query", extractDb, async (req, res) => {
     return res.status(400).json({ error: "No valid metrics specified" });
   }
 
-  // Determine which table(s) the metrics belong to
   let tableCategory = null;
   let tableInfo = null;
 
@@ -94,7 +83,6 @@ router.get("/query", extractDb, async (req, res) => {
     return res.status(400).json({ error: "No valid metrics found in catalog" });
   }
 
-  // Filter to only valid metrics for this table
   const validMetrics = requestedMetrics.filter(m => tableInfo.metrics[m]);
   if (validMetrics.length === 0) {
     return res.status(400).json({ error: "No valid metrics for the detected table" });
@@ -139,7 +127,6 @@ router.get("/query", extractDb, async (req, res) => {
 
     const [rows] = await db.execute(query, params);
 
-    // Format numeric values
     const formattedRows = rows.map(row => {
       const formatted = { timestamp: row.timestamp };
       for (const m of validMetrics) {

@@ -18,7 +18,6 @@ router.post('/test', async (req, res) => {
   try {
     const masterDb = await getDbConnection('tmu_master');
     
-    // Mengecek apakah kolom nomor_telpon atau email ada di table users
     const [columnsInfo] = await masterDb.execute("SHOW COLUMNS FROM users");
     const columns = columnsInfo.map(c => c.Field);
     
@@ -30,7 +29,6 @@ router.post('/test', async (req, res) => {
     if (columns.includes('nomor_telpon')) selectCols.push('nomor_telpon');
     if (columns.includes('email')) selectCols.push('email');
 
-    // Ambil SEMUA pengguna untuk tenant ini
     const [users] = await masterDb.execute(`SELECT ${selectCols.join(', ')} FROM users WHERE nama_db = ?`, [dbName]);
 
     if (users.length === 0) {
@@ -56,7 +54,6 @@ router.post('/test', async (req, res) => {
           await whatsappClient.sendWhatsAppMessage(phone, message);
           console.log(`- Berhasil WA: ${user.username} (${user.role}) - ${phone}`);
           sentToUser = true;
-          // Tambahkan delay agar puppeteer whatsapp tidak crash saat kirim massal
           await new Promise(resolve => setTimeout(resolve, 3000));
         } catch (err) {
           console.log(`- Gagal WA: ${user.username} (${user.role}) - ${phone} (${err.message})`);

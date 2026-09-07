@@ -56,7 +56,6 @@
 }
 
 
-/* Global scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -71,16 +70,14 @@
   @apply bg-gray-400 dark:bg-gray-500;
 }
 
-/* Hide scrollbar for clean mobile sliding menus */
 .hide-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;  
+  scrollbar-width: none;  
 }
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
 
-/* Subtle dot grid pattern for Lobby background */
 .bg-dot-pattern {
   background-image: radial-gradient(rgba(0, 82, 204, 0.15) 1px, transparent 1px);
   background-size: 20px 20px;
@@ -89,7 +86,6 @@
   background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
 }
 
-/* Fix React Grid Layout stuttering during container resize */
 .is-container-resizing .react-grid-item.cssTransforms {
   transition-property: none !important;
 }

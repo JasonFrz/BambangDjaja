@@ -79,7 +79,6 @@ const PerformanceReport = () => {
     const doc = new jsPDF();
     const dbName = sessionStorage.getItem('db_name') || 'Company';
     
-    // Add header
     doc.setFontSize(18);
     doc.setTextColor(23, 43, 77);
     doc.text("Transformer Performance Report", 14, 22);

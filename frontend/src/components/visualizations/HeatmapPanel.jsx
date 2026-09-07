@@ -7,23 +7,23 @@ import { useTrendData } from "../../contexts/TrendDataContext";
 const COLOR_SCHEMES = {
   spectral: {
     label: "Spectral",
-    getColor: (val) => `hsl(${240 - (val * 240)}, 100%, 50%)` // Blue to Red
+    getColor: (val) => `hsl(${240 - (val * 240)}, 100%, 50%)` 
   },
   inferno: {
     label: "Inferno",
-    getColor: (val) => `hsl(${280 - (val * 220)}, 100%, ${20 + (val * 60)}%)` // Dark Purple to Yellow
+    getColor: (val) => `hsl(${280 - (val * 220)}, 100%, ${20 + (val * 60)}%)`
   },
   matrix: {
     label: "Matrix",
-    getColor: (val) => `rgba(16, 185, 129, ${0.1 + (val * 0.9)})` // Green opacity
+    getColor: (val) => `rgba(16, 185, 129, ${0.1 + (val * 0.9)})` 
   },
   classic: {
     label: "Classic Red",
-    getColor: (val) => `rgba(239, 68, 68, ${0.1 + (val * 0.9)})` // Red opacity
+    getColor: (val) => `rgba(239, 68, 68, ${0.1 + (val * 0.9)})` 
   },
   soft: {
     label: "Soft Pastel",
-    getColor: (val) => `hsl(${220 - (val * 160)}, 70%, 75%)` // Soft blue to soft yellow/orange
+    getColor: (val) => `hsl(${220 - (val * 160)}, 70%, 75%)` 
   }
 };
 
@@ -35,14 +35,12 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
   const heatmapData = useMemo(() => {
     if (!chartData || chartData.length === 0 || metrics.length === 0) return [];
 
-    // Y-axis = metrics, X-axis = time segments
     const timeSegments = Math.min(24, chartData.length);
     const step = Math.ceil(chartData.length / timeSegments);
 
     return metrics.map(m => {
       const row = [];
       const meta = METRICS[m];
-      // Step 1: Collect valid values to find min/max
       const validValues = [];
       for (let i = 0; i < timeSegments; i++) {
         const point = chartData[i * step];
@@ -78,7 +76,6 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
     const parentRect = e.currentTarget.closest('.heatmap-container').getBoundingClientRect();
 
     let xPos = rect.left - parentRect.left + (rect.width / 2);
-    // Tooltip is approx 140px wide, so it needs 70px on each side.
     if (xPos + 70 > parentRect.width) {
       xPos = parentRect.width - 70;
     } else if (xPos - 70 < 0) {
@@ -88,7 +85,6 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
     let yPos = rect.top - parentRect.top - 10;
     let transform = 'translate(-50%, -100%)';
 
-    // If tooltip is too close to the top, render it below the cursor instead
     if (yPos < 70) {
       yPos = rect.bottom - parentRect.top + 10;
       transform = 'translate(-50%, 0)';
@@ -162,7 +158,6 @@ export const HeatmapPanel = memo(({ panel, chartData, isEditing }) => {
         </div>
       </div>
 
-      {/* Custom Tooltip */}
       {tooltip.show && (
         <div
           className="absolute pointer-events-none z-50 bg-white dark:bg-[#111217] border border-gray-200 dark:border-[#32363e] p-3 rounded-sm shadow-2xl flex flex-col gap-1 min-w-[120px]"

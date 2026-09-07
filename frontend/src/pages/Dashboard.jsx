@@ -112,7 +112,6 @@ const DEFAULT_GRID_LAYOUTS = {
   ]
 };
 
-// ─── Storage Keys ────────────────────────────────────────────────────────────
 const PANELS_KEY = 'grafana_panels_v2';
 const LAYOUTS_KEY = 'grafana_layouts_v2';
 const PROFILES_KEY = 'grafana_profiles_v3';
@@ -154,7 +153,6 @@ const PanelRenderer = memo(({ panel, latestData, chartData, tempData, isLive, is
   }
 });
 
-// ─── Panel Editor Modal ──────────────────────────────────────────────────────
 const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, getChartDataForPanel, tempData, isLive }) => {
   const [title, setTitle] = useState('');
   const [panelType, setPanelType] = useState('areachart');
@@ -239,7 +237,6 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
       setChartType(editingPanel.chartType || 'area');
       setColorScheme(editingPanel.colorScheme || 'spectral');
     } else {
-      // When opening Add Panel, always start clean and empty so user can select metrics freely
       try {
         localStorage.removeItem(DRAFT_KEY);
       } catch {}
@@ -276,9 +273,9 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     candlestick: 1,
     histogram: 1,
     barchart: 3,
-    phasor: 3,        // 3 Fasa (R-S-T)
-    healthindex: 6,   // Max 6 health index parameters
-    sld: 8,           // Max 8 SLD parameters
+    phasor: 3,        
+    healthindex: 6,  
+    sld: 8,          
   };
   const SINGLE_METRIC_PANELS = ['gauge', 'bargauge', 'candlestick', 'histogram'];
   const NO_METRIC_PANELS = ['oilstatus', 'eventstream', 'news'];
@@ -294,7 +291,6 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     });
   };
 
-  // Enforce single or panel-specific metric limits if user switches type
   useEffect(() => {
     const limit = PANEL_METRIC_LIMITS[panelType];
     if (limit && selectedMetrics.length > limit) {
@@ -314,7 +310,6 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     const groups = new Set(selectedMetrics.map(m => METRICS[m]?.group).filter(Boolean));
     if (groups.size === 1) return `${Array.from(groups)[0]} Overview`;
 
-    // Check if it's all some kind of voltage
     const allVoltages = selectedMetrics.every(m => METRICS[m]?.group?.includes('Voltage'));
     if (allVoltages) return 'Voltage Overview';
 
@@ -354,7 +349,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
 
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col bg-[#f4f7fe] dark:bg-[#0b1120] animate-[fadeIn_0.2s_ease-out]">
-      {/* Top Header */}
+    
       <div className="h-14 px-6 border-b border-gray-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-[#1a1a2e] shrink-0">
         <div className="flex items-center gap-4">
           <button onClick={onClose} className="text-gray-500 hover:text-gray-800 dark:hover:text-white flex items-center gap-2 text-sm font-semibold transition-colors">
@@ -375,10 +370,9 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
       </div>
 
       <div className="flex flex-1 overflow-y-auto lg:overflow-hidden flex-col lg:flex-row min-h-0">
-        {/* Main Left Content (Preview Top + Splitter + Metrics Bottom) */}
+        
         <div ref={leftColumnRef} className="contents lg:flex lg:flex-1 flex-col lg:h-full lg:overflow-hidden lg:border-r border-gray-200 dark:border-white/10 relative">
           
-          {/* Top: Preview Area (Resizable) */}
           <div
             className={`order-2 lg:order-none p-4 lg:p-5 flex flex-col bg-gray-50/50 dark:bg-black/20 overflow-hidden ${
               NO_METRIC_PANELS.includes(panelType) ? 'flex-1 h-full' : 'shrink-0'
@@ -391,7 +385,6 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
              </div>
           </div>
 
-          {/* Resizable Divider Handle (Drag Up / Down) */}
           {!NO_METRIC_PANELS.includes(panelType) && (
             <div
               onMouseDown={handleSplitMouseDown}
@@ -412,7 +405,6 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
             </div>
           )}
 
-          {/* Bottom: Metrics Selection Area (Dynamically Resized & Scrollable) */}
           {!NO_METRIC_PANELS.includes(panelType) && (
             <div className="order-4 lg:order-none flex-1 min-h-0 p-3 lg:p-4 bg-white dark:bg-[#1a1a2e] flex flex-col overflow-hidden">
                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 shrink-0">
@@ -474,7 +466,6 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
           )}
         </div>
 
-        {/* Right Sidebar: Settings */}
         <div className="contents lg:flex lg:w-80 bg-white dark:bg-[#1a1a2e] flex-col lg:overflow-hidden lg:p-6 lg:gap-8 shrink-0">
            <div className="order-1 lg:order-none p-5 lg:p-0 bg-white dark:bg-[#1a1a2e] lg:bg-transparent border-b border-gray-200 dark:border-white/10 lg:border-b-0 shrink-0">
              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wider">Panel Options</label>
@@ -555,9 +546,6 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
   );
 };
 
-// ═════════════════════════════════════════════════════════════════════════════
-// ═══ MAIN DASHBOARD COMPONENT ═══════════════════════════════════════════════
-// ═════════════════════════════════════════════════════════════════════════════
 const Dashboard = () => {
   const { liveData, wsData, isConnected, isLive, isLoading: isLoadingTrend, updateInterval, setUpdateInterval, fetchHistoricalData, resetToLive } = useTrendData();
   const { apiUrl } = useApi();
@@ -612,7 +600,6 @@ const Dashboard = () => {
     }
   };
 
-  // ─── Workspace / Profiles State ──────────────────────────────────────────────
   const [profilesState, setProfilesState] = useState({
     activeProfileId: 'default',
     profiles: {
@@ -621,7 +608,6 @@ const Dashboard = () => {
   });
   const [isLayoutsLoading, setIsLayoutsLoading] = useState(true);
 
-  // Fetch layouts on mount
   useEffect(() => {
     const fetchLayouts = async () => {
       try {
@@ -700,13 +686,11 @@ const Dashboard = () => {
   const skipLayoutChangeRef = useRef(false);
   const [layoutGeneration, setLayoutGeneration] = useState(0);
 
-  // ─── Ref trackers to eliminate closure staleness ─────────────────────
   const panelsRef = useRef(panels);
   const gridLayoutsRef = useRef(gridLayouts);
   useEffect(() => { panelsRef.current = panels; }, [panels]);
   useEffect(() => { gridLayoutsRef.current = gridLayouts; }, [gridLayouts]);
 
-  // ─── Multi-Step Undo / Redo History System ───────────────────────────
   const undoStackRef = useRef([]);
   const redoStackRef = useRef([]);
   const [undoCount, setUndoCount] = useState(0);
@@ -724,7 +708,6 @@ const Dashboard = () => {
     const p = currentPanels || panelsRef.current || [];
     const l = currentLayouts || gridLayoutsRef.current || {};
 
-    // Don't push identical consecutive snapshots
     const last = undoStackRef.current[undoStackRef.current.length - 1];
     if (last) {
       try {
@@ -743,7 +726,6 @@ const Dashboard = () => {
       undoStackRef.current.shift();
     }
 
-    // Any new user modification clears the redo stack
     redoStackRef.current = [];
     updateHistoryCounts();
   }, [updateHistoryCounts]);
@@ -753,7 +735,6 @@ const Dashboard = () => {
 
     skipLayoutChangeRef.current = true;
 
-    // 1. Push current state into redo stack
     const currentSnapshot = {
       panels: JSON.parse(JSON.stringify(panelsRef.current || [])),
       layouts: JSON.parse(JSON.stringify(gridLayoutsRef.current || {}))
@@ -763,7 +744,6 @@ const Dashboard = () => {
       redoStackRef.current.shift();
     }
 
-    // 2. Pop previous state from undo stack
     const previousState = undoStackRef.current.pop();
     setPanels(previousState.panels);
     setGridLayouts(previousState.layouts);
@@ -783,7 +763,6 @@ const Dashboard = () => {
 
     skipLayoutChangeRef.current = true;
 
-    // 1. Push current state into undo stack
     const currentSnapshot = {
       panels: JSON.parse(JSON.stringify(panelsRef.current || [])),
       layouts: JSON.parse(JSON.stringify(gridLayoutsRef.current || {}))
@@ -793,7 +772,6 @@ const Dashboard = () => {
       undoStackRef.current.shift();
     }
 
-    // 2. Pop next state from redo stack
     const nextState = redoStackRef.current.pop();
     setPanels(nextState.panels);
     setGridLayouts(nextState.layouts);
@@ -808,7 +786,6 @@ const Dashboard = () => {
     }, 100);
   }, [updateHistoryCounts]);
 
-  // Global Keyboard Shortcuts (Ctrl+Z for Undo, Ctrl+Y or Ctrl+Shift+Z for Redo)
   useEffect(() => {
     const handleKeyDown = (e) => {
       const isCtrlOrMeta = e.ctrlKey || e.metaKey;
@@ -824,12 +801,10 @@ const Dashboard = () => {
 
       const key = e.key.toLowerCase();
 
-      // Redo: Ctrl + Y or Ctrl + Shift + Z
       if (key === 'y' || (key === 'z' && e.shiftKey)) {
         e.preventDefault();
         handleRedo();
       }
-      // Undo: Ctrl + Z (without Shift)
       else if (key === 'z' && !e.shiftKey) {
         e.preventDefault();
         handleUndo();
@@ -840,14 +815,12 @@ const Dashboard = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleUndo, handleRedo]);
 
-  // Sync state when profile is switched or profiles are updated from API
   useEffect(() => {
     const prof = profilesState.profiles[profilesState.activeProfileId];
     if (prof) {
       setPanels(prof.panels);
       setGridLayouts(prof.layouts);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profilesState.activeProfileId, profilesState.profiles]);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -868,7 +841,6 @@ const Dashboard = () => {
   }, [setSearchParams]);
   const [editingPanel, setEditingPanel] = useState(null);
 
-  // Export modal state
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportStart, setExportStart] = useState('');
   const [exportEnd, setExportEnd] = useState('');
@@ -880,11 +852,9 @@ const Dashboard = () => {
   const [downloadMB, setDownloadMB] = useState("0.0");
   const [exportError, setExportError] = useState(null);
 
-  // WA modals
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Container ref for accurate RGL width
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(1200);
   const [isResizingContainer, setIsResizingContainer] = useState(false);
@@ -912,7 +882,6 @@ const Dashboard = () => {
     };
   }, [isLoadingTrend, panels, showLoadingScreen]);
 
-  // ─── API Helpers for Layouts ─────────────────────────────────────────
   const saveLayoutToApi = async (layoutId, layoutName, layoutData, isActive) => {
     try {
       const username = sessionStorage.getItem('username');
@@ -1018,7 +987,6 @@ const Dashboard = () => {
     }
   };
 
-  // ─── Persist to Active Profile ───────────────────────────────────────
   const isInitialMount = useRef(true);
   const saveTimeoutRef = useRef(null);
 
@@ -1028,14 +996,12 @@ const Dashboard = () => {
       return;
     }
     
-    // Debounce the save to prevent spamming the backend during resize/drag
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       const activeId = profilesState.activeProfileId;
       const currentProf = profilesState.profiles[activeId];
       if (!currentProf) return;
 
-      // Prevent redundant saves if identical
       if (currentProf.panels === panels && currentProf.layouts === gridLayouts) return;
 
       setProfilesState(prev => {
@@ -1059,12 +1025,10 @@ const Dashboard = () => {
     }, 2000);
   }, [panels, gridLayouts, profilesState]);
 
-  // Profile Management Functions
   const handleCreateProfile = async () => {
     const name = await prompt('Enter new dashboard profile name:', { title: 'Save As New Profile', placeholder: 'e.g. My Custom View', maxLength: 20 });
     if (!name || name.trim() === '') return;
 
-    // Save to API first, letting the backend generate the ID
     const result = await saveLayoutToApi(null, name.trim(), { panels: panels ? [...panels] : null, layouts: gridLayouts }, true);
     if (!result || !result.success || !result.id) {
       alert("Gagal menyimpan profil baru ke server.", { title: 'Error' });
@@ -1108,7 +1072,6 @@ const Dashboard = () => {
     
     if (!newName || newName === '' || newName === currentName) return;
 
-    // Use specific PUT endpoint for renaming
     renameLayoutInApi(profilesState.activeProfileId, newName);
 
     setProfilesState(prev => {
@@ -1135,7 +1098,6 @@ const Dashboard = () => {
     if (isConfirmed) {
       const deletedId = profilesState.activeProfileId;
       
-      // Call API
       deleteLayoutFromApi(deletedId).then(() => {
         if (!isDefault) setActiveLayoutInApi('default');
       });
@@ -1207,7 +1169,6 @@ const Dashboard = () => {
       if (response.ok) {
         const importedData = await response.json();
         
-        // Simpan sebagai profil baru
         const newName = importedData.layout_name + " (Imported)";
         const newId = 'p_' + Math.random().toString(36).substr(2, 9);
         const importedPanels = importedData.layout_data.panels;
@@ -1239,7 +1200,6 @@ const Dashboard = () => {
     }
   };
 
-  // ─── Latest data from WebSocket ──────────────────────────────────────
   const latestData = useMemo(() => {
     const d = {};
     if (wsData && wsData.phaseA !== undefined) {
@@ -1247,7 +1207,6 @@ const Dashboard = () => {
     } else if (liveData && liveData.length > 0) {
       Object.assign(d, liveData[liveData.length - 1]);
     }
-    // Add oil data
     if (tempData) {
       d.oil_temperature = tempData.oil_temperature || 0;
       d.oil_pressure = tempData.oil_pressure || 0;
@@ -1257,26 +1216,19 @@ const Dashboard = () => {
     return d;
   }, [wsData, liveData, tempData]);
 
-  // ─── Chart data (live from WebSocket) ────────────────────────────────
   const chartData = useMemo(() => {
-    const maxPoints = 15; // default 15s window across all panels
+    const maxPoints = 15; 
     const data = liveData && liveData.length > 0
       ? liveData.slice(-maxPoints)
       : [];
     return data;
   }, [liveData]);
 
-  // Oil chart data
   const oilChartData = useMemo(() => {
     return oilLiveData ? oilLiveData.slice(-15) : [];
   }, [oilLiveData]);
 
-  // ─── Get chart data for a panel ──────────────────────────────────────
   const getChartDataForPanel = useCallback((panel) => {
-    // Always align arrays by the end (latest data) to a uniform max length
-    // This ensures that ALL panels (whether oil, electrical, or mixed) 
-    // receive an array of the exact same length. 
-    // This is CRITICAL for Recharts syncId to work perfectly.
     const maxLen = Math.max(chartData.length, oilChartData.length);
     const merged = [];
     for (let i = 1; i <= maxLen; i++) {
@@ -1291,7 +1243,6 @@ const Dashboard = () => {
     return merged;
   }, [chartData, oilChartData]);
 
-  // ─── Compact layout vertically to Y:0 (Eliminates all empty Y gaps) ───
   const compactLayout = (layout, cols = 12) => {
     if (!layout || layout.length === 0) return [];
 
@@ -1327,25 +1278,21 @@ const Dashboard = () => {
     return compacted;
   };
 
-  // ─── Grid layout change handler ──────────────────────────────────────
 
   const handleLayoutChange = useCallback((currentLayout, allLayouts) => {
     if (skipLayoutChangeRef.current) return;
 
     setGridLayouts(prev => {
-      // Don't overwrite with empty if we had items
       const prevHasItems = Object.values(prev).some(bp => bp && bp.length > 0);
       const newHasItems = Object.values(allLayouts).some(bp => bp && bp.length > 0);
       if (prevHasItems && !newHasItems) return prev;
 
-      // Deep equality check — return prev if nothing actually changed
       let hasChanges = false;
       for (const bp of Object.keys(allLayouts)) {
         const newBp = (allLayouts[bp] || []);
         const oldBp = (prev[bp] || []);
         if (newBp.length !== oldBp.length) { hasChanges = true; break; }
         
-        // Sort by ID to ensure order differences don't trigger false changes
         const newSorted = [...newBp].sort((a,b) => String(a.i).localeCompare(String(b.i)));
         const oldSorted = [...oldBp].sort((a,b) => String(a.i).localeCompare(String(b.i)));
 
@@ -1367,7 +1314,6 @@ const Dashboard = () => {
     });
   }, []);
 
-  // ─── Default sizes for new panels ───────────────────────────────────
   const getDefaultSize = (type) => {
     const isSmall = type === 'stat' || type === 'gauge' || type === 'oilstatus';
     return {
@@ -1392,7 +1338,6 @@ const Dashboard = () => {
     document.body.scrollTop = 0;
   }, []);
 
-  // ─── Panel CRUD ──────────────────────────────────────────────────────
   const handleSavePanel = (panelConfig) => {
     pushToHistory(panels, gridLayouts);
     const panelId = String(panelConfig.id);
@@ -1407,7 +1352,6 @@ const Dashboard = () => {
     });
 
     if (isNew) {
-      // Block onLayoutChange while we programmatically set layouts
       skipLayoutChangeRef.current = true;
 
       setGridLayouts(prev => {
@@ -1421,14 +1365,12 @@ const Dashboard = () => {
           const cols = colsMap[bp];
           const { w, h, minW, minH } = sizes[bp];
 
-          // Find bottom of existing items
           let maxBottom = 0;
           existingItems.forEach(item => {
             const bottom = item.y + item.h;
             if (bottom > maxBottom) maxBottom = bottom;
           });
 
-          // Place new panel at x:0, y:maxBottom (below everything)
           updated[bp] = [
             ...existingItems,
             { i: panelId, x: 0, y: maxBottom, w, h, minW, minH }
@@ -1463,7 +1405,6 @@ const Dashboard = () => {
     setEditorOpen(true);
   };
 
-  // ─── Load default dashboard preset ──────────────────────────────────
   const loadDefaults = () => {
     pushToHistory(panels, gridLayouts);
     setPanels([...DEFAULT_PANELS]);
@@ -1477,7 +1418,6 @@ const Dashboard = () => {
     }
   };
 
-  // ─── Export Excel (preserved from old dashboard) ─────────────────────
   const handleDownloadExcel = async () => {
     setExportError(null);
     if (!exportStart || !exportEnd) { setExportError("Please specify a time range."); return; }
@@ -1514,7 +1454,6 @@ const Dashboard = () => {
     }
   };
 
-  // ─── WA notification (preserved) ─────────────────────────────────────
   const handleTestWA = async () => {
     try {
       const dbName = sessionStorage.getItem('db_name');
@@ -1546,7 +1485,6 @@ const Dashboard = () => {
 
   const isFreqSafe = (latestData.frequency || 0) <= 52.5;
 
-  // Lock all items if not editing
   const lockedLayouts = useMemo(() => {
     const locked = {};
     for (const [bp, layout] of Object.entries(gridLayouts)) {
@@ -1560,7 +1498,6 @@ const Dashboard = () => {
     return locked;
   }, [gridLayouts, isEditing]);
 
-  // ─── Loading Screen ───────────────
   const isDashboardLoaded = !isLayoutsLoading && !isLoadingTrend;
   
   if (showLoadingScreen) {
@@ -1582,7 +1519,6 @@ const Dashboard = () => {
     );
   }
 
-  // ─── Onboarding screen (first visit — panels is null) ───────────────
   if (panels === null) {
     return (
       <div className="flex flex-col items-center justify-center py-12 md:py-20 animate-[slideUpFade_0.3s_ease-out]">
@@ -1617,7 +1553,6 @@ const Dashboard = () => {
     );
   }
 
-  // ─── Render Dashboard ────────────────────────────────────────────────
   if (isLoadingTrend) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] animate-[fadeIn_0.3s_ease-out]">
@@ -1628,7 +1563,7 @@ const Dashboard = () => {
 
   return (
     <div ref={containerRef} className={`relative flex flex-col gap-4 animate-[fadeIn_0.3s_ease-out] w-full ${isFullscreen ? 'p-2 bg-[#f4f7fe] dark:bg-[#111217] min-h-screen' : ''}`}>
-      {/* Toast Notification */}
+      
       {copySuccess && (
         <div className="fixed top-20 right-8 z-[1000] bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-[slideDownFade_0.3s_ease-out]">
           <Check size={16} />
@@ -1636,10 +1571,8 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* ─── Header ─── */}
       <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between w-full gap-4">
 
-        {/* Left Side: Title & Badges */}
         <div className="shrink-0 min-w-0">
           <div className="flex items-center gap-3 mb-1">
             <h2 className="text-2xl md:text-3xl font-bold text-[#172b4d] dark:text-white font-heading tracking-tight">Dashboard</h2>
@@ -1657,7 +1590,6 @@ const Dashboard = () => {
           </p>
         </div>
 
-        {/* Center: Clock (Only in Fullscreen & Desktop) */}
         {isFullscreen && (
           <div className="hidden xl:flex flex-col items-center justify-center shrink-0 px-4">
             <span className="text-[#172b4d] dark:text-white font-medium tracking-widest text-lg leading-none font-mono">
@@ -1669,13 +1601,10 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Right Side: Toolbar */}
         <div className="flex flex-1 items-center gap-2 flex-wrap lg:flex-nowrap xl:justify-end">
-          {/* Universal Time Picker (Grafana Style) */}
+         
           <UniversalTimePicker />
 
-          {/* --- Text/Dropdown Buttons (Top Group) --- */}
-          {/* Profile Selector (Custom Dropdown) */}
           <div className="relative" ref={profileDropdownRef}>
             {inlineRename ? (
               <input
@@ -1709,7 +1638,6 @@ const Dashboard = () => {
                   Saved Dashboards
                 </div>
 
-                {/* Scrollable list area (limit to ~3 items) */}
                 <div className="max-h-[105px] overflow-y-auto custom-scrollbar">
                   {Object.values(profilesState.profiles).map(p => {
                     const isActive = p.id === profilesState.activeProfileId;
@@ -1733,7 +1661,6 @@ const Dashboard = () => {
                   })}
                 </div>
 
-                {/* Actions */}
                 {!isFullscreen && (
                   <div className="border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/10">
                     <button
@@ -1766,7 +1693,6 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* Interval Selector */}
           <select
             value={updateInterval}
             onChange={(e) => setUpdateInterval(Number(e.target.value))}
@@ -1782,31 +1708,24 @@ const Dashboard = () => {
 
           {!isFullscreen && (
             <>
-              {/* Export */}
               <button onClick={() => setShowExportModal(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 border border-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors shadow-sm">
                 <FileDown strokeWidth={2.5} size={14} /> Export
               </button>
-
-              {/* Add Panel */}
               <button onClick={() => { setEditingPanel(null); setEditorOpen(true); }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all">
                 <PlusSquare strokeWidth={2.5} size={14} /><span className="hidden sm:inline">Add Panel</span>
               </button>
             </>
           )}
-
-          {/* TV Mode */}
           <button onClick={toggleFullscreen} className={`p-2 rounded-xl border transition-colors shadow-sm ${isFullscreen ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-[#1f2937] border-gray-200 dark:border-white/10 text-gray-500 hover:text-[#172b4d] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#374151]'}`} title={isFullscreen ? "Exit TV Mode" : "TV Mode"}>
             {isFullscreen ? <Minimize2 strokeWidth={2.5} size={16} /> : <Monitor strokeWidth={2.5} size={16} />}
           </button>
 
           {!isFullscreen && (
             <>
-              {/* Sync Hover Toggle */}
               <button onClick={() => setIsSyncHoverActive(!isSyncHoverActive)} className={`p-2 rounded-xl border transition-colors shadow-sm ${isSyncHoverActive ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-[#1f2937] border-gray-200 dark:border-white/10 text-gray-500 hover:text-[#172b4d] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#374151]'}`} title={isSyncHoverActive ? "Sync Hover: On" : "Sync Hover: Off"}>
                 <Crosshair strokeWidth={2.5} size={16} />
               </button>
 
-              {/* Undo Button */}
               <button 
                 onClick={handleUndo} 
                 disabled={undoCount === 0}
@@ -1820,7 +1739,6 @@ const Dashboard = () => {
                 <Undo2 strokeWidth={2.5} size={16} />
               </button>
 
-              {/* Redo Button */}
               <button 
                 onClick={handleRedo} 
                 disabled={redoCount === 0}
@@ -1834,12 +1752,10 @@ const Dashboard = () => {
                 <Redo2 strokeWidth={2.5} size={16} />
               </button>
 
-              {/* Reset */}
               <button onClick={handleResetDashboard} className="p-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 transition-colors shadow-sm" title="Reset Dashboard">
                 <RotateCcw strokeWidth={2.5} size={16} />
               </button>
 
-              {/* Edit Layout */}
               <button onClick={() => setIsEditing(!isEditing)} className={`p-2 rounded-xl border transition-colors shadow-sm ${isEditing ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-[#1f2937] border-gray-200 dark:border-white/10 text-gray-500 hover:text-[#172b4d] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#374151]'}`} title={isEditing ? 'Done Editing' : 'Edit Layout'}>
                 <LayoutGrid strokeWidth={2.5} size={16} />
               </button>
@@ -1848,9 +1764,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* ─── Grid ─── */}
       <div className={`transition-all ${isEditing ? 'ring-2 ring-blue-500/30 rounded-xl p-1 bg-blue-500/5 dark:bg-blue-500/10' : ''}`}>
-        {/* Empty state overlay */}
+
         {(!panels || panels.length === 0) && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <BarChart3 size={48} className="text-gray-300 dark:text-gray-700 mb-4" />
@@ -1860,7 +1775,6 @@ const Dashboard = () => {
             </button>
           </div>
         )}
-        {/* Always-mounted RGL — never destroy/recreate on first panel add */}
         <ResponsiveGridLayout
           width={containerWidth}
           className={`layout ${isResizingContainer ? 'is-container-resizing' : ''}`}
@@ -1880,7 +1794,7 @@ const Dashboard = () => {
           {(panels || []).map(panel => (
             <div key={panel.id} className="flex">
               <div className={`bg-white dark:bg-[#181b1f] rounded-none p-3 shadow-sm border transition-all h-full w-full flex flex-col relative group overflow-hidden ${isEditing ? 'border-blue-200 dark:border-blue-500/20 ring-1 ring-blue-100 dark:ring-blue-500/10' : 'border-[#e5e7eb] dark:border-[#22252b] hover:border-[#d1d5db] dark:hover:border-[#32363e]'}`}>
-                {/* Panel action buttons (visible on hover) */}
+                
                 <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-50">
                   {panel.type !== 'status' && (
                     <button onClick={() => handleEditPanel(panel)} className="p-1.5 rounded-lg bg-white/80 dark:bg-black/40 backdrop-blur-sm hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-blue-500 transition-colors shadow-sm" title="Edit Panel">
@@ -1892,7 +1806,6 @@ const Dashboard = () => {
                   </button>
                 </div>
 
-                {/* Panel content */}
                 <PanelRenderer panel={panel} latestData={latestData} chartData={getChartDataForPanel(panel)} tempData={tempData} isLive={isLive} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />
               </div>
             </div>
@@ -1900,7 +1813,6 @@ const Dashboard = () => {
         </ResponsiveGridLayout>
       </div>
 
-      {/* ─── Panel Editor Modal ─── */}
       <PanelEditorModal
         isOpen={editorOpen}
         onClose={() => { setEditorOpen(false); setEditingPanel(null); }}
@@ -1912,7 +1824,6 @@ const Dashboard = () => {
         isLive={isLive}
       />
 
-      {/* ─── Export Excel Modal (preserved) ─── */}
       {showExportModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]">
           <div className="bg-white dark:bg-[#151521] rounded-2xl max-w-md w-full shadow-2xl border border-gray-100 dark:border-white/10 overflow-hidden flex flex-col">
@@ -1968,7 +1879,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* ─── WA Logout Modal (preserved) ─── */}
       {showLogoutModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]">
           <div className="bg-white dark:bg-[#151521] rounded-2xl max-w-sm w-full shadow-2xl border border-gray-100 dark:border-white/10 overflow-hidden">

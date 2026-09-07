@@ -129,7 +129,7 @@ const ManageUsersSuperuser = () => {
   const handleEditClick = (u) => {
     setEditingUserId(u.id);
     setUsername(u.username || '');
-    setPassword(''); // leave blank unless changing
+    setPassword(''); 
     setPhone(u.nomor_telpon || '');
     setEmail(u.email || '');
     setRole(u.role || 'user');

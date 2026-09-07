@@ -26,7 +26,6 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHover
   const { isLoading } = useTrendData() || { isLoading: false };
   const metric = panel.metrics?.[0]; 
 
-  // Synchronized hover method
   const handleSyncMethod = useCallback((tooltipTicks, syncData) => {
     if (!syncData || !tooltipTicks || tooltipTicks.length === 0) return -1;
     if (syncData.activeLabel) {
@@ -44,7 +43,6 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHover
     return -1;
   }, []);
 
-  // Build candlestick data mapping 1:1 with chartData
   const data = useMemo(() => {
     if (!chartData || chartData.length === 0 || !metric) return [];
     
@@ -92,7 +90,6 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHover
           </div>
           <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-200 font-sans truncate tracking-wide">{panel.title}</h3>
 
-          {/* Time Window Pills */}
           <div className="inline-flex p-0.5 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[10px] font-medium shrink-0 ml-1">
             {[
               { label: '15s', val: 15 },

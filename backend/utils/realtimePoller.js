@@ -4,11 +4,11 @@ const whatsappClient = require('./whatsappClient');
 const emailClient = require('./emailClient');
 
 const waCooldowns = new Map(); 
-const COOLDOWN_MS = 15 * 60 * 1000; // 15 Menit Jeda
+const COOLDOWN_MS = 15 * 60 * 1000; 
 
 const schemaCache = new Map(); 
 const thresholdCache = new Map(); 
-const CACHE_TTL_MS = 60 * 1000; // 1 menit cache TTL
+const CACHE_TTL_MS = 60 * 1000;
 
 const METRIC_MAPPING = {
   v_phase: { type: 'global', keys: ['phase_a_v', 'phase_b_v', 'phase_c_v'], name: 'Phase Voltage' },
@@ -41,14 +41,12 @@ async function sendAlertMessage(db, dbName, trafoId, alerts) {
         return `${index + 1}. *${namePart}*\n   Nilai Saat Ini: *${val}*\n   Batas Toleransi: ${alert.limit}\n   Kondisi: ${condition}`;
       }).join('\n\n');
 
-      // Placeholder for later construction inside the loop
       const emailSubject = `[TMU ALERT] Abnormal Parameter pada Trafo ${trafoId}`;
 
       
       let phones = [];
       let emails = [];
 
-      // Dapatkan user (tenant) dan superuser dari tmu_master
       const masterDb = await getDbConnection('tmu_master');
       
       const cacheKeyMaster = `tmu_master_users_cols`;
@@ -77,15 +75,13 @@ async function sendAlertMessage(db, dbName, trafoId, alerts) {
           });
       }
       
-      // Determine greeting
       const now = new Date();
-      const hour = (now.getUTCHours() + 7) % 24; // WIB
+      const hour = (now.getUTCHours() + 7) % 24; 
       let greeting = 'pagi';
       if (hour >= 11 && hour < 15) greeting = 'siang';
       else if (hour >= 15 && hour < 18) greeting = 'sore';
       else if (hour >= 18 || hour < 4) greeting = 'malam';
       
-      // Send alerts
       for (const contact of userContacts) {
           if (contact.phone) {
               const msg = `Halo Pak/Bu *${contact.username}*, selamat ${greeting}.\n\nPada trafo *${trafoId}* mendeteksi anomali pada sensor!\n\nParameter yang bermasalah:\n${lines}\n\nSilakan segera periksa sistem Anda.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
@@ -277,7 +273,6 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
                 modbus_connected: true,
               });
 
-              // Check thresholds
               const elecAlerts = await checkAndAlert(db, dbName, trafoId, latestElectrical, false);
               if (elecAlerts && elecAlerts.length > 0) allAlerts.push(...elecAlerts);
             }
@@ -303,7 +298,6 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
                 adc_connected: true,
               });
 
-              // Check thresholds
               const oilAlerts = await checkAndAlert(db, dbName, trafoId, latestOil, true);
               if (oilAlerts && oilAlerts.length > 0) allAlerts.push(...oilAlerts);
             }
@@ -327,4 +321,20 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
   }, 1000); 
 };
 
+function invalidateThresholdCache(dbName, trafoId) {
+  if (dbName && trafoId) {
+    thresholdCache.delete(`${dbName}_${trafoId}_thresholds`);
+  } else if (dbName) {
+    for (const key of thresholdCache.keys()) {
+      if (key.startsWith(`${dbName}_`)) {
+        thresholdCache.delete(key);
+      }
+    }
+  } else {
+    thresholdCache.clear();
+  }
+}
+
+startRealtimePoller.invalidateThresholdCache = invalidateThresholdCache;
 module.exports = startRealtimePoller;
+module.exports.invalidateThresholdCache = invalidateThresholdCache;

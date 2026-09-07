@@ -94,9 +94,7 @@ const TrafoListPopover = ({ company, trafos }) => {
     };
     
     const handleScroll = () => {
-      if (isOpen) {
-        // Optional: you can close it on scroll or recalculate position
-        // setIsOpen(false); 
+      if (isOpen) { 
       }
     };
 
@@ -114,12 +112,10 @@ const TrafoListPopover = ({ company, trafos }) => {
     e.stopPropagation();
     if (!isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      // Align left edge of popover with left edge of button
       let left = rect.left;
       
-      // Ensure it doesn't overflow right edge of screen (w-64 is 256px)
       if (left + 256 > window.innerWidth) {
-        left = window.innerWidth - 276; // 256px width + 20px padding
+        left = window.innerWidth - 276; 
       }
       
       setCoords({
@@ -199,7 +195,6 @@ const AdminDashboard = () => {
     return sessionStorage.getItem('admin_active_tab') || 'overview';
   });
 
-  // States
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [stats, setStats] = useState({ databases: 0, tables: 0, appUsers: 0, activeAdmins: 0 });
   const [databases, setDatabases] = useState([]);
@@ -208,7 +203,6 @@ const AdminDashboard = () => {
   const [waStatus, setWaStatus] = useState({ ready: false, state: 'DISCONNECTED', qr: '', connectedSince: null, messagesSentToday: 0, connectedPhone: '' });
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Database Tab States
   const [selectedDb, setSelectedDb] = useState(null);
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState(null);
@@ -217,7 +211,6 @@ const AdminDashboard = () => {
   const [dataSort, setDataSort] = useState('latest');
   const [searchTermDb, setSearchTermDb] = useState('');
 
-  // Loading States
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [isLoadingDbs, setIsLoadingDbs] = useState(false);
   const [isLoadingTables, setIsLoadingTables] = useState(false);
@@ -225,7 +218,6 @@ const AdminDashboard = () => {
   const [isLoadingAdmins, setIsLoadingAdmins] = useState(false);
   const [isLoadingAllUsers, setIsLoadingAllUsers] = useState(false);
 
-  // Companies Tab States
   const [companies, setCompanies] = useState([]);
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
@@ -244,7 +236,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Modal & Form States
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState(null);
   const [adminForm, setAdminForm] = useState({ username: '', password: '' });
@@ -258,7 +249,6 @@ const AdminDashboard = () => {
   const [appUserFormError, setAppUserFormError] = useState('');
   const [isSavingAppUser, setIsSavingAppUser] = useState(false);
 
-  // Inline edit state for Overview
   const [inlineEditingAppUserId, setInlineEditingAppUserId] = useState(null);
   const [inlineAppUserForm, setInlineAppUserForm] = useState({ username: '', nomor_telpon: '', email: '', role: '' });
 
@@ -330,7 +320,6 @@ const AdminDashboard = () => {
     window.location.href = '/login';
   };
 
-  // API Calls
   const fetchStats = async () => {
     setIsLoadingStats(true);
     try {
@@ -589,7 +578,6 @@ const AdminDashboard = () => {
   return (
     <div className={`flex h-screen overflow-hidden ${theme === 'dark' ? 'dark bg-[#f4f7fe] dark:bg-[#101014]' : 'bg-[#f4f7fe]'} text-[#172b4d] dark:text-white font-sans transition-colors duration-300`}>
 
-      {/* Desktop Sidebar */}
       <aside className={`hidden md:flex flex-col inset-y-0 left-0 z-50 transition-all duration-300 bg-white dark:bg-[#0b0c10] border-r border-gray-200 dark:border-white/5 ${isSidebarCollapsed ? 'w-20' : 'w-72'}`}>
         <div className="p-6 flex items-center gap-3 border-b border-gray-200 dark:border-white/5 relative">
           <div className="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center text-[#172b4d] dark:text-white p-1 shrink-0">
@@ -667,13 +655,11 @@ const AdminDashboard = () => {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0b0c10] pb-[72px] md:pb-0">
 
-        {/* Desktop Header */}
         <header className="hidden md:flex items-center justify-between p-6 border-b border-gray-200 dark:border-white/5 bg-white dark:bg-[#0b0c10]">
           <div className="flex items-center gap-4">
-            {/* Menu icon removed */}
+        
           </div>
           <div className="flex items-center gap-6">
             <button onClick={toggleTheme} className="text-gray-500 hover:text-[#172b4d] dark:text-gray-400 dark:hover:text-[#172b4d] dark:text-white transition-colors">
@@ -690,7 +676,6 @@ const AdminDashboard = () => {
           </div>
         </header>
 
-        {/* Mobile Header */}
         <div className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-[#0b0c10] border-b border-gray-200 dark:border-white/5 shrink-0 z-20 sticky top-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center text-[#172b4d] dark:text-white p-1">
@@ -705,7 +690,6 @@ const AdminDashboard = () => {
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
 
-          {/* TAB: OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="p-4 md:p-8 w-full mx-auto space-y-6 md:space-y-8 animate-[fadeIn_0.3s_ease-out]">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -715,7 +699,6 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* Stats Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8">
                 {[
                   { label: 'DATABASES', value: stats.databases, color: 'blue', icon: Database, sub: '1 online' },
@@ -759,9 +742,8 @@ const AdminDashboard = () => {
                 ))}
               </div>
 
-              {/* Middle Cards */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                {/* Databases Card */}
+           
                 <div className="bg-[#f4f7fe] dark:bg-[#101014] border border-gray-200 dark:border-white/5 rounded-2xl p-6 relative overflow-hidden group">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl transition-all group-hover:bg-blue-500/10"></div>
                   <div className="flex justify-between items-center mb-6 relative z-10">
@@ -792,7 +774,6 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                {/* WhatsApp Card */}
                 <div className="bg-[#f4f7fe] dark:bg-[#101014] border border-gray-200 dark:border-white/5 rounded-2xl p-6 relative overflow-hidden group flex flex-col justify-between">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-green-500/5 rounded-full blur-3xl transition-all group-hover:bg-green-500/10"></div>
                   <div className="relative z-10">
@@ -834,7 +815,6 @@ const AdminDashboard = () => {
                     {waStatus.ready ? 'Disconnect WhatsApp' : 'Connect WhatsApp'}
                   </button>
 
-                  {/* Decorative background phone wireframe */}
                   {!waStatus.ready && (
                     <div className="absolute -bottom-10 -right-10 opacity-30 pointer-events-none">
                       <svg width="180" height="200" viewBox="0 0 100 150" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -847,7 +827,6 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* App Users Table */}
               <div className="bg-[#f4f7fe] dark:bg-[#101014] border border-gray-200 dark:border-white/5 rounded-2xl overflow-hidden flex flex-col max-h-[70vh]">
                 <div className="p-6 border-b border-gray-200 dark:border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
@@ -969,10 +948,8 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* TAB: DATABASES */}
           {activeTab === 'databases' && (
             <>
-              {/* DESKTOP VIEW */}
               <div className="hidden md:flex flex-col md:flex-row h-full animate-[fadeIn_0.3s_ease-out]">
                 <div className="w-full md:w-72 border-r border-b md:border-b-0 border-gray-200 dark:border-white/5 bg-[#f4f7fe] dark:bg-[#151521] flex flex-col shrink-0 h-[250px] md:h-full">
                   <div className="p-4 border-b border-gray-200 dark:border-white/5">
@@ -1132,9 +1109,8 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* MOBILE VIEW (Drill-down) */}
               <div className="md:hidden flex flex-col h-full animate-[fadeIn_0.2s_ease-out] p-4 bg-[#f4f7fe] dark:bg-[#0a0a0f]">
-                {/* State 1: DB List */}
+              
                 {!selectedDb && (
                   <>
                     <h2 className="text-lg font-bold mb-3 text-gray-500 dark:text-gray-400">Databases</h2>
@@ -1207,7 +1183,6 @@ const AdminDashboard = () => {
                   </>
                 )}
 
-                {/* State 2: Table List */}
                 {selectedDb && !selectedTable && (
                   <>
                     <div className="flex items-center gap-3 mb-6">
@@ -1240,7 +1215,6 @@ const AdminDashboard = () => {
                   </>
                 )}
 
-                {/* State 3: Row Data (Cards) */}
                 {selectedDb && selectedTable && (
                   <>
                     <div className="flex flex-col gap-4 mb-6">
@@ -1296,7 +1270,6 @@ const AdminDashboard = () => {
                 )}
               </div>
 
-              {/* DELETE DB MODAL */}
               {showDeleteModal && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                   <div className="bg-[#f4f7fe] dark:bg-[#151521] border border-red-900/50 p-6 md:p-8 rounded-3xl max-w-md w-full shadow-[0_0_40px_rgba(220,38,38,0.15)] animate-[slideUpFade_0.3s_ease-out]">
@@ -1336,7 +1309,6 @@ const AdminDashboard = () => {
             </>
           )}
 
-          {/* TAB: ADMINS */}
           {activeTab === 'admins' && (
             <div className="p-4 md:p-8 w-full mx-auto space-y-6 animate-[fadeIn_0.3s_ease-out]">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1408,7 +1380,6 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* TAB: COMPANIES */}
           {activeTab === 'companies' && (
             <div className="p-4 md:p-8 w-full mx-auto space-y-6 animate-[fadeIn_0.3s_ease-out]">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1511,8 +1482,6 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* TAB: APP USERS */}
-
           {activeTab === 'users' && (
             <div className="p-4 md:p-8 w-full mx-auto space-y-6 animate-[fadeIn_0.3s_ease-out]">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1592,7 +1561,7 @@ const AdminDashboard = () => {
                 </div>
 
                 <div className="flex-1 overflow-auto custom-scrollbar">
-                  {/* DESKTOP TABLE */}
+                
                   <table className="hidden md:table w-full text-left text-sm whitespace-nowrap relative">
                     <thead className="bg-[#f4f7fe] dark:bg-[#1a1a24] sticky top-0 z-10">
                       <tr className="text-gray-500 dark:text-gray-400">
@@ -1635,7 +1604,6 @@ const AdminDashboard = () => {
                     </tbody>
                   </table>
 
-                  {/* MOBILE CARDS */}
                   <div className="md:hidden space-y-4 pb-16">
                     {allUsers.filter(u => {
                       const matchSearch = (u.username || '').toLowerCase().includes(searchAllUser.toLowerCase()) ||
@@ -1685,7 +1653,6 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* TAB: WHATSAPP */}
           {activeTab === 'whatsapp' && (
             <div className="p-4 md:p-8 max-w-4xl mx-auto animate-[fadeIn_0.3s_ease-out] flex flex-col items-center justify-center min-h-[70vh] md:min-h-[80vh]">
               {!waStatus.ready ? (
@@ -1771,7 +1738,6 @@ const AdminDashboard = () => {
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#151521] border-t border-gray-200 dark:border-white/5 flex items-center overflow-x-auto overflow-y-hidden flex-nowrap scrollbar-hide p-2 gap-2 z-50 pb-safe">
         <BottomNavItem icon={LayoutDashboard} label="Overview" id="overview" activeTab={activeTab} setActiveTab={setActiveTab} />
         <BottomNavItem icon={Database} label="DBs" id="databases" activeTab={activeTab} setActiveTab={setActiveTab} />

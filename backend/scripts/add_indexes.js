@@ -9,7 +9,6 @@ async function addIndexes() {
       const db = await getDbConnection(dbName);
       
       try {
-        // Cek dan tambah index untuk electrical_readings (timestamp)
         await db.execute('CREATE INDEX idx_electrical_timestamp ON electrical_readings(timestamp)');
         console.log(`  [OK] Index timestamp ditambahkan di electrical_readings.`);
       } catch (err) {
@@ -18,7 +17,6 @@ async function addIndexes() {
       }
       
       try {
-        // Cek dan tambah index untuk oil_readings (timestamp)
         await db.execute('CREATE INDEX idx_oil_timestamp ON oil_readings(timestamp)');
         console.log(`  [OK] Index timestamp ditambahkan di oil_readings.`);
       } catch (err) {

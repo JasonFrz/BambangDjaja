@@ -10,21 +10,20 @@ export const EventStreamPanel = memo(({ panel, latestData, isEditing }) => {
   const [events, setEvents] = useState([]);
   const [isDbLoading, setIsDbLoading] = useState(false);
 
-  // Fetch events directly from MySQL backend database webservice
   const fetchDbEvents = useCallback(async () => {
     try {
-      // Only show loading indicator on initial cold load
       if (events.length === 0) {
         setIsDbLoading(true);
       }
-      const dbName = sessionStorage.getItem('db_name');
-      const trafoId = sessionStorage.getItem('selected_trafo_id') || 1;
+      const dbName = sessionStorage.getItem('db_name') || sessionStorage.getItem('tenant_db');
+      const trafoId = sessionStorage.getItem('selectedTrafoId') || sessionStorage.getItem('selected_trafo_id') || '1';
       if (!dbName) return;
 
-      const res = await axios.get(`${apiUrl}/api/trends/events?trafo_id=${trafoId}&limit=50`);
+      const res = await axios.get(`${apiUrl}/api/trends/events?trafo_id=${trafoId}&limit=50`, {
+        headers: { 'X-DB-Name': dbName }
+      });
       if (res.data?.success && Array.isArray(res.data.events)) {
         setEvents(prev => {
-          // Avoid re-rendering if events have not changed
           if (
             prev.length === res.data.events.length &&
             prev[0]?.id === res.data.events[0]?.id &&
@@ -42,7 +41,6 @@ export const EventStreamPanel = memo(({ panel, latestData, isEditing }) => {
     }
   }, [apiUrl, events.length]);
 
-  // Initial fetch and smart background polling (every 6 seconds, paused when tab hidden)
   useEffect(() => {
     fetchDbEvents();
 
@@ -88,7 +86,7 @@ export const EventStreamPanel = memo(({ panel, latestData, isEditing }) => {
 
   return (
     <div className="h-full w-full flex flex-col transition-colors duration-300">
-      {/* Header */}
+   
       <div className={`flex items-center justify-between gap-2 px-1 mb-1.5 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
         <div className="flex items-center gap-2 min-w-0">
           <div className="p-1 rounded-md bg-zinc-500/10 text-zinc-500 dark:text-zinc-400 shrink-0">
@@ -102,7 +100,6 @@ export const EventStreamPanel = memo(({ panel, latestData, isEditing }) => {
           </span>
         </div>
 
-        {/* Severity Filter Tabs */}
         <div className="flex items-center gap-1 shrink-0 text-[10px] pr-14">
           {['ALL', 'CRITICAL', 'ALARM', 'WARN', 'OK', 'INFO'].map(lvl => (
             <button
@@ -121,7 +118,6 @@ export const EventStreamPanel = memo(({ panel, latestData, isEditing }) => {
         </div>
       </div>
 
-      {/* Terminal List Body */}
       <div className="flex-1 min-h-0 bg-gray-900 text-gray-100 rounded-xl border border-gray-800 p-2 font-mono text-xs overflow-y-auto custom-scrollbar flex flex-col gap-1.5 shadow-inner">
         {filteredEvents.length === 0 ? (
           <div className="h-full flex items-center justify-center text-gray-500 text-[11px]">

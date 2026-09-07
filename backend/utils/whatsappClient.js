@@ -4,7 +4,7 @@ const qrcode = require('qrcode-terminal');
 let waClient = null;
 let waReady = false;
 let qrString = '';
-let connectionState = 'DISCONNECTED'; // DISCONNECTED, NEEDS_SCAN, CONNECTING, CONNECTED
+let connectionState = 'DISCONNECTED'; 
 
 let connectedSince = null;
 let messagesSentToday = 0;
@@ -120,7 +120,6 @@ const sendWhatsAppMessage = async (phone, text) => {
     await waClient.sendMessage(chatId, text);
     console.log(`✅ Berhasil mengirim notifikasi WA ke ${phoneNumber}`);
     
-    // Update tracking
     const today = new Date().toDateString();
     if (lastMessageDate !== today) {
       messagesSentToday = 1;

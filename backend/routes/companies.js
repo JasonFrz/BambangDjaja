@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { getDbConnection, getAdminPool } = require('../utils/db');
 
-// Ensure schema matches our requirements
 const ensureCompaniesSchema = async (pool) => {
   try {
     const [columns] = await pool.execute("SHOW COLUMNS FROM companies LIKE 'nama_db'");
@@ -15,7 +14,6 @@ const ensureCompaniesSchema = async (pool) => {
   }
 };
 
-// GET all companies along with their trafo lists
 router.get('/', async (req, res) => {
   try {
     const pool = await getDbConnection('tmu_master');
@@ -23,13 +21,11 @@ router.get('/', async (req, res) => {
     
     const [companies] = await pool.execute('SELECT id, nama_perusahaan, nama_db FROM companies ORDER BY id DESC');
     
-    // Fetch trafos for all companies in parallel
     await Promise.all(companies.map(async (company) => {
       company.trafos = [];
       if (company.nama_db) {
         try {
           const dbPool = await getDbConnection(company.nama_db);
-          // check if trafo table exists
           const [tables] = await dbPool.execute("SHOW TABLES LIKE 'trafo'");
           if (tables.length > 0) {
             const [trafos] = await dbPool.execute('SELECT id, nama FROM trafo ORDER BY id ASC');
@@ -49,7 +45,6 @@ router.get('/', async (req, res) => {
 });
 
 
-// POST create company
 router.post('/', async (req, res) => {
   const { nama_perusahaan, nama_db } = req.body;
   
@@ -61,7 +56,6 @@ router.post('/', async (req, res) => {
     const pool = await getDbConnection('tmu_master');
     await ensureCompaniesSchema(pool);
     
-    // Check if nama_perusahaan is used by another company
     const [existing] = await pool.execute('SELECT id FROM companies WHERE nama_perusahaan = ?', [nama_perusahaan]);
     if (existing.length > 0) {
       return res.status(400).json({ error: 'Company Name already used by another company' });
@@ -79,7 +73,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT update company
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const { nama_perusahaan, nama_db } = req.body;
@@ -92,7 +85,6 @@ router.put('/:id', async (req, res) => {
     const pool = await getDbConnection('tmu_master');
     await ensureCompaniesSchema(pool);
     
-    // Check if nama_perusahaan is used by another company
     const [existing] = await pool.execute('SELECT id FROM companies WHERE nama_perusahaan = ? AND id != ?', [nama_perusahaan, id]);
     if (existing.length > 0) {
       return res.status(400).json({ error: 'Company Name already used by another company' });
@@ -110,14 +102,12 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE company
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
   
   try {
     const pool = await getDbConnection('tmu_master');
     
-    // Get company details first to drop its database
     const [companyRows] = await pool.execute('SELECT nama_db FROM companies WHERE id = ?', [id]);
     const company = companyRows[0];
     
@@ -130,14 +120,11 @@ router.delete('/:id', async (req, res) => {
         console.error(`Failed to drop database ${company.nama_db}:`, dbErr);
       }
       
-      // Delete users associated with this nama_db
       await pool.execute('DELETE FROM users WHERE nama_db = ?', [company.nama_db]);
     }
     
-    // Delete users associated with this company_id
     await pool.execute('DELETE FROM users WHERE company_id = ?', [id]);
     
-    // Finally, delete the company
     await pool.execute('DELETE FROM companies WHERE id = ?', [id]);
     
     res.json({ success: true, message: 'Company, its users, and database deleted successfully' });

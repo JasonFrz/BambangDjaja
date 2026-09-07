@@ -67,17 +67,14 @@ const TransformerData = () => {
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
   
-  // Crop states
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
-  // Rename states
   const [trafoName, setTrafoName] = useState('Transformer Data');
   const [isEditingName, setIsEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState('');
 
-  // Webcam states
   const [cameraMode, setCameraMode] = useState(false);
   const webcamRef = useRef(null);
 
@@ -86,7 +83,7 @@ const TransformerData = () => {
       const imageSrc = webcamRef.current.getScreenshot();
       if (imageSrc) {
         setPreviewUrl(imageSrc);
-        setSelectedImage(new File([], 'webcam.jpg')); // Dummy file to pass truthy check
+        setSelectedImage(new File([], 'webcam.jpg')); 
         setCameraMode(false);
       }
     }
@@ -102,7 +99,6 @@ const TransformerData = () => {
   const token = sessionStorage.getItem('token');
 
   useEffect(() => {
-    // Fetch existing image if any
     if (trafoId && companyNameHeader) {
       fetch(`${apiUrl}/api/trafo/${trafoId}`, {
         headers: {
@@ -143,7 +139,6 @@ const TransformerData = () => {
       });
       if (response.ok) {
         setTrafoName(editNameValue.trim());
-        // Trigger event so other components (like navbar/sidebar) can know the name changed
         window.dispatchEvent(new Event('trafoChanged'));
       } else {
         alert('Failed to rename trafo');
@@ -254,7 +249,6 @@ const TransformerData = () => {
   return (
     <div className="flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out] w-full pb-10">
 
-      {/* Header Section */}
       <div className="mb-2 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-3">
@@ -303,7 +297,6 @@ const TransformerData = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* Info Panel 1 */}
         <div className="bg-white dark:bg-[#151521] rounded-2xl p-5 shadow-sm border border-transparent dark:border-white/5 flex flex-col">
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#dfe1e6] dark:border-white/10">
             <div className="flex items-center gap-3">
@@ -353,7 +346,6 @@ const TransformerData = () => {
 
       </div>
 
-      {/* Upload Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]">
           <div className="bg-white dark:bg-[#151521] w-full max-w-md rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)] flex flex-col border border-gray-200 dark:border-white/10">
@@ -450,7 +442,6 @@ const TransformerData = () => {
                 </div>
               )}
 
-              {/* Hidden File Input */}
               <input 
                 type="file" 
                 ref={fileInputRef}

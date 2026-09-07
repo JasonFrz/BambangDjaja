@@ -7,7 +7,7 @@ import { useTrendData } from "../../contexts/TrendDataContext";
 
 export const HistogramPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
   const { isLoading } = useTrendData() || { isLoading: false };
-  const metric = panel.metrics?.[0]; // Restrict to 1 metric
+  const metric = panel.metrics?.[0]; 
   const buckets = panel.buckets || 10;
   
   const histogramData = useMemo(() => {
@@ -26,7 +26,6 @@ export const HistogramPanel = memo(({ panel, chartData, isEditing, isSyncHoverAc
     
     const binSize = (max - min) / buckets;
     
-    // Create buckets
     const bins = Array.from({ length: buckets }, (_, i) => ({
       bin: `${(min + i * binSize).toFixed(1)}`,
       rangeStart: min + i * binSize,
@@ -34,7 +33,6 @@ export const HistogramPanel = memo(({ panel, chartData, isEditing, isSyncHoverAc
       count: 0
     }));
     
-    // Fill buckets
     values.forEach(v => {
       const binIdx = Math.min(Math.floor((v - min) / binSize), buckets - 1);
       if (bins[binIdx]) bins[binIdx].count++;

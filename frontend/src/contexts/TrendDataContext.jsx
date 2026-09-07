@@ -73,7 +73,6 @@ export const TrendDataProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const lastDataRef = useRef(null);
 
-  // Initial fetch for Live mode
   const fetchLiveInitial = useCallback(async () => {
     const dbName = sessionStorage.getItem('db_name');
     if (!dbName) return;
@@ -103,7 +102,6 @@ export const TrendDataProvider = ({ children }) => {
     fetchLiveInitial();
   }, [fetchLiveInitial]);
 
-  // Universal Range Data Fetcher (Grafana Time Engine)
   const fetchRangeData = useCallback(async (preset, customStart = null, customEnd = null) => {
     const dbName = sessionStorage.getItem('db_name');
     if (!dbName) return;
@@ -133,28 +131,27 @@ export const TrendDataProvider = ({ children }) => {
         end = now.toISOString();
         if (preset === '15m') {
           start = new Date(now.getTime() - 15 * 60 * 1000).toISOString();
-          interval = 0; // Raw or 2s
+          interval = 0; 
           label = 'Last 15m';
         } else if (preset === '1h') {
           start = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
-          interval = 5; // 5s interval
+          interval = 5; 
           label = 'Last 1h';
         } else if (preset === '6h') {
           start = new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString();
-          interval = 30; // 30s interval
+          interval = 30; 
           label = 'Last 6h';
         } else if (preset === '24h') {
           start = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-          interval = 120; // 2 min interval
+          interval = 120; 
           label = 'Last 24h';
         } else if (preset === '7d') {
           start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-          interval = 600; // 10 min interval
+          interval = 600; 
           label = 'Last 7 Days';
         }
       } else {
         label = 'Custom Range';
-        // Auto calculate interval based on duration
         const diffHours = (new Date(end) - new Date(start)) / (1000 * 60 * 60);
         if (diffHours <= 1) interval = 5;
         else if (diffHours <= 6) interval = 30;
@@ -194,7 +191,6 @@ export const TrendDataProvider = ({ children }) => {
     fetchRangeData('live');
   }, [fetchRangeData]);
 
-  // Live WebSocket point streaming (only active in Live Mode)
   useEffect(() => {
     if (!isLiveMode) return;
     if (!wsData || !wsData.modbus_connected) return;
@@ -228,7 +224,6 @@ export const TrendDataProvider = ({ children }) => {
     });
   }, [wsData, isLiveMode]);
 
-  // Liveness checker
   useEffect(() => {
     const checkLive = () => {
       if (lastDataRef.current && lastDataRef.current._receivedAt) {

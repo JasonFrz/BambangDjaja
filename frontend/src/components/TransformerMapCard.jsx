@@ -12,7 +12,6 @@ const styles = {
   dark: 'https://tiles.openfreemap.org/styles/dark',
 };
 
-// ─── Analog Joystick Component ─────────────────────────────────────────
 const MapJoystick = ({ onMove }) => {
   const [active, setActive] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -32,8 +31,6 @@ const MapJoystick = ({ onMove }) => {
     let dx = e.clientX - rect.left - centerX;
     let dy = e.clientY - rect.top - centerY;
     
-    // Calculate max drag radius (e.g., container half-width minus knob half-width)
-    // For a 48px container and 24px knob, maxRadius is (24 - 12) = 12
     const maxRadius = (rect.width / 2) - 12; 
     const distance = Math.sqrt(dx * dx + dy * dy);
     
@@ -44,7 +41,6 @@ const MapJoystick = ({ onMove }) => {
     
     setPosition({ x: dx, y: dy });
     
-    // Add small deadzone (10%)
     const normX = Math.abs(dx/maxRadius) < 0.1 ? 0 : dx/maxRadius;
     const normY = Math.abs(dy/maxRadius) < 0.1 ? 0 : dy/maxRadius;
     
@@ -110,7 +106,6 @@ const TransformerMapCard = ({ latitude, longitude, onLocationUpdate }) => {
     }
   };
 
-  // ─── Analog Joystick Logic ─────────────────────────────────────────
   const requestRef = useRef();
   const joyData = useRef({ x: 0, y: 0 });
 
@@ -123,7 +118,6 @@ const TransformerMapCard = ({ latitude, longitude, onLocationUpdate }) => {
        const currentBearing = mapRef.current.getBearing();
        const currentPitch = mapRef.current.getPitch();
        
-       // Slower speed for smoother rotation
        const bearingDelta = joyData.current.x * 0.5; 
        const pitchDelta = joyData.current.y * 0.3; 
        
@@ -144,10 +138,9 @@ const TransformerMapCard = ({ latitude, longitude, onLocationUpdate }) => {
     mapRef.current?.easeTo({ pitch: is3D ? 60 : 0, bearing: 0, duration: 500 });
   };
 
-  // ─── Resizable Height State ──────────────────────────────────────────
   const [mapHeight, setMapHeight] = useState(() => {
     const saved = localStorage.getItem('user_layouts_map_only_height');
-    return saved ? parseInt(saved, 10) : 300; // default to 300px for just the map area
+    return saved ? parseInt(saved, 10) : 300; 
   });
   
   const [isResizing, setIsResizing] = useState(false);
@@ -169,7 +162,7 @@ const TransformerMapCard = ({ latitude, longitude, onLocationUpdate }) => {
       if (!clientY) return;
       
       const deltaY = clientY - resizeStartY.current;
-      const newHeight = Math.max(150, resizeStartHeight.current + deltaY); // Min map height 150px
+      const newHeight = Math.max(150, resizeStartHeight.current + deltaY); 
       setMapHeight(newHeight);
       mapRef.current?.resize();
     };
@@ -236,7 +229,6 @@ const TransformerMapCard = ({ latitude, longitude, onLocationUpdate }) => {
           </h3>
         </div>
         
-        {/* Style Selector */}
         <div className="relative flex items-center self-start sm:self-auto bg-gray-50/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden">
           <div className="pl-3 pr-2 text-gray-500">
             <Layers size={14} />
@@ -250,7 +242,6 @@ const TransformerMapCard = ({ latitude, longitude, onLocationUpdate }) => {
             <option value="bright" className="bg-white dark:bg-[#1f2937]">Bright</option>
             <option value="dark" className="bg-white dark:bg-[#1f2937]">Dark</option>
           </select>
-          {/* Custom chevron for select */}
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
           </div>
@@ -340,7 +331,6 @@ const TransformerMapCard = ({ latitude, longitude, onLocationUpdate }) => {
         </div>
       </div>
 
-      {/* Touch-Friendly Drag Handle */}
       <div 
         className="absolute bottom-0 left-0 w-full h-6 cursor-ns-resize flex items-center justify-center bg-transparent hover:bg-gray-100 dark:hover:bg-white/5 transition-colors z-20"
         onMouseDown={handleResizeStart}

@@ -19,7 +19,6 @@ export const UniversalTimePicker = () => {
   const [customEnd, setCustomEnd] = useState('');
   const dropdownRef = useRef(null);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -57,9 +56,9 @@ export const UniversalTimePicker = () => {
 
   return (
     <div className="relative inline-flex items-center" ref={dropdownRef}>
-      {/* ─── Main Range Button ─── */}
+  
       <div className="inline-flex items-center rounded-xl bg-white/80 dark:bg-[#151521]/90 border border-gray-200/80 dark:border-white/10 shadow-sm p-1 gap-1 backdrop-blur-md">
-        {/* Mode Status Pill */}
+      
         {isLiveMode ? (
           <button
             onClick={() => handleSelectPreset('live')}
@@ -84,7 +83,6 @@ export const UniversalTimePicker = () => {
           </button>
         )}
 
-        {/* Time Selector Dropdown Trigger */}
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
@@ -94,7 +92,6 @@ export const UniversalTimePicker = () => {
           <ChevronDown size={13} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
 
-        {/* Refresh / Loader indicator */}
         {isLoading && (
           <div className="px-1.5 text-blue-500 animate-spin">
             <RefreshCw size={12} />
@@ -102,7 +99,6 @@ export const UniversalTimePicker = () => {
         )}
       </div>
 
-      {/* ─── Dropdown Menu ─── */}
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl bg-white dark:bg-[#181826] border border-gray-200 dark:border-white/10 shadow-2xl z-50 p-2 overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="px-3 py-2 border-b border-gray-100 dark:border-white/5 mb-1 flex items-center justify-between">
@@ -132,7 +128,6 @@ export const UniversalTimePicker = () => {
             })}
           </div>
 
-          {/* Custom Date Range Trigger */}
           <div className="mt-2 pt-2 border-t border-gray-100 dark:border-white/5">
             <button
               onClick={() => {
@@ -148,7 +143,6 @@ export const UniversalTimePicker = () => {
         </div>
       )}
 
-      {/* ─── Custom Date Modal ─── */}
       {showCustomModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#181826] rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl p-6 w-full max-w-md">

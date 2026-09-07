@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useApi } from '../contexts/ApiContext';
+import { useThresholds } from '../contexts/ThresholdContext';
 import { Edit, Check, Activity } from 'lucide-react';
 import EnergyLoader from '../components/EnergyLoader';
 
@@ -31,8 +32,9 @@ const TABS = ['Voltage', 'Current', 'Power', 'Frequency', 'Oil and env'];
 
 const Settings = () => {
   const { apiUrl } = useApi();
-  const dbName = sessionStorage.getItem('tenant_db');
-  const selectedTrafoId = sessionStorage.getItem('selectedTrafoId');
+  const { refreshThresholds } = useThresholds();
+  const dbName = sessionStorage.getItem('db_name') || sessionStorage.getItem('tenant_db');
+  const selectedTrafoId = sessionStorage.getItem('selectedTrafoId') || sessionStorage.getItem('selected_trafo_id') || '1';
   
   const [thresholds, setThresholds] = useState([]);
   const [activeTab, setActiveTab] = useState('Voltage');
@@ -42,7 +44,7 @@ const Settings = () => {
   const [editValues, setEditValues] = useState({ min_value: '', max_value: '', is_active: 1 });
 
   useEffect(() => {
-    if (selectedTrafoId) {
+    if (selectedTrafoId && dbName) {
       fetchThresholds();
     }
   }, [selectedTrafoId, dbName]);
@@ -87,7 +89,6 @@ const Settings = () => {
         headers: { 'X-DB-Name': dbName }
       });
       
-      // Update local state
       setThresholds(prev => prev.map(t => 
         t.id === id ? { 
           ...t, 
@@ -97,6 +98,8 @@ const Settings = () => {
         } : t
       ));
       setEditingId(null);
+      await refreshThresholds();
+      window.dispatchEvent(new Event('thresholdsUpdated'));
     } catch (err) {
       console.error('Failed to update threshold:', err);
       alert('Failed to update setting');
@@ -119,7 +122,6 @@ const Settings = () => {
         </p>
       </div>
 
-      {/* TABS */}
       <div className="flex overflow-x-auto custom-scrollbar gap-2 pb-2">
         {TABS.map(tab => (
           <button
@@ -155,7 +157,6 @@ const Settings = () => {
                     : 'bg-white dark:bg-[#151521] border-[#dfe1e6] dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 shadow-sm'
                 }`}
               >
-                {/* Info Section */}
                 <div className="flex flex-col mb-4 md:mb-0 md:w-1/3">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-bold text-[#172b4d] dark:text-white text-base md:text-lg">
@@ -174,7 +175,6 @@ const Settings = () => {
                   </span>
                 </div>
 
-                {/* Values Section */}
                 <div className="flex items-end md:items-center gap-4 md:gap-8 flex-1 justify-start md:justify-center">
                   <div className="flex flex-col gap-1 w-24">
                     <label className="text-[10px] font-bold text-gray-500 uppercase">Min</label>
@@ -210,17 +210,21 @@ const Settings = () => {
                   </div>
                 </div>
 
-                {/* Actions Section */}
                 <div className="flex items-center justify-end gap-4 mt-4 md:mt-0 md:w-1/4">
-                  {/* Toggle */}
+                 
                   <button 
-                    onClick={() => {
+                    onClick={async () => {
                       if (isEditing) {
                         setEditValues({...editValues, is_active: !editValues.is_active});
                       } else {
-                        // Optimistic quick toggle if not in edit mode
-                        axios.put(`${apiUrl}/api/settings/thresholds/${t.id}`, { is_active: !t.is_active ? 1 : 0 }, { headers: { 'X-DB-Name': dbName } });
-                        setThresholds(prev => prev.map(x => x.id === t.id ? { ...x, is_active: !t.is_active ? 1 : 0 } : x));
+                        try {
+                          await axios.put(`${apiUrl}/api/settings/thresholds/${t.id}`, { is_active: !t.is_active ? 1 : 0 }, { headers: { 'X-DB-Name': dbName } });
+                          setThresholds(prev => prev.map(x => x.id === t.id ? { ...x, is_active: !t.is_active ? 1 : 0 } : x));
+                          await refreshThresholds();
+                          window.dispatchEvent(new Event('thresholdsUpdated'));
+                        } catch (err) {
+                          console.error('Failed to toggle threshold:', err);
+                        }
                       }
                     }}
                     className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors ${
@@ -234,7 +238,6 @@ const Settings = () => {
                     }`} />
                   </button>
 
-                  {/* Edit/Save Button */}
                   {isEditing ? (
                     <button 
                       onClick={() => handleSaveClick(t.id)}

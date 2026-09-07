@@ -34,7 +34,6 @@ const checkUser = async (req, res, next) => {
 };
 
 router.get('/', checkUser, (req, res) => {
-  // Hanya kembalikan data yang aman
   res.json({
     id: req.user.id,
     username: req.user.username,
@@ -57,7 +56,6 @@ router.put('/', checkUser, async (req, res) => {
     const params = [];
     const updates = [];
 
-    // Validasi nomor telepon
     if (nomor_telpon !== undefined && columns.includes('nomor_telpon')) {
       if (nomor_telpon.trim() !== '' && nomor_telpon !== '+62') {
         const [existingPhone] = await req.db.execute('SELECT id FROM users WHERE nomor_telpon = ? AND username != ? LIMIT 1', [nomor_telpon, req.username]);
@@ -69,7 +67,6 @@ router.put('/', checkUser, async (req, res) => {
       params.push(nomor_telpon);
     }
     
-    // Validasi email
     if (req.body.email !== undefined && columns.includes('email')) {
       const email = req.body.email.trim();
       if (email !== '') {
@@ -82,7 +79,6 @@ router.put('/', checkUser, async (req, res) => {
       params.push(email);
     }
     
-    // Validasi username
     let newUsername = req.username;
     if (req.body.username !== undefined && req.body.username.trim() !== '' && req.body.username.trim() !== req.username) {
       newUsername = req.body.username.trim();
@@ -108,7 +104,6 @@ router.put('/', checkUser, async (req, res) => {
       await req.db.execute(query, params);
     }
 
-    // Generate a new token since credentials (username/password) might have changed
     const newToken = jwt.sign(
       { id: req.user.id, username: newUsername, role: req.user.role, dbName: req.dbName },
       process.env.JWT_SECRET,

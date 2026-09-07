@@ -13,7 +13,7 @@ async function autoAddIndexes() {
         await db.execute('CREATE INDEX idx_electrical_timestamp ON electrical_readings(timestamp)');
         console.log(`[Auto-Index] Berhasil menambahkan index timestamp di ${dbName}.electrical_readings`);
       } catch (err) {
-        // Abaikan jika index sudah ada atau tabel belum dibuat oleh IRIV
+        
       }
       
       try {

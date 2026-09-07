@@ -53,10 +53,8 @@ const MainLayout = () => {
   return (
     <div className="flex flex-col h-screen w-full bg-[#f4f7fe] dark:bg-[#111217] transition-colors duration-300 overflow-hidden relative">
       
-      {/* Ambient Warm Blue Glow from bottom to middle (ONLY on /home) */}
       {location.pathname === '/home' && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-          {/* Wide radial glow anchored at the bottom */}
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/3 w-[120%] h-[60%] bg-[#00a3ff]/15 dark:bg-[#00a3ff]/20 blur-[120px] rounded-[100%]" />
         </div>
       )}

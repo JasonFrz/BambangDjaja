@@ -7,6 +7,7 @@ import { Activity, BarChart3, GripVertical } from "lucide-react";
 import { METRICS } from "../../config/metrics";
 import EnergyLoader from "../../components/EnergyLoader";
 import { useTrendData } from "../../contexts/TrendDataContext";
+import { useThresholds } from "../../contexts/ThresholdContext";
 
 export const ChartTooltip = ({ active, payload, label }) => {
   if (!active || !payload || !payload.length) return null;
@@ -33,7 +34,32 @@ export const ChartTooltip = ({ active, payload, label }) => {
 
 export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
   const { isLoading } = useTrendData() || { isLoading: false };
+  const { getThreshold } = useThresholds();
   const metrics = panel.metrics || [];
+
+  const referenceLines = useMemo(() => {
+    const lines = [];
+    metrics.forEach(m => {
+      const t = getThreshold(m);
+      if (t?.is_active) {
+        if (t.max !== null && t.max !== undefined) {
+          lines.push({
+            id: `${m}-max`,
+            y: t.max,
+            label: `${METRICS[m]?.label || m} Max (${t.max})`
+          });
+        }
+        if (t.min !== null && t.min !== undefined && metrics.length === 1) {
+          lines.push({
+            id: `${m}-min`,
+            y: t.min,
+            label: `${METRICS[m]?.label || m} Min (${t.min})`
+          });
+        }
+      }
+    });
+    return lines;
+  }, [metrics, getThreshold]);
   
   const commonXAxis = {
     dataKey: "time", tick: { fontSize: 10, fill: '#94a3b8' }, tickLine: false,
@@ -114,13 +140,14 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
             {metrics.map(m => (
               <Line key={m} type="monotone" dataKey={m} name={METRICS[m]?.label || m} stroke={METRICS[m]?.color || '#8884d8'} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls isAnimationActive={true} animationDuration={400} animationEasing="ease-out" />
             ))}
-            {metrics.includes('frequency') && <ReferenceLine y={50.5} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: 'Limit (50.5)', fill: '#ef4444', fontSize: 10 }} />}
+            {referenceLines.map(rl => (
+              <ReferenceLine key={rl.id} y={rl.y} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: rl.label, fill: '#ef4444', fontSize: 10 }} />
+            ))}
           </LineChart>
         </ResponsiveContainer>
       );
     }
 
-    // Default: area
     return (
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={displayData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }} syncId={isSyncHoverActive ? "dashboardSync" : undefined}>
@@ -140,7 +167,9 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
           {metrics.map(m => (
             <Area key={m} type="monotone" dataKey={m} name={METRICS[m]?.label || m} stroke={METRICS[m]?.color || '#8884d8'} fill={`url(#areaGrad-${m})`} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls isAnimationActive={true} animationDuration={400} animationEasing="ease-out" />
           ))}
-          {metrics.includes('frequency') && <ReferenceLine y={50.5} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: 'Limit (50.5)', fill: '#ef4444', fontSize: 10 }} />}
+          {referenceLines.map(rl => (
+            <ReferenceLine key={rl.id} y={rl.y} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: rl.label, fill: '#ef4444', fontSize: 10 }} />
+          ))}
         </AreaChart>
       </ResponsiveContainer>
     );
@@ -152,7 +181,6 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
         <div className="flex items-center gap-2 min-w-0">
           <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-200 font-sans truncate tracking-wide">{panel.title}</h3>
 
-          {/* Time Window Pills (15s / 30s / 60s) */}
           <div className="inline-flex p-0.5 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[10px] font-medium shrink-0 ml-1">
             {[
               { label: '15s', val: 15 },

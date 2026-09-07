@@ -19,7 +19,6 @@ export const TemperatureDataProvider = ({ children }) => {
     return saved !== null ? parseInt(saved, 10) : 5000;
   });
 
-  // Keep updateInterval in sync if changed elsewhere
   useEffect(() => {
     const handleStorage = () => {
       const saved = localStorage.getItem('updateInterval');
@@ -106,7 +105,6 @@ export const TemperatureDataProvider = ({ children }) => {
       if (trafoId) {
         socket.emit("subscribe_transformer", { trafoId, dbName });
       }
-      // Send interval preference to backend
       socket.emit("set_poll_interval", updateInterval);
     });
 
@@ -183,7 +181,6 @@ export const TemperatureDataProvider = ({ children }) => {
     };
   }, [apiUrl]);
 
-  // When interval changes, notify backend immediately
   useEffect(() => {
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit("set_poll_interval", updateInterval);
@@ -196,7 +193,6 @@ export const TemperatureDataProvider = ({ children }) => {
         const diffMs = Date.now() - lastDataRef.current._receivedAt;
         const isDataRecent = diffMs < Math.max(15000, updateInterval * 3);
         
-        // Kita juga perlu mengecek apakah socket masih connected
         setIsLive(isConnected && isDataRecent);
       } else {
         setIsLive(false);

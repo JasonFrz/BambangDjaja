@@ -28,7 +28,6 @@ export const useWebSocket = (url, updateInterval = 0) => {
         socket.emit("subscribe_transformer", { trafoId, dbName });
       }
 
-      // Send initial interval preference to backend
       socket.emit("set_poll_interval", updateInterval);
     });
 
@@ -76,7 +75,6 @@ export const useWebSocket = (url, updateInterval = 0) => {
     };
   }, [url]);
 
-  // When interval changes, notify backend immediately
   useEffect(() => {
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit("set_poll_interval", updateInterval);

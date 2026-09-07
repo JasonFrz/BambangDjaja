@@ -6,7 +6,6 @@ const fs = require('fs');
 const { getDbConnection } = require('../utils/db');
 const { uploadToCloudinary } = require('../utils/cloudinaryClient');
 
-// Setup multer untuk local storage sementara sebelum diupload ke Cloudinary
 const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -38,7 +37,6 @@ const ensureTrafoTable = async (db, dbName) => {
   `);
   
   try {
-    // Add column to existing tables
     await db.execute('ALTER TABLE trafo ADD COLUMN device_serial VARCHAR(100)');
   } catch (err) {
     if (err.code !== 'ER_DUP_FIELDNAME') {
@@ -66,17 +64,13 @@ router.post('/:id/image', upload.single('image'), async (req, res) => {
     const db = await getDbConnection(dbName);
     await ensureTrafoTable(db, dbName);
     
-    // Upload ke Cloudinary
     const imageUrl = await uploadToCloudinary(req.file);
 
-    // Cek apakah trafo ada di db
     const [existing] = await db.execute('SELECT id FROM trafo WHERE id = ?', [trafoId]);
     
     if (existing.length === 0) {
-      // Jika trafo belum ada di db, insert dulu (meskipun dengan id string sementara, kalau skema int auto increment akan bermasalah. Kita asumsikan id sudah ada dari db.)
       await db.execute('INSERT INTO trafo (id, nama, image_url) VALUES (?, ?, ?)', [trafoId, 'Trafo ' + trafoId, imageUrl]);
     } else {
-      // Update image
       await db.execute('UPDATE trafo SET image_url = ? WHERE id = ?', [imageUrl, trafoId]);
     }
 
@@ -163,12 +157,11 @@ router.get('/', async (req, res) => {
       if (readings.length > 0) {
         const lastDataTime = new Date(readings[0].timestamp).getTime();
         const now = Date.now();
-        if (now - lastDataTime < 20000) { // 20s threshold to match dashboard's 15s + network buffer
+        if (now - lastDataTime < 20000) {
           isOnline = true;
         }
       }
     } catch (err) {
-      // Ignore error if table doesn't exist yet
     }
 
     const transformers = rows.map(t => ({

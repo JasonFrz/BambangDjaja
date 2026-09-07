@@ -5,14 +5,12 @@ import { METRICS } from "../../config/metrics";
 export const TransformerSLDPanel = memo(({ panel, latestData, isEditing }) => {
   const userMetrics = panel.metrics || [];
 
-  // Categorize ONLY the metrics that the user explicitly selected
   const voltKeys = userMetrics.filter(m => m.toLowerCase().includes('phase') || m.toLowerCase().includes('line') || m.toLowerCase().includes('v'));
   const currKeys = userMetrics.filter(m => m.toLowerCase().includes('current') || m.toLowerCase().includes('i'));
   const powerKeys = userMetrics.filter(m => m.toLowerCase().includes('power') || m.toLowerCase().includes('kw') || m.toLowerCase().includes('kva'));
   const freqKeys = userMetrics.filter(m => m.toLowerCase().includes('freq') || m.toLowerCase().includes('hz'));
   const pfKeys = userMetrics.filter(m => m.toLowerCase().includes('pf'));
 
-  // Clean voltage label generator (e.g. lineBC -> Vbc, phaseA -> Va)
   const getVoltLabel = (k) => {
     const meta = METRICS[k];
     if (k.toLowerCase().includes('line')) {
@@ -23,7 +21,6 @@ export const TransformerSLDPanel = memo(({ panel, latestData, isEditing }) => {
     return match ? `V${match[1].toLowerCase()}` : (meta?.label || k);
   };
 
-  // Check if system has active signal from any selected metric
   const hasActiveSignal = userMetrics.some(k => {
     const val = latestData?.[k];
     return val !== undefined && val !== null && Number(val) > 0;
@@ -31,7 +28,7 @@ export const TransformerSLDPanel = memo(({ panel, latestData, isEditing }) => {
 
   return (
     <div className="h-full w-full flex flex-col transition-colors duration-300">
-      {/* ─── Header ─── */}
+   
       <div className={`flex items-center justify-between gap-2 px-1 mb-1.5 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
         <div className="flex items-center gap-2 min-w-0">
           <div className="p-1 rounded-md bg-blue-500/10 text-blue-500 dark:text-blue-400 shrink-0">
@@ -53,9 +50,8 @@ export const TransformerSLDPanel = memo(({ panel, latestData, isEditing }) => {
         </div>
       </div>
 
-      {/* ─── Diagram Body ─── */}
       <div className="flex-1 min-h-0 bg-gray-50/50 dark:bg-black/20 rounded-xl border border-gray-200/60 dark:border-white/5 p-3 flex flex-col justify-between overflow-hidden relative">
-        {/* Top: Grid Infeed (Primary Side) */}
+   
         <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-white dark:bg-[#151521] border border-gray-200/80 dark:border-white/10 shadow-xs">
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${hasActiveSignal ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
@@ -75,14 +71,12 @@ export const TransformerSLDPanel = memo(({ panel, latestData, isEditing }) => {
           </div>
         </div>
 
-        {/* Center: Transformer Core Card */}
         <div className="my-2 flex items-center justify-center gap-4 relative">
-          {/* Animated Power Flow Line (Left to Center) */}
+        
           <div className={`flex-1 border-t-2 border-dashed ${hasActiveSignal ? 'border-blue-500/60 animate-pulse' : 'border-gray-300 dark:border-white/10'}`} />
 
-          {/* Transformer Core Card */}
           <div className="w-80 p-3 rounded-2xl bg-white dark:bg-[#181826] border-2 border-blue-500/40 shadow-xl flex flex-col gap-2 relative z-10">
-            {/* Header */}
+           
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-1.5">
               <div className="flex items-center gap-1.5">
                 <Zap size={13} className="text-amber-500" />
@@ -93,7 +87,6 @@ export const TransformerSLDPanel = memo(({ panel, latestData, isEditing }) => {
               </span>
             </div>
 
-            {/* Core Metrics: 100% strictly displays whatever the user selected */}
             {userMetrics.length === 0 ? (
               <div className="py-4 text-center text-xs text-gray-400">
                 Please select metrics below to display on the transformer diagram
@@ -121,11 +114,9 @@ export const TransformerSLDPanel = memo(({ panel, latestData, isEditing }) => {
             )}
           </div>
 
-          {/* Animated Power Flow Line (Center to Right) */}
           <div className={`flex-1 border-t-2 border-dashed ${hasActiveSignal ? 'border-blue-500/60 animate-pulse' : 'border-gray-300 dark:border-white/10'}`} />
         </div>
 
-        {/* Bottom: LV Outgoing Busbar (Secondary Side) */}
         <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-white dark:bg-[#151521] border border-gray-200/80 dark:border-white/10 shadow-xs">
           <div className="flex items-center gap-3">
             <span className={`w-2.5 h-2.5 rounded-full ${hasActiveSignal ? 'bg-emerald-500' : 'bg-gray-400'}`} />
@@ -161,7 +152,6 @@ export const TransformerSLDPanel = memo(({ panel, latestData, isEditing }) => {
           </div>
         </div>
 
-        {/* Extra Metrics Bar (If user selected > 6 metrics) */}
         {userMetrics.length > 6 && (
           <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-blue-500/5 border border-blue-500/20 text-[10px] overflow-x-auto custom-scrollbar shrink-0 mt-1">
             <span className="font-bold text-blue-500 shrink-0 uppercase tracking-wider">Extra:</span>

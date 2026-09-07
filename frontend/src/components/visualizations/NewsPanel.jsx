@@ -8,16 +8,17 @@ export const NewsPanel = memo(({ panel, latestData, isEditing }) => {
   const [bulletins, setBulletins] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch real operational news & telemetry bulletins directly from MySQL backend
   const fetchNews = useCallback(async () => {
     try {
       setIsLoading(true);
       if (!bulletins.length) setIsLoading(true);
-      const dbName = sessionStorage.getItem('db_name');
-      const trafoId = sessionStorage.getItem('selected_trafo_id') || 1;
+      const dbName = sessionStorage.getItem('db_name') || sessionStorage.getItem('tenant_db');
+      const trafoId = sessionStorage.getItem('selectedTrafoId') || sessionStorage.getItem('selected_trafo_id') || '1';
       if (!dbName) return;
 
-      const res = await axios.get(`${apiUrl}/api/trends/news?trafo_id=${trafoId}`);
+      const res = await axios.get(`${apiUrl}/api/trends/news?trafo_id=${trafoId}`, {
+        headers: { 'X-DB-Name': dbName }
+      });
       if (res.data?.success && Array.isArray(res.data.bulletins)) {
         setBulletins(prev => {
           if (
@@ -37,7 +38,6 @@ export const NewsPanel = memo(({ panel, latestData, isEditing }) => {
     }
   }, [apiUrl, bulletins.length]);
 
-  // Initial fetch and poll every 30 seconds (paused when tab hidden)
   useEffect(() => {
     fetchNews();
 
@@ -75,7 +75,7 @@ export const NewsPanel = memo(({ panel, latestData, isEditing }) => {
 
   return (
     <div className="h-full w-full flex flex-col transition-colors duration-300">
-      {/* Header */}
+  
       <div className={`flex items-center justify-between gap-2 px-1 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
         <div className="flex items-center gap-2 min-w-0">
           <div className="p-1 rounded-md bg-blue-500/10 text-blue-500 dark:text-blue-400 shrink-0">
@@ -91,7 +91,6 @@ export const NewsPanel = memo(({ panel, latestData, isEditing }) => {
         {isEditing && <GripVertical size={16} className="text-gray-400 shrink-0" />}
       </div>
 
-      {/* Bulletin Feed Body */}
       <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-2.5 pr-1">
         {bulletins.length === 0 ? (
           <div className="h-full flex items-center justify-center text-gray-500 text-xs font-medium">

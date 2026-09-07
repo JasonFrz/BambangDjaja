@@ -1,8 +1,10 @@
 import React, { memo } from 'react';
 import { GripVertical, Activity } from "lucide-react";
 import { METRICS } from "../../config/metrics";
+import { useThresholds } from "../../contexts/ThresholdContext";
 
 export const StatusHistoryPanel = memo(({ panel, chartData, isEditing }) => {
+  const { getThreshold } = useThresholds();
   const metrics = panel.metrics || [];
   
   return (
@@ -23,13 +25,13 @@ export const StatusHistoryPanel = memo(({ panel, chartData, isEditing }) => {
          ) : (
            <div className="w-full flex gap-1 h-16">
               {(!chartData || chartData.length === 0) ? null : chartData.slice(-40).map((d, i) => {
-                 // Determine overall status for this time bucket across selected metrics
+             
                  let isError = false;
                  for (const m of metrics) {
                    const val = d[m];
-                   const meta = METRICS[m];
-                   const tMin = meta?.thresholds?.min;
-                   const tMax = meta?.thresholds?.max;
+                   const threshold = getThreshold(m);
+                   const tMin = (threshold.is_active && threshold.min !== null) ? threshold.min : undefined;
+                   const tMax = (threshold.is_active && threshold.max !== null) ? threshold.max : undefined;
                    if (val !== undefined && ((tMin !== undefined && val < tMin) || (tMax !== undefined && val > tMax))) {
                      isError = true; break;
                    }

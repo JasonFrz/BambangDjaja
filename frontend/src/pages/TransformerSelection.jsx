@@ -18,7 +18,6 @@ const TransformerSelection = () => {
   const [waSending, setWaSending] = useState(null);
   const [waStatus, setWaStatus] = useState({});
 
-  // Inline rename states
   const [editingTrafoId, setEditingTrafoId] = useState(null);
   const [editNameValue, setEditNameValue] = useState("");
 
@@ -155,17 +154,14 @@ const TransformerSelection = () => {
       className="relative min-h-full w-full bg-dot-pattern flex flex-col overflow-hidden"
     >
 
-      {/* Elegant ambient glow behind the content, shining from the bottom up */}
       <div className="absolute bottom-[-20%] left-1/2 -translate-x-1/2 w-[80vw] h-[60vh] bg-gradient-to-t from-[#0052cc]/15 via-[#0052cc]/5 dark:from-[#4c9aff]/20 dark:via-[#4c9aff]/5 to-transparent blur-[120px] pointer-events-none rounded-full z-0"></div>
 
-      {/* Gradient fade to blend seamlessly into the bottom edge without dimming text */}
       <div className="fixed bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#f4f7fe] dark:from-[#111217] to-transparent pointer-events-none z-0"></div>
 
 
 
       <div className="flex flex-col items-center justify-start flex-1 w-full max-w-6xl mx-auto py-6 md:py-8 px-4 relative z-10">
         
-        {/* Premium Hero Section */}
         <div className="text-center mb-6 flex flex-col items-center animate-slide-up-fade">
           <h1 className="text-3xl md:text-[38px] font-heading font-bold tracking-tight text-[#172b4d] dark:text-white leading-tight mb-4">
             Select a unit to begin monitoring
@@ -181,7 +177,6 @@ const TransformerSelection = () => {
           </div>
         </div>
 
-        {/* Stats Strip */}
         <div className="flex items-center gap-4 text-xs font-semibold text-[#5e6c84] dark:text-[#94a3b8] mb-8 animate-slide-up-fade" style={{ animationDelay: '100ms' }}>
           <span className="flex items-center gap-1.5"><Activity size={14}/> {totalUnits} units</span>
           <span>·</span>
@@ -212,7 +207,6 @@ const TransformerSelection = () => {
                   style={{ animationDelay: `${index * 100 + 200}ms` }}
                 >
                   
-                  {/* Top Area */}
                   <div className="relative h-[200px] w-full bg-gray-50/50 dark:bg-white/[0.02] border-b border-[#dfe1e6]/50 dark:border-white/5 flex items-center justify-center shrink-0 overflow-hidden">
                     
                     {trafo.image_url ? (
@@ -232,7 +226,6 @@ const TransformerSelection = () => {
                       </svg>
                     )}
 
-                    {/* Status Badge */}
                     <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white dark:bg-[#111217] border border-[#dfe1e6]/80 dark:border-white/10 shadow-sm z-10">
                       {isOnline ? (
                         <>
@@ -248,7 +241,6 @@ const TransformerSelection = () => {
                     </div>
                   </div>
 
-                  {/* Body Area */}
                   <div className="p-5 flex flex-col flex-1 z-10">
                     {editingTrafoId === trafo.id ? (
                       <input 
@@ -277,7 +269,6 @@ const TransformerSelection = () => {
                       {trafo.device_serial || '-'}
                     </p>
 
-                    {/* Specs Badges */}
                     <div className="flex items-center gap-2 mt-4 mb-6">
                       <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-[11px] font-semibold text-gray-600 dark:text-gray-400">
                         {trafo.power_capacity || '1000 kVA'}

@@ -10,7 +10,6 @@ export const HealthIndexPanel = memo(({ panel, latestData, isEditing }) => {
   const [thiData, setThiData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch THI calculation and thresholds directly from backend webservice
   const fetchThiWebservice = useCallback(async () => {
     if (userMetrics.length === 0) return;
 
@@ -18,16 +17,17 @@ export const HealthIndexPanel = memo(({ panel, latestData, isEditing }) => {
       if (!thiData) {
         setIsLoading(true);
       }
-      const dbName = sessionStorage.getItem('db_name');
-      const trafoId = sessionStorage.getItem('selected_trafo_id') || 1;
+      const dbName = sessionStorage.getItem('db_name') || sessionStorage.getItem('tenant_db');
+      const trafoId = sessionStorage.getItem('selectedTrafoId') || sessionStorage.getItem('selected_trafo_id') || '1';
       if (!dbName) return;
 
       const metricsParam = userMetrics.join(',');
-      const res = await axios.get(`${apiUrl}/api/trends/thi?trafo_id=${trafoId}&metrics=${metricsParam}`);
+      const res = await axios.get(`${apiUrl}/api/trends/thi?trafo_id=${trafoId}&metrics=${metricsParam}`, {
+        headers: { 'X-DB-Name': dbName }
+      });
 
       if (res.data?.success) {
         setThiData(prev => {
-          // Avoid re-renders if score and timestamp are unchanged
           if (prev && prev.overallScore === res.data.overallScore && prev.timestamp === res.data.timestamp) {
             return prev;
           }
@@ -41,12 +41,19 @@ export const HealthIndexPanel = memo(({ panel, latestData, isEditing }) => {
     }
   }, [apiUrl, userMetrics, thiData]);
 
-  // Fetch on mount or when metrics change
   useEffect(() => {
     fetchThiWebservice();
+
+    const handleThresholdUpdate = () => {
+      fetchThiWebservice();
+    };
+    window.addEventListener('thresholdsUpdated', handleThresholdUpdate);
+
+    return () => {
+      window.removeEventListener('thresholdsUpdated', handleThresholdUpdate);
+    };
   }, [fetchThiWebservice]);
 
-  // Periodic refresh (every 6 seconds, paused when tab is hidden)
   useEffect(() => {
     if (userMetrics.length === 0) return;
     const interval = setInterval(() => {
@@ -66,7 +73,6 @@ export const HealthIndexPanel = memo(({ panel, latestData, isEditing }) => {
     };
   }, [fetchThiWebservice, userMetrics.length]);
 
-  // Determine icon for metric
   const getMetricIcon = (key) => {
     const k = key.toLowerCase();
     if (k.includes('phase') || (k.includes('line') && k.includes('voltage')) || k.includes('volt')) return Zap;
@@ -80,7 +86,6 @@ export const HealthIndexPanel = memo(({ panel, latestData, isEditing }) => {
   const overallStatus = thiData?.overallStatus ?? 'EVALUATING';
   const overallColor = thiData?.overallColor ?? '#10b981';
 
-  // Fallback evaluated metrics if webservice is loading
   const displayMetrics = (thiData?.evaluatedMetrics && thiData.evaluatedMetrics.length > 0)
     ? thiData.evaluatedMetrics
     : userMetrics.map(key => {
@@ -100,7 +105,7 @@ export const HealthIndexPanel = memo(({ panel, latestData, isEditing }) => {
 
   return (
     <div className="h-full w-full flex flex-col transition-colors duration-300">
-      {/* Header */}
+    
       <div className={`flex items-center justify-between gap-2 px-1 mb-1.5 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
         <div className="flex items-center gap-2 min-w-0">
           <div className="p-1 rounded-md bg-rose-500/10 text-rose-500 dark:text-rose-400 shrink-0">
@@ -120,7 +125,6 @@ export const HealthIndexPanel = memo(({ panel, latestData, isEditing }) => {
         </div>
       </div>
 
-      {/* Main Content */}
       {userMetrics.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
           <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-500 mb-2">
@@ -135,7 +139,7 @@ export const HealthIndexPanel = memo(({ panel, latestData, isEditing }) => {
         </div>
       ) : (
         <div className="flex-1 min-h-0 flex flex-col md:flex-row items-center justify-between gap-3 p-1.5 overflow-hidden">
-          {/* Left: Dynamic Health Index Circular Gauge */}
+         
           <div className="relative flex items-center justify-center shrink-0 w-28 h-28">
             <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="9" fill="transparent" className="text-gray-200 dark:text-white/10" />
@@ -158,7 +162,6 @@ export const HealthIndexPanel = memo(({ panel, latestData, isEditing }) => {
             </div>
           </div>
 
-          {/* Right: Cards of User Selected Metrics evaluated against Threshold Settings */}
           <div className="flex-1 w-full flex flex-col gap-1.5 min-h-0 overflow-y-auto custom-scrollbar">
             <div className={`grid gap-1.5 text-xs ${displayMetrics.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
               {displayMetrics.map(m => {
@@ -167,7 +170,6 @@ export const HealthIndexPanel = memo(({ panel, latestData, isEditing }) => {
                 const unit = meta?.unit || m.unit || '';
                 const label = meta?.label || m.label || m.key;
 
-                // Format threshold label in English
                 let thresholdText = m.thresholdLabel || 'Normal Operation';
                 thresholdText = thresholdText
                   .replace(/^Batas:\s*/i, 'Limit: ')
@@ -199,7 +201,6 @@ export const HealthIndexPanel = memo(({ panel, latestData, isEditing }) => {
                       </span>
                     </div>
 
-                    {/* Direct Reference to Thresholds from Settings */}
                     <div className="mt-1 pt-1 border-t border-gray-200/40 dark:border-white/5 flex items-center justify-between text-[9px] text-gray-400 font-mono">
                       <span className="flex items-center gap-0.5 text-gray-400 truncate">
                         <Sliders size={8} className="shrink-0" /> {thresholdText}

@@ -5,7 +5,6 @@ import { METRICS } from "../../config/metrics";
 export const PhasorDiagramPanel = memo(({ panel, latestData, isEditing }) => {
   const userMetrics = panel.metrics || [];
 
-  // Helper polar coordinate converter (0° = top / 12 o'clock, clockwise)
   const toSvgCoords = (magnitudeNormalized, angleDeg, radius, cx, cy) => {
     const rad = ((angleDeg - 90) * Math.PI) / 180;
     const r = magnitudeNormalized * radius;
@@ -15,19 +14,16 @@ export const PhasorDiagramPanel = memo(({ panel, latestData, isEditing }) => {
     };
   };
 
-  // Dimensions
   const size = 260;
   const cx = size / 2;
   const cy = size / 2;
   const maxR = size * 0.40;
 
-  // Selected vectors extraction (up to 3 metrics)
   const vectors = useMemo(() => {
     if (userMetrics.length === 0) return [];
 
-    // Assign standard electrical 3-phase angles: 0° (Phase 1), 240° (Phase 2), 120° (Phase 3)
     const angles = [0, 240, 120];
-    const colors = ['#ef4444', '#eab308', '#3b82f6']; // Red (A/R), Yellow (B/S), Blue (C/T)
+    const colors = ['#ef4444', '#eab308', '#3b82f6']; 
 
     const rawVals = userMetrics.slice(0, 3).map(k => {
       const v = latestData?.[k];
@@ -43,7 +39,6 @@ export const PhasorDiagramPanel = memo(({ panel, latestData, isEditing }) => {
       const angle = angles[idx] || 0;
       const pt = toSvgCoords(norm, angle, maxR, cx, cy);
 
-      // Clean short label
       let shortLabel = meta?.label || k;
       if (k.toLowerCase().includes('line')) {
         const match = k.match(/line([a-c]{2})/i);
@@ -69,7 +64,6 @@ export const PhasorDiagramPanel = memo(({ panel, latestData, isEditing }) => {
     });
   }, [userMetrics, latestData, maxR, cx, cy]);
 
-  // Unbalance calculation strictly from selected vectors
   const unbalance = useMemo(() => {
     if (vectors.length < 2) return null;
     const vals = vectors.map(v => v.val);
@@ -79,14 +73,13 @@ export const PhasorDiagramPanel = memo(({ panel, latestData, isEditing }) => {
     return ((maxDev / avg) * 100).toFixed(2);
   }, [vectors]);
 
-  // Measured PF from data if available
   const rawPf = latestData?.pfTotal ?? latestData?.pf_total;
   const pf = rawPf !== undefined && rawPf !== null ? Number(rawPf) : null;
   const phiDeg = pf !== null ? Math.acos(Math.min(1, Math.max(0, pf))) * (180 / Math.PI) : null;
 
   return (
     <div className="h-full w-full flex flex-col transition-colors duration-300">
-      {/* Header */}
+   
       <div className={`flex items-center justify-between gap-2 px-1 mb-1.5 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
         <div className="flex items-center gap-2 min-w-0">
           <div className="p-1 rounded-md bg-purple-500/10 text-purple-500 dark:text-purple-400 shrink-0">
@@ -108,7 +101,6 @@ export const PhasorDiagramPanel = memo(({ panel, latestData, isEditing }) => {
         </div>
       </div>
 
-      {/* Main Content */}
       {userMetrics.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
           <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-500 mb-2">
@@ -123,7 +115,7 @@ export const PhasorDiagramPanel = memo(({ panel, latestData, isEditing }) => {
         </div>
       ) : (
         <div className="flex-1 min-h-0 flex flex-col md:flex-row items-center justify-around gap-4 p-2">
-          {/* Polar SVG Diagram */}
+         
           <div className="relative shrink-0 flex items-center justify-center">
             <svg width={size} height={size} className="overflow-visible select-none">
               <defs>
@@ -138,7 +130,6 @@ export const PhasorDiagramPanel = memo(({ panel, latestData, isEditing }) => {
                 </marker>
               </defs>
 
-              {/* Concentric Circles */}
               {[0.33, 0.66, 1.0].map((frac, idx) => (
                 <circle
                   key={idx}
@@ -152,7 +143,6 @@ export const PhasorDiagramPanel = memo(({ panel, latestData, isEditing }) => {
                 />
               ))}
 
-              {/* Radial Spokes (every 30°) */}
               {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => {
                 const pt = toSvgCoords(1.0, deg, maxR, cx, cy);
                 return (
@@ -169,13 +159,11 @@ export const PhasorDiagramPanel = memo(({ panel, latestData, isEditing }) => {
                 );
               })}
 
-              {/* Polar Angle Labels */}
               <text x={cx} y={cy - maxR - 8} textAnchor="middle" className="fill-gray-400 text-[9px] font-mono">0°</text>
               <text x={cx + maxR + 12} y={cy + 3} textAnchor="start" className="fill-gray-400 text-[9px] font-mono">90°</text>
               <text x={cx} y={cy + maxR + 14} textAnchor="middle" className="fill-gray-400 text-[9px] font-mono">180°</text>
               <text x={cx - maxR - 12} y={cy + 3} textAnchor="end" className="fill-gray-400 text-[9px] font-mono">270°</text>
 
-              {/* Render ONLY Selected Vectors */}
               {vectors.map((v, idx) => {
                 const markerId = `url(#arrow${idx})`;
                 return (
@@ -202,14 +190,12 @@ export const PhasorDiagramPanel = memo(({ panel, latestData, isEditing }) => {
                 );
               })}
 
-              {/* Origin Center Point */}
               <circle cx={cx} cy={cy} r={3} fill="#64748b" />
             </svg>
           </div>
 
-          {/* Diagnostics & Phasor Metrics List */}
           <div className="flex-1 w-full flex flex-col justify-center gap-2">
-            {/* Selected Metric Badges */}
+           
             <div className="flex flex-col gap-1.5">
               <span className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider">
                 Selected Vectors ({vectors.length}/3)
@@ -229,7 +215,6 @@ export const PhasorDiagramPanel = memo(({ panel, latestData, isEditing }) => {
               </div>
             </div>
 
-            {/* Unbalance & Power Factor Info */}
             <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200/80 dark:border-white/10 flex flex-col gap-1 text-xs">
               {unbalance !== null && (
                 <div className="flex items-center justify-between">

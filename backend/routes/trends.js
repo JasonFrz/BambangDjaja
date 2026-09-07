@@ -444,14 +444,11 @@ router.get("/report", extractDb, async (req, res) => {
   }
 });
 
-// ─── THI (TRANSFORMER HEALTH INDEX) WEBSERVICE ──────────────────────────────
-// Queries threshold_settings directly from database and evaluates metrics
 router.get("/thi", extractDb, async (req, res) => {
   try {
     const db = await getDbConnection(req.dbName);
     const { trafo_id, metrics } = req.query;
 
-    // 1. SELECT threshold_settings directly from Database
     let thresholdQuery = "SELECT * FROM threshold_settings WHERE is_active = 1";
     const thresholdParams = [];
     if (trafo_id) {
@@ -467,7 +464,6 @@ router.get("/thi", extractDb, async (req, res) => {
 
     const [thresholdRows] = await db.execute(thresholdQuery, thresholdParams);
 
-    // Map thresholds by metric_key
     const dbThresholdsMap = {};
     thresholdRows.forEach(row => {
       dbThresholdsMap[row.metric_key] = {
@@ -479,7 +475,6 @@ router.get("/thi", extractDb, async (req, res) => {
       };
     });
 
-    // 2. SELECT latest electrical and oil measurements from Database
     const [elecRows] = await db.execute(
       "SELECT * FROM electrical_readings ORDER BY timestamp DESC LIMIT 1"
     );
@@ -516,7 +511,6 @@ router.get("/thi", extractDb, async (req, res) => {
       oil_pressure: rawOil.oil_pressure !== undefined ? parseFloat(rawOil.oil_pressure) : null
     };
 
-    // 3. Mapping Frontend Keys to DB Threshold Keys
     const FRONTEND_TO_DB_THRESHOLD = {
       phaseA: 'v_phase', phaseB: 'v_phase', phaseC: 'v_phase',
       lineAB: 'v_line', lineBC: 'v_line', lineCA: 'v_line',
@@ -532,7 +526,6 @@ router.get("/thi", extractDb, async (req, res) => {
       oil_pressure: 'oil_pressure'
     };
 
-    // 4. Metrics to evaluate
     const metricKeys = metrics 
       ? metrics.split(',').map(m => m.trim()).filter(Boolean)
       : ['phaseA', 'phaseB', 'phaseC', 'currentA', 'currentB', 'currentC', 'pfTotal', 'frequency'];
@@ -565,7 +558,6 @@ router.get("/thi", extractDb, async (req, res) => {
       let color = '#10b981';
       let thresholdLabel = 'Operasi Normal';
 
-      // ─── 1. Power Factor (Higher is Better, 1.0 is Unity/Optimal) ───────────
       if (key === 'pfTotal' || dbKey === 'pf_total') {
         const pfMin = tMin !== null ? tMin : 0.85;
         thresholdLabel = `Min: ${pfMin}`;
@@ -584,7 +576,6 @@ router.get("/thi", extractDb, async (req, res) => {
           color = breach <= 0.10 ? '#f59e0b' : '#ef4444';
         }
       }
-      // ─── 2. Symmetrical Tolerances (Voltages & Frequency: Center is Ideal) ───
       else if (
         ['phaseA', 'phaseB', 'phaseC', 'lineAB', 'lineBC', 'lineCA', 'frequency'].includes(key) ||
         ['v_phase', 'v_line', 'avg_phase_v', 'avg_line_v', 'frequency'].includes(dbKey)
@@ -616,8 +607,6 @@ router.get("/thi", extractDb, async (req, res) => {
           }
         }
       }
-      // ─── 3. Upper-Bounded Quantities (Currents, Power, Unbalance, Oil Temp) ──
-      // Low values (or safe operational load <= 85% capacity) are completely optimal!
       else if (
         ['currentA', 'currentB', 'currentC', 'currentN', 'currentUnbalance', 'powerActiveTotal', 'powerReactiveTotal', 'powerApparentTotal', 'oil_temperature'].includes(key) ||
         ['current', 'avg_current', 'current_n', 'current_unbalance', 'power_active_total_kw', 'power_reactive_total_kvar', 'power_apparent_total_kva', 'oil_temperature'].includes(dbKey)
@@ -643,7 +632,6 @@ router.get("/thi", extractDb, async (req, res) => {
           color = breachPct <= 15 ? '#f59e0b' : '#ef4444';
         }
       }
-      // ─── 4. Oil Pressure (Nominal operating window 0.5 - 2.5 Bar) ───────────
       else if (key === 'oil_pressure' || dbKey === 'oil_pressure') {
         const minP = tMin !== null ? tMin : 0.5;
         const maxP = tMax !== null ? tMax : 2.5;
@@ -658,7 +646,6 @@ router.get("/thi", extractDb, async (req, res) => {
           color = '#f59e0b';
         }
       }
-      // ─── 5. General Fallback ───────────────────────────────────────────────
       else {
         if (tMin !== null && tMax !== null) {
           thresholdLabel = `Limit: ${tMin} - ${tMax}`;
@@ -680,7 +667,6 @@ router.get("/thi", extractDb, async (req, res) => {
         }
       }
 
-      // Format decimals according to metric nature
       let displayVal = Number(val).toFixed(1);
       if (['pfTotal', 'frequency', 'oil_pressure', 'currentUnbalance'].includes(key)) {
         displayVal = Number(val).toFixed(2);
@@ -700,7 +686,6 @@ router.get("/thi", extractDb, async (req, res) => {
       };
     });
 
-    // 5. Calculate Overall THI Score
     let overallScore = 0;
     if (evaluatedMetrics.length > 0) {
       const sum = evaluatedMetrics.reduce((acc, m) => acc + m.score, 0);
@@ -735,16 +720,12 @@ router.get("/thi", extractDb, async (req, res) => {
   }
 });
 
-// ─── EVENT STREAM WEBSERVICE ─────────────────────────────────────────────────
-// Directly queries database (electrical_readings, oil_readings, threshold_settings)
-// and evaluates real system alarms, trips, anomalies, and status logs.
 router.get("/events", extractDb, async (req, res) => {
   try {
     const db = await getDbConnection(req.dbName);
     const trafoId = req.query.trafo_id || 1;
     const limit = parseInt(req.query.limit) || 50;
 
-    // 1. Query threshold settings configured in database
     const [thresholdRows] = await db.execute(
       "SELECT * FROM threshold_settings WHERE is_active = 1 ORDER BY id ASC"
     );
@@ -760,13 +741,11 @@ router.get("/events", extractDb, async (req, res) => {
 
     const safeLimit = Math.min(Math.max(1, limit), 50);
 
-    // 2. Query recent electrical readings from database
     const [electricalRows] = await db.query(
       `SELECT * FROM electrical_readings 
        ORDER BY timestamp DESC LIMIT ${safeLimit}`
     );
 
-    // 3. Query recent oil readings from database
     let oilRows = [];
     try {
       [oilRows] = await db.query(
@@ -777,13 +756,11 @@ router.get("/events", extractDb, async (req, res) => {
 
     const generatedEvents = [];
 
-    // Evaluate Oil readings (Trips, Alarms, Temperature, Pressure)
     oilRows.forEach(row => {
       const ts = new Date(row.timestamp);
       const timeStr = ts.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       const dateStr = ts.toISOString();
 
-      // Oil Level Trip (0 = Trip triggered)
       if (row.oil_level_trip === 0) {
         generatedEvents.push({
           id: `db-oil-trip-${row.id}`,
@@ -795,7 +772,6 @@ router.get("/events", extractDb, async (req, res) => {
         });
       }
 
-      // Oil Level Alarm (0 = Alarm triggered)
       if (row.oil_level_alarm === 0) {
         generatedEvents.push({
           id: `db-oil-alarm-${row.id}`,
@@ -807,7 +783,6 @@ router.get("/events", extractDb, async (req, res) => {
         });
       }
 
-      // Oil Temperature
       if (row.oil_temperature !== null && row.oil_temperature !== undefined) {
         const temp = parseFloat(row.oil_temperature);
         const tTemp = thresholds['oil_temperature'];
@@ -823,7 +798,6 @@ router.get("/events", extractDb, async (req, res) => {
         }
       }
 
-      // Oil Pressure
       if (row.oil_pressure !== null && row.oil_pressure !== undefined) {
         const press = parseFloat(row.oil_pressure);
         const tPress = thresholds['oil_pressure'];
@@ -840,13 +814,11 @@ router.get("/events", extractDb, async (req, res) => {
       }
     });
 
-    // Evaluate Electrical readings (Voltage, Current, Unbalance, Frequency, Power Factor, Relay/Alarm status)
     electricalRows.forEach(row => {
       const ts = new Date(row.timestamp);
       const timeStr = ts.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       const dateStr = ts.toISOString();
 
-      // Relay Status
       if (row.relay_status === 1) {
         generatedEvents.push({
           id: `db-elec-relay-${row.id}`,
@@ -858,7 +830,6 @@ router.get("/events", extractDb, async (req, res) => {
         });
       }
 
-      // Alarm Status
       if (row.alarm_status === 1) {
         generatedEvents.push({
           id: `db-elec-alarm-${row.id}`,
@@ -870,7 +841,6 @@ router.get("/events", extractDb, async (req, res) => {
         });
       }
 
-      // Current Unbalance
       if (row.current_unbalance !== null && row.current_unbalance !== undefined) {
         const unb = parseFloat(row.current_unbalance);
         const tUnb = thresholds['current_unbalance'];
@@ -887,7 +857,6 @@ router.get("/events", extractDb, async (req, res) => {
         }
       }
 
-      // Frequency
       if (row.frequency !== null && row.frequency !== undefined) {
         const freq = parseFloat(row.frequency);
         const tFreq = thresholds['frequency'];
@@ -912,7 +881,6 @@ router.get("/events", extractDb, async (req, res) => {
         }
       }
 
-      // Line Voltages (Line AB, BC, CA)
       const tLine = thresholds['v_line'];
       if (tLine) {
         ['line_ab_v', 'line_bc_v', 'line_ca_v'].forEach(k => {
@@ -942,7 +910,6 @@ router.get("/events", extractDb, async (req, res) => {
       }
     });
 
-    // If no anomalous events exist in recent logs, generate system status confirmations from latest DB records
     if (generatedEvents.length === 0) {
       const latestElec = electricalRows[0];
       const latestOil = oilRows[0];
@@ -980,7 +947,6 @@ router.get("/events", extractDb, async (req, res) => {
       });
     }
 
-    // Sort events descending by timestamp
     generatedEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
     res.json({
@@ -996,15 +962,11 @@ router.get("/events", extractDb, async (req, res) => {
   }
 });
 
-// ─── NEWS & OPERATIONAL BULLETIN WEBSERVICE ──────────────────────────────────
-// Queries database (trafo, threshold_settings, electrical_readings, oil_readings)
-// and synthesizes authentic operational bulletins, energy summaries, and asset status.
 router.get("/news", extractDb, async (req, res) => {
   try {
     const db = await getDbConnection(req.dbName);
     const trafoId = req.query.trafo_id || 1;
 
-    // 1. Query Transformer specifications
     const [trafoRows] = await db.query(
       "SELECT * FROM trafo WHERE id = ? LIMIT 1",
       [trafoId]
@@ -1013,7 +975,6 @@ router.get("/news", extractDb, async (req, res) => {
     const trafoName = trafo.nama || `Unit #${trafoId}`;
     const deviceSerial = trafo.device_serial || 'N/A';
 
-    // 2. Query Electrical aggregate stats
     const [elecAggRows] = await db.query(
       `SELECT 
         COUNT(*) as total_records,
@@ -1025,7 +986,6 @@ router.get("/news", extractDb, async (req, res) => {
     );
     const elecAgg = elecAggRows[0] || {};
 
-    // 3. Query Oil aggregate stats & latest readings
     const [oilAggRows] = await db.query(
       `SELECT 
         MAX(oil_temperature) as max_temp,
@@ -1036,7 +996,6 @@ router.get("/news", extractDb, async (req, res) => {
     );
     const oilAgg = oilAggRows[0] || {};
 
-    // 4. Query Threshold counts
     const [threshCountRows] = await db.query(
       "SELECT COUNT(*) as count FROM threshold_settings WHERE is_active = 1"
     );
@@ -1044,7 +1003,6 @@ router.get("/news", extractDb, async (req, res) => {
 
     const bulletins = [];
 
-    // Bulletin 1: Asset Commissioning & Status
     bulletins.push({
       id: 'news-asset',
       tag: 'Asset',
@@ -1055,7 +1013,6 @@ router.get("/news", extractDb, async (req, res) => {
       timestamp: trafo.created_at || new Date().toISOString()
     });
 
-    // Bulletin 2: Cumulative Energy Consumption
     if (elecAgg.total_energy_kwh) {
       const energyMWh = (parseFloat(elecAgg.total_energy_kwh) / 1000).toFixed(2);
       const totalRecs = Number(elecAgg.total_records || 0).toLocaleString();
@@ -1070,7 +1027,6 @@ router.get("/news", extractDb, async (req, res) => {
       });
     }
 
-    // Bulletin 3: Thermal & Pressure Environmental Diagnostics
     if (oilAgg.avg_temp) {
       const avgTemp = parseFloat(oilAgg.avg_temp).toFixed(1);
       const avgPress = parseFloat(oilAgg.avg_press || 0).toFixed(2);
@@ -1085,7 +1041,6 @@ router.get("/news", extractDb, async (req, res) => {
       });
     }
 
-    // Bulletin 4: Safety & Protection Policy Enforcement
     bulletins.push({
       id: 'news-safety',
       tag: 'Policy',
