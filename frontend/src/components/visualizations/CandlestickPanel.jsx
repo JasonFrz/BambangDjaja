@@ -22,7 +22,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
+export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive, updatePanel }) => {
   const { isLoading } = useTrendData() || { isLoading: false };
   const metric = panel.metrics?.[0]; 
 
@@ -51,7 +51,7 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHover
       const prevVal = i > 0 ? chartData[i - 1][metric] : val;
       
       if (val === undefined || val === null) {
-        return { time: point.time };
+        return { time: point.time, timestamp: point.timestamp };
       }
       
       const open = prevVal !== undefined && prevVal !== null ? prevVal : val;
@@ -64,6 +64,7 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHover
       
       return {
         time: point.time,
+        timestamp: point.timestamp,
         open, close,
         wick: [renderMin, renderMax],
         body: [Math.min(open, close), Math.max(open, close)],
@@ -73,12 +74,22 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHover
     });
   }, [chartData, metric]);
 
-  const [timeWindow, setTimeWindow] = useState(15);
+  const [timeWindow, setTimeWindow] = useState(panel.timeWindow || 15);
 
   const displayData = useMemo(() => {
     if (!data || data.length === 0) return [];
-    if (timeWindow >= data.length) return data;
-    return data.slice(-timeWindow);
+    
+    const lastItem = data[data.length - 1];
+    if (!lastItem.timestamp) return data.slice(-timeWindow);
+    
+    const latestTime = new Date(lastItem.timestamp).getTime();
+    if (isNaN(latestTime) || latestTime === 0) return data.slice(-timeWindow);
+    
+    const startTime = latestTime - (timeWindow * 1000);
+    return data.filter(d => {
+      const t = d.timestamp ? new Date(d.timestamp).getTime() : 0;
+      return t >= startTime;
+    });
   }, [data, timeWindow]);
 
   return (
@@ -102,6 +113,7 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHover
                 onClick={(e) => {
                   e.stopPropagation();
                   setTimeWindow(tab.val);
+                  if (updatePanel) updatePanel(panel.id, { timeWindow: tab.val });
                 }}
                 className={`px-1.5 py-0.5 rounded transition-all duration-200 cursor-pointer ${
                   timeWindow === tab.val
@@ -148,11 +160,11 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHover
               <YAxis yAxisId="price" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => v.toFixed(1)} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(148, 163, 184, 0.12)', radius: 4 }} isAnimationActive={false} />
               
-              <Bar xAxisId="wick" yAxisId="price" dataKey="wick" barSize={2} isAnimationActive={true} animationDuration={400} animationEasing="ease-out">
+              <Bar xAxisId="wick" yAxisId="price" dataKey="wick" barSize={2} isAnimationActive={true} animationDuration={300} animationEasing="linear">
                  {displayData.map((entry, index) => <Cell key={`wick-${index}`} fill={entry.color} />)}
               </Bar>
               
-              <Bar xAxisId="body" yAxisId="price" dataKey="body" isAnimationActive={true} animationDuration={400} animationEasing="ease-out">
+              <Bar xAxisId="body" yAxisId="price" dataKey="body" isAnimationActive={true} animationDuration={300} animationEasing="linear">
                  {displayData.map((entry, index) => <Cell key={`body-${index}`} fill={entry.color} />)}
               </Bar>
             </ComposedChart>

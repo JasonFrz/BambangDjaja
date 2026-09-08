@@ -32,7 +32,7 @@ export const ChartTooltip = ({ active, payload, label }) => {
   );
 };
 
-export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
+export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive, updatePanel }) => {
   const { isLoading } = useTrendData() || { isLoading: false };
   const { getThreshold } = useThresholds();
   const metrics = panel.metrics || [];
@@ -71,12 +71,22 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
   };
   const gridProps = { strokeDasharray: "3 3", stroke: '#e2e8f020', vertical: false };
 
-  const [timeWindow, setTimeWindow] = useState(15);
+  const [timeWindow, setTimeWindow] = useState(panel.timeWindow || 15);
 
   const displayData = useMemo(() => {
     if (!chartData || chartData.length === 0) return [];
-    if (timeWindow >= chartData.length) return chartData;
-    return chartData.slice(-timeWindow);
+    
+    const lastItem = chartData[chartData.length - 1];
+    if (!lastItem.timestamp) return chartData.slice(-timeWindow);
+    
+    const latestTime = new Date(lastItem.timestamp).getTime();
+    if (isNaN(latestTime) || latestTime === 0) return chartData.slice(-timeWindow);
+    
+    const startTime = latestTime - (timeWindow * 1000);
+    return chartData.filter(d => {
+      const t = d.timestamp ? new Date(d.timestamp).getTime() : 0;
+      return t >= startTime;
+    });
   }, [chartData, timeWindow]);
 
   const renderChart = () => {
@@ -121,7 +131,7 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
             <RechartsTooltip content={<ChartTooltip />} />
             <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
             {metrics.map(m => (
-              <Bar key={m} dataKey={m} name={METRICS[m]?.label || m} fill={METRICS[m]?.color || '#8884d8'} radius={[3, 3, 0, 0]} maxBarSize={16} isAnimationActive={true} animationDuration={400} animationEasing="ease-out" />
+              <Bar key={m} dataKey={m} name={METRICS[m]?.label || m} fill={METRICS[m]?.color || '#8884d8'} radius={[3, 3, 0, 0]} maxBarSize={16} isAnimationActive={false} />
             ))}
           </BarChart>
         </ResponsiveContainer>
@@ -138,7 +148,7 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
             <RechartsTooltip content={<ChartTooltip />} />
             <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
             {metrics.map(m => (
-              <Line key={m} type="monotone" dataKey={m} name={METRICS[m]?.label || m} stroke={METRICS[m]?.color || '#8884d8'} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls isAnimationActive={true} animationDuration={400} animationEasing="ease-out" />
+              <Line key={m} type="monotone" dataKey={m} name={METRICS[m]?.label || m} stroke={METRICS[m]?.color || '#8884d8'} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls isAnimationActive={true} animationDuration={300} animationEasing="linear" />
             ))}
             {referenceLines.map(rl => (
               <ReferenceLine key={rl.id} y={rl.y} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: rl.label, fill: '#ef4444', fontSize: 10 }} />
@@ -165,7 +175,7 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
           <RechartsTooltip content={<ChartTooltip />} />
           <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
           {metrics.map(m => (
-            <Area key={m} type="monotone" dataKey={m} name={METRICS[m]?.label || m} stroke={METRICS[m]?.color || '#8884d8'} fill={`url(#areaGrad-${m})`} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls isAnimationActive={true} animationDuration={400} animationEasing="ease-out" />
+            <Area key={m} type="monotone" dataKey={m} name={METRICS[m]?.label || m} stroke={METRICS[m]?.color || '#8884d8'} fill={`url(#areaGrad-${m})`} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls isAnimationActive={true} animationDuration={300} animationEasing="linear" />
           ))}
           {referenceLines.map(rl => (
             <ReferenceLine key={rl.id} y={rl.y} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: rl.label, fill: '#ef4444', fontSize: 10 }} />
@@ -193,6 +203,7 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
                 onClick={(e) => {
                   e.stopPropagation();
                   setTimeWindow(tab.val);
+                  if (updatePanel) updatePanel(panel.id, { timeWindow: tab.val });
                 }}
                 className={`px-1.5 py-0.5 rounded transition-all duration-200 cursor-pointer ${
                   timeWindow === tab.val

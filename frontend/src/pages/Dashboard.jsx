@@ -106,17 +106,17 @@ const PROFILES_KEY = 'grafana_profiles_v3';
 const uid = () => 'p_' + Math.random().toString(36).substr(2, 9);
 
 
-const PanelRenderer = memo(({ panel, latestData, chartData, tempData, isLive, isEditing, isSyncHoverActive }) => {
+const PanelRenderer = memo(({ panel, latestData, chartData, tempData, isLive, isEditing, isSyncHoverActive, updatePanel }) => {
   const combinedLatestData = { ...(latestData || {}), ...(tempData || {}) };
 
   switch (panel.type) {
     case 'status': return <StatusPanel tempData={tempData || {}} isLive={isLive} isEditing={isEditing} />;
-    case 'areachart': return <TimeSeriesPanel panel={{...panel, chartType: 'area'}} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
-    case 'linechart': return <TimeSeriesPanel panel={{...panel, chartType: 'line'}} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
+    case 'areachart': return <TimeSeriesPanel panel={{...panel, chartType: 'area'}} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} updatePanel={updatePanel} />;
+    case 'linechart': return <TimeSeriesPanel panel={{...panel, chartType: 'line'}} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} updatePanel={updatePanel} />;
     case 'stat': return <StatPanel panel={panel} latestData={combinedLatestData} chartData={chartData} isEditing={isEditing} />;
     case 'gauge': return <GaugePanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
-    case 'barchart': return <BarChartPanel panel={panel} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
-    case 'bargauge': return <BarGaugePanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
+    case 'barchart': return <BarChartPanel panel={panel} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} updatePanel={updatePanel} />;
+    case 'bargauge': return <BarGaugePanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} updatePanel={updatePanel} />;
     case 'table': return <TablePanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
     case 'piechart': return <PieChartPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
     case 'statetimeline': return <StateTimelinePanel panel={panel} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
@@ -126,7 +126,7 @@ const PanelRenderer = memo(({ panel, latestData, chartData, tempData, isLive, is
 
     case 'news': return <NewsPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
 
-    case 'candlestick': return <CandlestickPanel panel={panel} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />;
+    case 'candlestick': return <CandlestickPanel panel={panel} chartData={chartData} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} updatePanel={updatePanel} />;
     case 'oilstatus': return <OilStatusPanel panel={panel} tempData={tempData || {}} isEditing={isEditing} />;
     case 'phasor': return <PhasorDiagramPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
     case 'sld': return <TransformerSLDPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
@@ -1205,7 +1205,7 @@ const Dashboard = () => {
   }, [wsData, liveData, tempData]);
 
   const chartData = useMemo(() => {
-    const maxPoints = 15; 
+    const maxPoints = 300; 
     const data = liveData && liveData.length > 0
       ? liveData.slice(-maxPoints)
       : [];
@@ -1213,10 +1213,10 @@ const Dashboard = () => {
   }, [liveData]);
 
   const oilChartData = useMemo(() => {
-    return oilLiveData ? oilLiveData.slice(-15) : [];
+    return oilLiveData ? oilLiveData.slice(-300) : [];
   }, [oilLiveData]);
 
-  const getChartDataForPanel = useCallback((panel) => {
+  const mergedChartData = useMemo(() => {
     const maxLen = Math.max(chartData.length, oilChartData.length);
     const merged = [];
     for (let i = 1; i <= maxLen; i++) {
@@ -1230,6 +1230,10 @@ const Dashboard = () => {
     }
     return merged;
   }, [chartData, oilChartData]);
+
+  const getChartDataForPanel = useCallback((panel) => {
+    return mergedChartData;
+  }, [mergedChartData]);
 
   const compactLayout = (layout, cols = 12) => {
     if (!layout || layout.length === 0) return [];
@@ -1392,6 +1396,29 @@ const Dashboard = () => {
     setEditingPanel(panel);
     setEditorOpen(true);
   };
+
+  const handleUpdatePanel = useCallback((panelId, updates) => {
+    setPanels(prev => {
+      if (!prev) return prev;
+      const newPanels = prev.map(p => p.id === panelId ? { ...p, ...updates } : p);
+      
+      setTimeout(() => {
+        if (!profilesState) return;
+        const activeId = profilesState.activeProfileId;
+        const activeProfile = profilesState.profiles[activeId];
+        if (activeProfile && activeProfile.isEditable) {
+           const dbId = activeProfile.dbId || activeProfile.id;
+           const layoutData = {
+             panels: newPanels,
+             layouts: gridLayoutsRef.current
+           };
+           saveLayoutToApi(dbId, activeProfile.name, layoutData, activeId === profilesState.activeProfileId).catch(() => {});
+        }
+      }, 0);
+
+      return newPanels;
+    });
+  }, [profilesState]);
 
   const loadDefaults = () => {
     pushToHistory(panels, gridLayouts);
@@ -1794,7 +1821,7 @@ const Dashboard = () => {
                   </button>
                 </div>
 
-                <PanelRenderer panel={panel} latestData={latestData} chartData={getChartDataForPanel(panel)} tempData={tempData} isLive={isLive} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} />
+                <PanelRenderer panel={panel} latestData={latestData} chartData={getChartDataForPanel(panel)} tempData={tempData} isLive={isLive} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} updatePanel={handleUpdatePanel} />
               </div>
             </div>
           ))}

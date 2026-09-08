@@ -7,15 +7,25 @@ import { GripVertical, BarChart3, Activity } from "lucide-react";
 import { METRICS } from "../../config/metrics";
 import { ChartTooltip } from "./TimeSeriesPanel";
 
-export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
+export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive, updatePanel }) => {
   const metrics = (panel.metrics || []).slice(0, 3);
   
-  const [timeWindow, setTimeWindow] = useState(15);
+  const [timeWindow, setTimeWindow] = useState(panel.timeWindow || 15);
 
   const displayData = useMemo(() => {
     if (!chartData || chartData.length === 0) return [];
-    if (timeWindow >= chartData.length) return chartData;
-    return chartData.slice(-timeWindow);
+    
+    const lastItem = chartData[chartData.length - 1];
+    if (!lastItem.timestamp) return chartData.slice(-timeWindow);
+    
+    const latestTime = new Date(lastItem.timestamp).getTime();
+    if (isNaN(latestTime) || latestTime === 0) return chartData.slice(-timeWindow);
+    
+    const startTime = latestTime - (timeWindow * 1000);
+    return chartData.filter(d => {
+      const t = d.timestamp ? new Date(d.timestamp).getTime() : 0;
+      return t >= startTime;
+    });
   }, [chartData, timeWindow]);
 
   const handleSyncMethod = useCallback((tooltipTicks, syncData) => {
@@ -94,6 +104,7 @@ export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverAct
                 onClick={(e) => {
                   e.stopPropagation();
                   setTimeWindow(tab.val);
+                  if (updatePanel) updatePanel(panel.id, { timeWindow: tab.val });
                 }}
                 className={`px-1.5 py-0.5 rounded transition-all duration-200 cursor-pointer ${
                   timeWindow === tab.val
@@ -180,8 +191,8 @@ export const BarChartPanel = memo(({ panel, chartData, isEditing, isSyncHoverAct
                 radius={[4, 4, 0, 0]}
                 maxBarSize={barSize}
                 isAnimationActive={true}
-                animationDuration={400}
-                animationEasing="ease-out"
+                animationDuration={300}
+                animationEasing="linear"
               />
             ))}
           </BarChart>
