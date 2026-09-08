@@ -24,11 +24,11 @@ const METRIC_LABELS = {
   
   frequency: { label: 'Frequency', tab: 'Frequency', unit: 'Hz' },
   
-  oil_temperature: { label: 'Oil temperature', tab: 'Oil and env', unit: '°C' },
-  oil_pressure: { label: 'Oil pressure', tab: 'Oil and env', unit: 'Bar' },
+  oil_temperature: { label: 'Oil temperature', tab: 'Oil', unit: '°C' },
+  oil_pressure: { label: 'Oil pressure', tab: 'Oil', unit: 'Bar' },
 };
 
-const TABS = ['Voltage', 'Current', 'Power', 'Frequency', 'Oil and env'];
+const TABS = ['Voltage', 'Current', 'Power', 'Frequency', 'Oil'];
 
 const Settings = () => {
   const { apiUrl } = useApi();
