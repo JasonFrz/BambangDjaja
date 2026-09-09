@@ -71,16 +71,20 @@ io.on("connection", (socket) => {
       const roomName = `trafo_${dbName}_${trafoId}`;
       socket.join(roomName);
       activeSubscriptions.set(roomName, dbName);
-      console.log(`Client ${socket.id} subscribed to ${roomName} for DB: ${dbName}`);
+      const pollInterval = socket.requestedPollInterval !== undefined ? socket.requestedPollInterval : (roomIntervals.get(roomName) ?? 0);
+      roomIntervals.set(roomName, pollInterval);
+      console.log(`Client ${socket.id} subscribed to ${roomName} for DB: ${dbName} (interval: ${pollInterval}ms)`);
     }
   });
 
   socket.on("set_poll_interval", (interval) => {
     const ms = parseInt(interval, 10);
+    const validMs = !isNaN(ms) && ms >= 0 ? ms : 0;
+    socket.requestedPollInterval = validMs;
     for (const roomName of socket.rooms) {
       if (roomName.startsWith("trafo_")) {
-        roomIntervals.set(roomName, ms >= 0 ? ms : 5000);
-        console.log(`Room ${roomName} poll interval set to ${ms}ms`);
+        roomIntervals.set(roomName, validMs);
+        console.log(`Room ${roomName} poll interval set to ${validMs}ms`);
       }
     }
   });

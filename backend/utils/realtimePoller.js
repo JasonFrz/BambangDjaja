@@ -41,9 +41,26 @@ async function sendAlertMessage(db, dbName, trafoId, alerts) {
         return `${index + 1}. *${namePart}*\n   Nilai Saat Ini: *${val}*\n   Batas Toleransi: ${alert.limit}\n   Kondisi: ${condition}`;
       }).join('\n\n');
 
-      const emailSubject = `[TMU ALERT] Abnormal Parameter pada Trafo ${trafoId}`;
+      // Ambil nama trafo dari tabel trafo database perusahaan
+      let trafoName = `Trafo ${trafoId}`;
+      try {
+        const [trafoRows] = await db.execute("SELECT nama FROM trafo WHERE id = ? LIMIT 1", [trafoId]);
+        if (trafoRows.length > 0 && trafoRows[0].nama && trafoRows[0].nama.trim() !== '') {
+          trafoName = trafoRows[0].nama.trim();
+        }
+      } catch (trafoErr) {
+        console.error(`Error fetching trafo name for trafo ${trafoId} in ${dbName}:`, trafoErr.message);
+      }
 
-      
+      const trafoLabelWa = (trafoName.toLowerCase().startsWith('trafo') || trafoName.toLowerCase().startsWith('transformator'))
+        ? `*${trafoName}*`
+        : `trafo *${trafoName}*`;
+
+      const emailSubjectTrafo = (trafoName.toLowerCase().startsWith('trafo') || trafoName.toLowerCase().startsWith('transformator'))
+        ? trafoName
+        : `Trafo ${trafoName}`;
+      const emailSubject = `[TMU ALERT] Abnormal Parameter pada ${emailSubjectTrafo}`;
+
       let phones = [];
       let emails = [];
 
@@ -64,15 +81,15 @@ async function sendAlertMessage(db, dbName, trafoId, alerts) {
       
       let userContacts = [];
       if (masterSelectCols.length > 0) {
-          const [allUsers] = await masterDb.execute(`SELECT ${masterSelectCols.join(', ')} FROM users WHERE nama_db = ?`, [dbName]);
-          allUsers.forEach(u => {
-              const phone = (u.nomor_telpon && u.nomor_telpon.length >= 10) ? u.nomor_telpon.trim() : null;
-              const email = (u.email && u.email.includes('@')) ? u.email.trim() : null;
-              const username = u.username || 'User';
-              if (phone || email) {
-                  userContacts.push({ phone, email, username });
-              }
-          });
+        const [allUsers] = await masterDb.execute(`SELECT ${masterSelectCols.join(', ')} FROM users WHERE nama_db = ?`, [dbName]);
+        allUsers.forEach(u => {
+            const phone = (u.nomor_telpon && u.nomor_telpon.length >= 10) ? u.nomor_telpon.trim() : null;
+            const email = (u.email && u.email.includes('@')) ? u.email.trim() : null;
+            const username = u.username || 'User';
+            if (phone || email) {
+                userContacts.push({ phone, email, username });
+            }
+        });
       }
       
       const now = new Date();
@@ -84,7 +101,7 @@ async function sendAlertMessage(db, dbName, trafoId, alerts) {
       
       for (const contact of userContacts) {
           if (contact.phone) {
-              const msg = `Halo Pak/Bu *${contact.username}*, selamat ${greeting}.\n\nPada trafo *${trafoId}* mendeteksi anomali pada sensor!\n\nParameter yang bermasalah:\n${lines}\n\nSilakan segera periksa sistem Anda.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
+              const msg = `Halo Pak/Bu *${contact.username}*, selamat ${greeting}.\n\nPada ${trafoLabelWa} mendeteksi anomali pada sensor!\n\nParameter yang bermasalah:\n${lines}\n\nSilakan segera periksa sistem Anda.\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
               await whatsappClient.sendWhatsAppMessage(contact.phone, msg).catch(() => {});
               await new Promise(resolve => setTimeout(resolve, 3000));
           }
@@ -95,7 +112,7 @@ async function sendAlertMessage(db, dbName, trafoId, alerts) {
                   const namePart = alert.sub ? `${alert.name} (${alert.sub})` : alert.name;
                   return `${index + 1}. ${namePart}\n   Nilai Saat Ini: ${val}\n   Batas Toleransi: ${alert.limit}\n   Kondisi: ${condition}`;
               }).join('\n\n');
-              const emailMsg = `Halo Pak/Bu ${contact.username}, selamat ${greeting}.\n\nPada trafo: ${trafoId}\n\nParameter yang bermasalah:\n${emailLines}\n\nSilakan segera periksa sistem Anda.\n\nPesan otomatis dari PT. Bambang Djaja - TMU System`;
+              const emailMsg = `Halo Pak/Bu ${contact.username}, selamat ${greeting}.\n\nPada trafo: ${trafoName}\n\nParameter yang bermasalah:\n${emailLines}\n\nSilakan segera periksa sistem Anda.\n\nPesan otomatis dari PT. Bambang Djaja - TMU System`;
               await emailClient.sendEmailMessage(contact.email, emailSubject, emailMsg).catch(() => {});
           }
       }
@@ -217,7 +234,7 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
       const now = Date.now();
 
       await Promise.allSettled(activeTrafos.map(async ({ trafoId, dbName, roomName }) => {
-        const interval = roomIntervals.get(roomName) ?? 5000; 
+        const interval = roomIntervals.get(roomName) ?? 0; 
         const lastEmit = lastEmitTime[roomName] || 0;
         
         if (interval > 0 && now - lastEmit < interval) {
@@ -228,11 +245,17 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
           const db = await getDbConnection(dbName);
           let allAlerts = [];
 
-          const [elecRows] = await db.execute(
-            'SELECT * FROM electrical_readings WHERE trafo_id = ? ORDER BY timestamp DESC LIMIT 1',
-            [trafoId]
-          );
-          
+          const [ [elecRows], [oilRows] ] = await Promise.all([
+            db.execute(
+              'SELECT * FROM electrical_readings WHERE trafo_id = ? ORDER BY timestamp DESC LIMIT 1',
+              [trafoId]
+            ),
+            db.execute(
+              'SELECT * FROM oil_readings WHERE trafo_id = ? ORDER BY timestamp DESC LIMIT 1',
+              [trafoId]
+            )
+          ]);
+
           if (elecRows.length > 0) {
             const latestElectrical = elecRows[0];
             const lastId = lastSeenElectrical[roomName];
@@ -277,11 +300,6 @@ const startRealtimePoller = (io, activeSubscriptions, roomIntervals) => {
               if (elecAlerts && elecAlerts.length > 0) allAlerts.push(...elecAlerts);
             }
           }
-
-          const [oilRows] = await db.execute(
-            'SELECT * FROM oil_readings WHERE trafo_id = ? ORDER BY timestamp DESC LIMIT 1',
-            [trafoId]
-          );
 
           if (oilRows.length > 0) {
             const latestOil = oilRows[0];

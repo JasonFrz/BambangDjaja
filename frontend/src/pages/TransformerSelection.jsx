@@ -24,7 +24,9 @@ const TransformerSelection = () => {
 
 
   useEffect(() => {
-    const fetchTransformers = async () => {
+    let isMounted = true;
+
+    const fetchTransformers = async (isFirst = false) => {
       try {
         const username = sessionStorage.getItem('username');
         const role = sessionStorage.getItem('role');
@@ -42,18 +44,24 @@ const TransformerSelection = () => {
 
         if (response.ok) {
           const data = await response.json();
-          setTransformers(data);
-        } else {
-          setError("Gagal mengambil data trafo dari server.");
+          if (isMounted) setTransformers(data);
+        } else if (isFirst) {
+          if (isMounted) setError("Gagal mengambil data trafo dari server.");
         }
       } catch (err) {
-        setError("Koneksi ke server gagal.");
+        if (isFirst && isMounted) setError("Koneksi ke server gagal.");
       } finally {
-        setLoading(false);
+        if (isFirst && isMounted) setLoading(false);
       }
     };
 
-    fetchTransformers();
+    fetchTransformers(true);
+    const interval = setInterval(() => fetchTransformers(false), 10000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [apiUrl]);
 
   const handleMonitor = (trafo) => {

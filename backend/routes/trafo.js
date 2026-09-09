@@ -151,22 +151,54 @@ router.get('/', async (req, res) => {
     
     const [rows] = await db.execute('SELECT * FROM trafo ORDER BY id ASC');
 
-    let isOnline = false;
-    try {
-      const [readings] = await db.execute('SELECT timestamp FROM electrical_readings ORDER BY timestamp DESC LIMIT 1');
-      if (readings.length > 0) {
-        const lastDataTime = new Date(readings[0].timestamp).getTime();
-        const now = Date.now();
-        if (now - lastDataTime < 20000) {
+    const now = Date.now();
+    const transformers = await Promise.all(rows.map(async (t) => {
+      let isOnline = false;
+      try {
+        let lastTime = 0;
+        try {
+          const [elecReadings] = await db.execute(
+            'SELECT timestamp FROM electrical_readings WHERE trafo_id = ? ORDER BY timestamp DESC LIMIT 1',
+            [t.id]
+          );
+          if (elecReadings.length > 0) {
+            lastTime = new Date(elecReadings[0].timestamp).getTime();
+          }
+        } catch (elecErr) {
+          if (elecErr.code === 'ER_BAD_FIELD_ERROR' && rows.length === 1) {
+            const [elecReadings] = await db.execute(
+              'SELECT timestamp FROM electrical_readings ORDER BY timestamp DESC LIMIT 1'
+            );
+            if (elecReadings.length > 0) {
+              lastTime = new Date(elecReadings[0].timestamp).getTime();
+            }
+          }
+        }
+
+        if (now - lastTime >= 20000) {
+          try {
+            const [oilReadings] = await db.execute(
+              'SELECT timestamp FROM oil_readings WHERE trafo_id = ? ORDER BY timestamp DESC LIMIT 1',
+              [t.id]
+            );
+            if (oilReadings.length > 0) {
+              const oilTime = new Date(oilReadings[0].timestamp).getTime();
+              if (oilTime > lastTime) lastTime = oilTime;
+            }
+          } catch (_) {}
+        }
+
+        if (lastTime > 0 && (now - lastTime < 20000)) {
           isOnline = true;
         }
+      } catch (err) {
+        console.error(`Error checking status for trafo ${t.id}:`, err.message);
       }
-    } catch (err) {
-    }
 
-    const transformers = rows.map(t => ({
-      ...t,
-      status: isOnline ? 'Online' : 'Offline'
+      return {
+        ...t,
+        status: isOnline ? 'Online' : 'Offline'
+      };
     }));
 
     res.json(transformers);

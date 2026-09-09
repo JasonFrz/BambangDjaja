@@ -1,4 +1,4 @@
-import React, { memo, useState, useMemo, useCallback } from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import { ComposedChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell, Tooltip } from 'recharts';
 import { GripVertical, CandlestickChart } from "lucide-react";
 import { METRICS } from "../../config/metrics";
@@ -22,7 +22,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive, updatePanel }) => {
+export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHoverActive }) => {
   const { isLoading } = useTrendData() || { isLoading: false };
   const metric = panel.metrics?.[0]; 
 
@@ -51,7 +51,7 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHover
       const prevVal = i > 0 ? chartData[i - 1][metric] : val;
       
       if (val === undefined || val === null) {
-        return { time: point.time, timestamp: point.timestamp };
+        return { time: point.time };
       }
       
       const open = prevVal !== undefined && prevVal !== null ? prevVal : val;
@@ -64,7 +64,6 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHover
       
       return {
         time: point.time,
-        timestamp: point.timestamp,
         open, close,
         wick: [renderMin, renderMax],
         body: [Math.min(open, close), Math.max(open, close)],
@@ -74,74 +73,22 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHover
     });
   }, [chartData, metric]);
 
-  const [timeWindow, setTimeWindow] = useState(panel.timeWindow || 15);
-
   const displayData = useMemo(() => {
     if (!data || data.length === 0) return [];
-    
-    const lastItem = data[data.length - 1];
-    if (!lastItem.timestamp) return data.slice(-timeWindow);
-    
-    const latestTime = new Date(lastItem.timestamp).getTime();
-    if (isNaN(latestTime) || latestTime === 0) return data.slice(-timeWindow);
-    
-    const startTime = latestTime - (timeWindow * 1000);
-    return data.filter(d => {
-      const t = d.timestamp ? new Date(d.timestamp).getTime() : 0;
-      return t >= startTime;
-    });
-  }, [data, timeWindow]);
+    return data.slice(-15);
+  }, [data]);
 
   return (
     <div className="h-full w-full flex flex-col transition-colors duration-500 rounded-none overflow-hidden">
-      <div className={`flex items-center justify-between gap-2 px-1 mb-1.5 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 shrink-0">
-            <CandlestickChart size={14} />
-          </div>
-          <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-200 font-sans truncate tracking-wide">{panel.title}</h3>
-
-          <div className="inline-flex p-0.5 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[10px] font-medium shrink-0 ml-1">
-            {[
-              { label: '15s', val: 15 },
-              { label: '30s', val: 30 },
-              { label: '60s', val: 60 }
-            ].map(tab => (
-              <button
-                key={tab.val}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setTimeWindow(tab.val);
-                  if (updatePanel) updatePanel(panel.id, { timeWindow: tab.val });
-                }}
-                className={`px-1.5 py-0.5 rounded transition-all duration-200 cursor-pointer ${
-                  timeWindow === tab.val
-                    ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-xs font-semibold'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                }`}
-                title={`Show last ${tab.label} window`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+      <div className={`flex items-center gap-2 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
+        <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 shrink-0">
+          <CandlestickChart size={14} />
         </div>
-
-        <div className="flex items-center gap-2 shrink-0 pr-14">
-          {isEditing && <GripVertical size={16} className="text-gray-400 shrink-0" />}
-        </div>
+        <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-200 font-sans truncate flex-1 tracking-wide">{panel.title}</h3>
+        {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
-      <div className="flex-1 min-h-0 pb-2 relative flex flex-col h-full w-full">
-        {!metric ? (
-          <div className="h-full w-full flex-1 flex flex-col items-center justify-center p-4 text-center">
-            <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 mb-2">
-              <CandlestickChart size={24} />
-            </div>
-            <span className="text-xs font-bold text-gray-700 dark:text-gray-200 mb-1">No Metric Selected</span>
-            <span className="text-[11px] text-gray-400 max-w-xs">Please select 1 metric below to render the candlestick chart.</span>
-          </div>
-        ) : displayData.length === 0 ? (
+      <div className="flex-1 min-h-0 pb-2 relative">
+        {!metric || displayData.length === 0 ? (
            <div className="h-full flex items-center justify-center text-gray-500 text-xs font-semibold">
              {isLoading ? "Waiting for data..." : "Data not found"}
            </div>
@@ -160,11 +107,11 @@ export const CandlestickPanel = memo(({ panel, chartData, isEditing, isSyncHover
               <YAxis yAxisId="price" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => v.toFixed(1)} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(148, 163, 184, 0.12)', radius: 4 }} isAnimationActive={false} />
               
-              <Bar xAxisId="wick" yAxisId="price" dataKey="wick" barSize={2} isAnimationActive={true} animationDuration={300} animationEasing="linear">
+              <Bar xAxisId="wick" yAxisId="price" dataKey="wick" barSize={2} isAnimationActive={true} animationDuration={400} animationEasing="ease-out">
                  {displayData.map((entry, index) => <Cell key={`wick-${index}`} fill={entry.color} />)}
               </Bar>
               
-              <Bar xAxisId="body" yAxisId="price" dataKey="body" isAnimationActive={true} animationDuration={300} animationEasing="linear">
+              <Bar xAxisId="body" yAxisId="price" dataKey="body" isAnimationActive={true} animationDuration={400} animationEasing="ease-out">
                  {displayData.map((entry, index) => <Cell key={`body-${index}`} fill={entry.color} />)}
               </Bar>
             </ComposedChart>
