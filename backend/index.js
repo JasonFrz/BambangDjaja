@@ -6,6 +6,24 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 
+process.on("unhandledRejection", (reason) => {
+  const msg = reason && (reason.message || String(reason));
+  if (msg && (msg.includes("Execution context was destroyed") || msg.includes("Session closed"))) {
+    console.warn("⚠️ Intercepted Puppeteer navigation error (safe, server continuing):", msg);
+    return;
+  }
+  console.error("Unhandled Rejection:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  const msg = error && (error.message || String(error));
+  if (msg && (msg.includes("Execution context was destroyed") || msg.includes("Session closed"))) {
+    console.warn("⚠️ Intercepted Puppeteer navigation exception (safe, server continuing):", msg);
+    return;
+  }
+  console.error("Uncaught Exception:", error);
+});
+
 const app = express();
 app.set("trust proxy", 1); // Allow rate limiting behind proxies like ngrok
 
@@ -21,7 +39,7 @@ const io = new Server(server, {
   },
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.SERVER_PORT || (process.env.PORT && process.env.PORT != 3306 ? process.env.PORT : 5000);
 
 app.use(helmet());
 
@@ -152,10 +170,13 @@ app.use("/api/admin/companies", verifyToken, companiesRoutes);
 
 const startRealtimePoller = require("./utils/realtimePoller");
 const { initWhatsApp } = require("./utils/whatsappClient");
+const { initRaspiWebSocket } = require("./utils/raspiWebSocket");
 const whatsappRoutes = require("./routes/whatsappRoutes");
 const autoAddIndexes = require("./utils/autoIndex");
 
 app.use("/api/whatsapp", verifyToken, whatsappRoutes);
+
+initRaspiWebSocket(server);
 
 server.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);

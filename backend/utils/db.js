@@ -5,58 +5,65 @@
   let adminPool = null;
   let isMasterInit = false;
 
-  async function getAdminPool() {
-    if (!adminPool) {
-      adminPool = mysql.createPool({
-        host: process.env.AIVEN_DB_HOST,
-        port: process.env.AIVEN_DB_PORT,
-        user: process.env.AIVEN_DB_USER,
-        password: process.env.AIVEN_DB_PASSWORD,
-        timezone: 'Z',
-        waitForConnections: true,
-        connectionLimit: 10,
-        queueLimit: 0,
-        idleTimeout: 30000
-      });
-    }
-    return adminPool;
+  function getDbConfig(dbName = null) {
+  const host = process.env.DB_HOST || process.env.HOST || process.env.AIVEN_DB_HOST || 'localhost';
+  const port = parseInt(process.env.DB_PORT || (process.env.PORT == 3306 ? process.env.PORT : null) || process.env.AIVEN_DB_PORT || 3306);
+  const user = process.env.DB_USER || process.env.USER || process.env.AIVEN_DB_USER || 'root';
+  const password = process.env.DB_PASSWORD !== undefined
+    ? process.env.DB_PASSWORD
+    : (process.env.PASSWORD !== undefined
+      ? process.env.PASSWORD
+      : (process.env.AIVEN_DB_PASSWORD !== undefined ? process.env.AIVEN_DB_PASSWORD : ''));
+
+  const config = {
+    host,
+    port,
+    user,
+    password,
+    timezone: 'Z',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    idleTimeout: 30000
+  };
+
+  if (dbName) {
+    config.database = dbName;
   }
 
-  async function getDbConnection(dbName) {
-    if (!dbName) {
-      throw new Error('Database name is required to get a connection');
+  return config;
+}
+
+async function getAdminPool() {
+  if (!adminPool) {
+    adminPool = mysql.createPool(getDbConfig());
+  }
+  return adminPool;
+}
+
+async function getDbConnection(dbName) {
+  if (!dbName) {
+    throw new Error('Database name is required to get a connection');
+  }
+
+  if (connectionPools.has(dbName)) {
+    return connectionPools.get(dbName);
+  }
+
+  const pool = mysql.createPool(getDbConfig(dbName));
+
+  connectionPools.set(dbName, pool);
+
+  try {
+    const connection = await pool.getConnection();
+    connection.release();
+  } catch (error) {
+    if (error.code !== 'ER_BAD_DB_ERROR') {
+      console.error(`Failed to connect to database: ${dbName}`, error);
     }
-
-    if (connectionPools.has(dbName)) {
-      return connectionPools.get(dbName);
-    }
-
-    const pool = mysql.createPool({
-      host: process.env.AIVEN_DB_HOST,
-      port: process.env.AIVEN_DB_PORT,
-      user: process.env.AIVEN_DB_USER,
-      password: process.env.AIVEN_DB_PASSWORD,
-      database: dbName,
-      timezone: 'Z',
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-      idleTimeout: 30000
-    });
-
-    connectionPools.set(dbName, pool);
-
-    try {
-      const connection = await pool.getConnection();
-      connection.release();
-
-    } catch (error) {
-      if (error.code !== 'ER_BAD_DB_ERROR') {
-        console.error(`Failed to connect to database: ${dbName}`, error);
-      }
-      connectionPools.delete(dbName);
-      throw error;
-    }
+    connectionPools.delete(dbName);
+    throw error;
+  }
 
   return pool;
 }

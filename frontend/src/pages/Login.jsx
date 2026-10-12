@@ -41,7 +41,7 @@ const Login = () => {
         sessionStorage.setItem('username', data.username);
         sessionStorage.setItem('role', data.role);
         sessionStorage.setItem('phone', data.phone || '');
-        sessionStorage.setItem('company_name', data.company_name || '');
+        sessionStorage.setItem('company_name', data.nama_perusahaan || data.company_name || '');
         sessionStorage.setItem('db_name', data.db_name || '');
 
         if (data.role === 'admin') {

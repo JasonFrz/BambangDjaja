@@ -39,7 +39,8 @@ const initWhatsApp = () => {
         '--no-zygote',
         '--mute-audio',
         '--disable-background-networking',
-        '--disable-background-timer-throttling'
+        '--disable-background-timer-throttling',
+        '--disable-features=IsolateOrigins,site-per-process'
       ]
     }
   });

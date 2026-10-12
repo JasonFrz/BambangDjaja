@@ -16,7 +16,7 @@ const checkUser = async (req, res, next) => {
   
   try {
     const masterDb = await getDbConnection('tmu_master');
-    const [rows] = await masterDb.execute('SELECT u.*, c.nama_perusahaan FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.username = ? LIMIT 1', [username]);
+    const [rows] = await masterDb.execute('SELECT u.*, c.nama_perusahaan FROM users u LEFT JOIN companies c ON (u.company_id = c.id OR (u.nama_db = c.nama_db AND u.nama_db != "-")) WHERE u.username = ? LIMIT 1', [username]);
     
     if (rows.length === 0) {
       return res.status(404).json({ error: 'User not found.' });

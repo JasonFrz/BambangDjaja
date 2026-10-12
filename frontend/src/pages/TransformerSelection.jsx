@@ -20,6 +20,11 @@ const TransformerSelection = () => {
 
   const [editingTrafoId, setEditingTrafoId] = useState(null);
   const [editNameValue, setEditNameValue] = useState("");
+  const [companyDisplayName, setCompanyDisplayName] = useState(
+    sessionStorage.getItem('company_name') && sessionStorage.getItem('company_name') !== sessionStorage.getItem('db_name')
+      ? sessionStorage.getItem('company_name')
+      : ''
+  );
 
 
 
@@ -48,6 +53,24 @@ const TransformerSelection = () => {
         } else if (isFirst) {
           if (isMounted) setError("Gagal mengambil data trafo dari server.");
         }
+
+        try {
+          const compRes = await fetch(`${apiUrl}/api/trafo/company-info`, {
+            headers: {
+              'X-Username': username,
+              'X-Role': role,
+              'X-DB-Name': companyName,
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (compRes.ok) {
+            const compData = await compRes.json();
+            if (compData.nama_perusahaan && isMounted) {
+              setCompanyDisplayName(compData.nama_perusahaan);
+              sessionStorage.setItem('company_name', compData.nama_perusahaan);
+            }
+          }
+        } catch (_) {}
       } catch (err) {
         if (isFirst && isMounted) setError("Koneksi ke server gagal.");
       } finally {
@@ -150,9 +173,9 @@ const TransformerSelection = () => {
     }
   };
 
-  const companyName = sessionStorage.getItem('db_name');
+  const companyName = companyDisplayName || sessionStorage.getItem('company_name') || sessionStorage.getItem('db_name') || 'Unknown Company';
   const totalUnits = transformers.length;
-  const onlineUnits = transformers.filter(t => t.status !== 'Offline' && t.status !== undefined).length;
+  const onlineUnits = transformers.filter(t => t.status === 'Online').length;
   const offlineUnits = totalUnits - onlineUnits;
 
 
@@ -202,7 +225,7 @@ const TransformerSelection = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
             {transformers.map((trafo, index) => {
-              const isOnline = trafo.status !== 'Offline' && trafo.status !== undefined;
+              const isOnline = trafo.status === 'Online';
               
               return (
                 <div 

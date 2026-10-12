@@ -57,7 +57,7 @@ router.post('/', checkAdmin, async (req, res) => {
 
 router.get('/', checkAdmin, async (req, res) => {
   try {
-    const [users] = await req.db.execute('SELECT u.id, u.username, u.ROLE as role, u.nama_db, u.nomor_telpon, u.email, u.created_at, c.nama_perusahaan FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.nama_db = ? ORDER BY u.id DESC', [req.dbName]);
+    const [users] = await req.db.execute('SELECT u.id, u.username, u.ROLE as role, u.nama_db, u.nomor_telpon, u.email, u.created_at, c.nama_perusahaan FROM users u LEFT JOIN companies c ON (u.company_id = c.id OR (u.nama_db = c.nama_db AND u.nama_db != "-")) WHERE u.nama_db = ? ORDER BY u.id DESC', [req.dbName]);
     
     const usersWithDetails = users.map(u => ({
       id: u.id,

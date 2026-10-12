@@ -151,44 +151,71 @@ router.get('/', async (req, res) => {
     
     const [rows] = await db.execute('SELECT * FROM trafo ORDER BY id ASC');
 
-    const now = Date.now();
     const transformers = await Promise.all(rows.map(async (t) => {
       let isOnline = false;
       try {
-        let lastTime = 0;
+        let lastDiffSeconds = null;
+
+        // Cek data sensor electrical_readings
         try {
           const [elecReadings] = await db.execute(
-            'SELECT timestamp FROM electrical_readings WHERE trafo_id = ? ORDER BY timestamp DESC LIMIT 1',
+            'SELECT timestamp, TIMESTAMPDIFF(SECOND, timestamp, NOW()) AS sec_diff FROM electrical_readings WHERE trafo_id = ? ORDER BY timestamp DESC LIMIT 1',
             [t.id]
           );
           if (elecReadings.length > 0) {
-            lastTime = new Date(elecReadings[0].timestamp).getTime();
+            const row = elecReadings[0];
+            const mySqlDiff = row.sec_diff !== null && row.sec_diff !== undefined ? Number(row.sec_diff) : null;
+            const nodeDiff = row.timestamp ? (Date.now() - new Date(row.timestamp).getTime()) / 1000 : null;
+            
+            const candidates = [mySqlDiff, nodeDiff].filter(d => d !== null && !isNaN(d) && d >= 0);
+            if (candidates.length > 0) {
+              lastDiffSeconds = Math.min(...candidates);
+            }
           }
         } catch (elecErr) {
           if (elecErr.code === 'ER_BAD_FIELD_ERROR' && rows.length === 1) {
-            const [elecReadings] = await db.execute(
-              'SELECT timestamp FROM electrical_readings ORDER BY timestamp DESC LIMIT 1'
-            );
-            if (elecReadings.length > 0) {
-              lastTime = new Date(elecReadings[0].timestamp).getTime();
-            }
+            try {
+              const [elecReadings] = await db.execute(
+                'SELECT timestamp, TIMESTAMPDIFF(SECOND, timestamp, NOW()) AS sec_diff FROM electrical_readings ORDER BY timestamp DESC LIMIT 1'
+              );
+              if (elecReadings.length > 0) {
+                const row = elecReadings[0];
+                const mySqlDiff = row.sec_diff !== null && row.sec_diff !== undefined ? Number(row.sec_diff) : null;
+                const nodeDiff = row.timestamp ? (Date.now() - new Date(row.timestamp).getTime()) / 1000 : null;
+                const candidates = [mySqlDiff, nodeDiff].filter(d => d !== null && !isNaN(d) && d >= 0);
+                if (candidates.length > 0) {
+                  lastDiffSeconds = Math.min(...candidates);
+                }
+              }
+            } catch (_) {}
           }
         }
 
-        if (now - lastTime >= 20000) {
+        // Jika belum ada data atau belum online, periksa juga oil_readings
+        if (lastDiffSeconds === null || lastDiffSeconds > 20) {
           try {
             const [oilReadings] = await db.execute(
-              'SELECT timestamp FROM oil_readings WHERE trafo_id = ? ORDER BY timestamp DESC LIMIT 1',
+              'SELECT timestamp, TIMESTAMPDIFF(SECOND, timestamp, NOW()) AS sec_diff FROM oil_readings WHERE trafo_id = ? ORDER BY timestamp DESC LIMIT 1',
               [t.id]
             );
             if (oilReadings.length > 0) {
-              const oilTime = new Date(oilReadings[0].timestamp).getTime();
-              if (oilTime > lastTime) lastTime = oilTime;
+              const row = oilReadings[0];
+              const mySqlDiff = row.sec_diff !== null && row.sec_diff !== undefined ? Number(row.sec_diff) : null;
+              const nodeDiff = row.timestamp ? (Date.now() - new Date(row.timestamp).getTime()) / 1000 : null;
+              const candidates = [mySqlDiff, nodeDiff].filter(d => d !== null && !isNaN(d) && d >= 0);
+              if (candidates.length > 0) {
+                const oilDiff = Math.min(...candidates);
+                if (lastDiffSeconds === null || oilDiff < lastDiffSeconds) {
+                  lastDiffSeconds = oilDiff;
+                }
+              }
             }
           } catch (_) {}
         }
 
-        if (lastTime > 0 && (now - lastTime < 20000)) {
+        // HANYA Online jika benar-benar ada data masuk dalam 20 detik terakhir!
+        // Jika tidak ada data (null) atau data lama (> 20s), status tetap Offline!
+        if (lastDiffSeconds !== null && lastDiffSeconds >= 0 && lastDiffSeconds <= 20) {
           isOnline = true;
         }
       } catch (err) {
@@ -204,6 +231,39 @@ router.get('/', async (req, res) => {
     res.json(transformers);
   } catch (error) {
     console.error('Error fetching all trafos:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.get('/company-info', async (req, res) => {
+  const dbName = req.headers['x-db-name'];
+  if (!dbName) return res.status(400).json({ error: 'Missing X-DB-Name header' });
+
+  try {
+    const masterDb = await getDbConnection('tmu_master');
+    const [rows] = await masterDb.execute(
+      'SELECT id, nama_perusahaan, nama_db FROM companies WHERE nama_db = ? LIMIT 1',
+      [dbName]
+    );
+
+    if (rows.length > 0 && rows[0].nama_perusahaan) {
+      return res.json({ success: true, nama_perusahaan: rows[0].nama_perusahaan, nama_db: rows[0].nama_db });
+    }
+
+    const username = req.user?.username || req.headers['x-username'];
+    if (username) {
+      const [uRows] = await masterDb.execute(
+        'SELECT c.nama_perusahaan FROM users u JOIN companies c ON (u.company_id = c.id OR u.nama_db = c.nama_db) WHERE u.username = ? LIMIT 1',
+        [username]
+      );
+      if (uRows.length > 0 && uRows[0].nama_perusahaan) {
+        return res.json({ success: true, nama_perusahaan: uRows[0].nama_perusahaan, nama_db: dbName });
+      }
+    }
+
+    res.json({ success: true, nama_perusahaan: dbName, nama_db: dbName });
+  } catch (error) {
+    console.error('Error fetching company info:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

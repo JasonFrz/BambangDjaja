@@ -216,7 +216,7 @@ router.delete('/users/:id', async (req, res) => {
 router.get('/all-users', async (req, res) => {
   try {
     const pool = await getDbConnection('tmu_master');
-    const [users] = await pool.execute("SELECT u.id, u.username, u.ROLE as role, u.email, u.nomor_telpon as nomor_telpon, u.nama_db, u.created_at, c.nama_perusahaan FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.ROLE != 'admin' ORDER BY u.created_at DESC");
+    const [users] = await pool.execute("SELECT u.id, u.username, u.ROLE as role, u.email, u.nomor_telpon as nomor_telpon, u.nama_db, u.created_at, c.nama_perusahaan FROM users u LEFT JOIN companies c ON (u.company_id = c.id OR (u.nama_db = c.nama_db AND u.nama_db != '-')) WHERE u.ROLE != 'admin' ORDER BY u.created_at DESC");
     const formattedUsers = users.map(u => ({
       ...u,
       company_name: u.nama_perusahaan || u.nama_db || '-'

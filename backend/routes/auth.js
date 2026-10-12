@@ -23,7 +23,7 @@ router.post('/login', loginLimiter, async (req, res) => {
   try {
     const masterDb = await getDbConnection('tmu_master');
     
-    const query = 'SELECT u.*, c.nama_perusahaan FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.username = ? OR u.email = ? OR u.nomor_telpon = ? LIMIT 1';
+    const query = 'SELECT u.*, c.nama_perusahaan FROM users u LEFT JOIN companies c ON (u.company_id = c.id OR (u.nama_db = c.nama_db AND u.nama_db != "-")) WHERE u.username = ? OR u.email = ? OR u.nomor_telpon = ? LIMIT 1';
     const queryParams = [username, username, username];
     
     const [rows] = await masterDb.execute(query, queryParams);
@@ -60,8 +60,23 @@ router.post('/login', loginLimiter, async (req, res) => {
     const foundDbName = user.nama_db || 'tmu_master';
     const userRole = user.ROLE || user.role || 'user';
     
+    let companyName = user.nama_perusahaan;
+    if (!companyName && foundDbName && foundDbName !== 'tmu_master' && foundDbName !== '-') {
+      try {
+        const [compRows] = await masterDb.execute(
+          'SELECT nama_perusahaan FROM companies WHERE nama_db = ? LIMIT 1',
+          [foundDbName]
+        );
+        if (compRows.length > 0 && compRows[0].nama_perusahaan) {
+          companyName = compRows[0].nama_perusahaan;
+        }
+      } catch (e) {
+        console.error('Error finding company by db_name:', e.message);
+      }
+    }
+
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: userRole, dbName: foundDbName },
+      { id: user.id, username: user.username, role: userRole, dbName: foundDbName, companyName: companyName || foundDbName },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -71,7 +86,8 @@ router.post('/login', loginLimiter, async (req, res) => {
       token,
       username: user.username, 
       role: userRole, 
-      company_name: user.nama_perusahaan || foundDbName,
+      company_name: companyName || foundDbName,
+      nama_perusahaan: companyName || foundDbName,
       db_name: foundDbName,
       phone: user.nomor_telpon || '' 
     });

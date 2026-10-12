@@ -76,7 +76,7 @@ router.post('/', checkSuperuser, async (req, res) => {
 
 router.get('/', checkSuperuser, async (req, res) => {
   try {
-    const query = "SELECT u.id, u.username, u.ROLE as role, u.nama_db, u.nomor_telpon, u.email, u.created_at, c.nama_perusahaan FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.ROLE != 'admin' AND u.nama_db = ? ORDER BY u.id DESC";
+    const query = "SELECT u.id, u.username, u.ROLE as role, u.nama_db, u.nomor_telpon, u.email, u.created_at, c.nama_perusahaan FROM users u LEFT JOIN companies c ON (u.company_id = c.id OR (u.nama_db = c.nama_db AND u.nama_db != '-')) WHERE u.ROLE != 'admin' AND u.nama_db = ? ORDER BY u.id DESC";
     const [users] = await req.db.execute(query, [req.dbName]);
     const formattedUsers = users.map(u => ({
       ...u,

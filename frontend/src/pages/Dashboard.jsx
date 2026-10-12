@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from "react";
 import { useSearchParams, useLocation } from 'react-router-dom';
-import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Plus, X, Settings2, Trash2, RefreshCw, GripVertical, Edit3, Send, LogOut, Download, Loader2, ChevronDown, Check, Search, Layers, RotateCcw, Thermometer, TrendingUp, BarChart3, Eye, AlertTriangle, Maximize2, Minimize2, MousePointer2, BellRing, Power, FileDown, Monitor, Crosshair, LayoutGrid, PlusSquare, Database, PieChart as PieChartIcon, FileText, Table, AlignLeft, CalendarClock, List, Rss, MessageSquareWarning, CandlestickChart, ActivitySquare, LayoutPanelLeft, BoxSelect, Calendar, Compass, GitCommit, HeartPulse, Terminal, Undo2, Redo2 } from 'lucide-react';
+import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Plus, X, Settings2, Trash2, RefreshCw, GripVertical, Edit3, Send, LogOut, Download, Loader2, ChevronDown, Check, Search, Layers, RotateCcw, Thermometer, TrendingUp, BarChart3, Eye, AlertTriangle, Maximize2, Minimize2, MousePointer2, BellRing, Power, FileDown, Monitor, Crosshair, LayoutGrid, PlusSquare, Database, PieChart as PieChartIcon, FileText, Table, AlignLeft, CalendarClock, List, Rss, MessageSquareWarning, CandlestickChart, ActivitySquare, LayoutPanelLeft, BoxSelect, Calendar, Compass, GitCommit, HeartPulse, Terminal, Undo2, Redo2, Sparkles, Wand2, Bot } from 'lucide-react';
 import { useTrendData } from "../contexts/TrendDataContext";
 import { useTemperatureData } from "../contexts/TemperatureDataContext";
 import { useDialog } from "../contexts/DialogContext";
@@ -22,6 +22,7 @@ import {
 } from "../components/visualizations";
 import { UniversalTimePicker } from "../components/UniversalTimePicker";
 import TransformerMapCard from '../components/TransformerMapCard';
+import AiLayoutModal from '../components/AiLayoutModal';
 
 
 const DEFAULT_PANELS = [
@@ -98,6 +99,46 @@ const DEFAULT_GRID_LAYOUTS = {
     { h: 5, i: 'p_k18z2kmbp', w: 1, x: 0, y: 33, minH: 2, minW: 1, isDraggable: true, isResizable: true },
     { h: 5, i: 'p_w4nm3z94b', w: 1, x: 0, y: 38, minH: 2, minW: 1, isDraggable: true, isResizable: true }
   ]
+};
+
+const ensureResponsiveLayouts = (layouts) => {
+  if (!layouts || typeof layouts !== 'object') return DEFAULT_GRID_LAYOUTS;
+  const result = { ...layouts };
+  const baseLayout = layouts.lg || layouts.md || layouts.sm || DEFAULT_GRID_LAYOUTS.lg;
+  
+  if (!result.lg) result.lg = baseLayout;
+  if (!result.md) {
+    result.md = baseLayout.map(item => ({
+      ...item,
+      w: Math.min(item.w || 6, 10),
+      x: Math.min(item.x || 0, 10 - Math.min(item.w || 6, 10))
+    }));
+  }
+  if (!result.sm) {
+    result.sm = baseLayout.map((item, idx) => ({
+      ...item,
+      w: 6,
+      x: 0,
+      y: idx * (item.h || 4)
+    }));
+  }
+  if (!result.xs) {
+    result.xs = baseLayout.map((item, idx) => ({
+      ...item,
+      w: 2,
+      x: 0,
+      y: idx * (item.h || 4)
+    }));
+  }
+  if (!result.xxs) {
+    result.xxs = baseLayout.map((item, idx) => ({
+      ...item,
+      w: 1,
+      x: 0,
+      y: idx * (item.h || 4)
+    }));
+  }
+  return result;
 };
 
 const PANELS_KEY = 'grafana_panels_v2';
@@ -541,6 +582,9 @@ const Dashboard = () => {
   const { confirm, prompt, alert } = useDialog();
   const location = useLocation();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [assemblingInfo, setAssemblingInfo] = useState(null);
+  const [newlyAddedPanelIds, setNewlyAddedPanelIds] = useState(new Set());
   const [showLoadingScreen, setShowLoadingScreen] = useState(location.state?.fromHome === true);
   const [isSyncHoverActive, setIsSyncHoverActive] = useState(() => {
     const stored = localStorage.getItem('grafana_sync_hover');
@@ -599,6 +643,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchLayouts = async () => {
       try {
+        const token = sessionStorage.getItem('token');
         const username = sessionStorage.getItem('username');
         const role = sessionStorage.getItem('role');
         const companyName = sessionStorage.getItem('db_name');
@@ -610,14 +655,17 @@ const Dashboard = () => {
 
         const trafoId = sessionStorage.getItem('selectedTrafoId');
 
-        const response = await fetch(`${apiUrl}/api/layouts`, {
-          headers: {
-            'X-Username': username,
-            'X-DB-Name': companyName,
-            'X-Role': role,
-            'X-Trafo-Id': trafoId || ''
-          }
-        });
+        const headers = {
+          'X-Username': username,
+          'X-DB-Name': companyName,
+          'X-Role': role,
+          'X-Trafo-Id': trafoId || ''
+        };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${apiUrl}/api/layouts`, { headers });
         
         if (response.ok) {
           const layouts = await response.json();
@@ -625,13 +673,20 @@ const Dashboard = () => {
             const newProfiles = {};
             let activeId = 'default';
             layouts.forEach(layout => {
+              const layoutData = typeof layout.layout_data === 'string'
+                ? (() => { try { return JSON.parse(layout.layout_data); } catch { return {}; } })()
+                : (layout.layout_data || {});
+
+              const parsedPanels = layoutData.panels || [];
+              const parsedLayouts = ensureResponsiveLayouts(layoutData.layouts || {});
+
               if (layout.layout_name === 'Main Dashboard') {
                 newProfiles['default'] = {
                   id: 'default',
                   dbId: layout.id,
                   name: 'Main Dashboard',
-                  panels: layout.layout_data.panels || [],
-                  layouts: layout.layout_data.layouts || {},
+                  panels: parsedPanels,
+                  layouts: parsedLayouts,
                   isEditable: false
                 };
                 if (layout.is_active) activeId = 'default';
@@ -639,8 +694,8 @@ const Dashboard = () => {
                 newProfiles[layout.id] = {
                   id: layout.id,
                   name: layout.layout_name,
-                  panels: layout.layout_data.panels || [],
-                  layouts: layout.layout_data.layouts || {},
+                  panels: parsedPanels,
+                  layouts: parsedLayouts,
                   isEditable: true
                 };
                 if (layout.is_active) activeId = layout.id;
@@ -648,7 +703,7 @@ const Dashboard = () => {
             });
             
             if (!newProfiles['default']) {
-              newProfiles['default'] = { id: 'default', name: 'Main Dashboard', panels: null, layouts: DEFAULT_GRID_LAYOUTS, isEditable: false };
+              newProfiles['default'] = { id: 'default', name: 'Main Dashboard', panels: [...DEFAULT_PANELS], layouts: DEFAULT_GRID_LAYOUTS, isEditable: false };
             }
 
             setProfilesState({
@@ -872,6 +927,7 @@ const Dashboard = () => {
 
   const saveLayoutToApi = async (layoutId, layoutName, layoutData, isActive) => {
     try {
+      const token = sessionStorage.getItem('token');
       const username = sessionStorage.getItem('username');
       const role = sessionStorage.getItem('role');
       const companyName = sessionStorage.getItem('db_name');
@@ -879,15 +935,20 @@ const Dashboard = () => {
 
       const trafoId = sessionStorage.getItem('selectedTrafoId');
 
+      const headers = {
+        'Content-Type': 'application/json',
+        'X-Username': username,
+        'X-DB-Name': companyName,
+        'X-Role': role,
+        'X-Trafo-Id': trafoId || ''
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`${apiUrl}/api/layouts`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Username': username,
-          'X-DB-Name': companyName,
-          'X-Role': role,
-          'X-Trafo-Id': trafoId || ''
-        },
+        headers,
         body: JSON.stringify({
           id: layoutId,
           layout_name: layoutName,
@@ -904,6 +965,7 @@ const Dashboard = () => {
 
   const renameLayoutInApi = async (layoutId, newName) => {
     try {
+      const token = sessionStorage.getItem('token');
       const username = sessionStorage.getItem('username');
       const role = sessionStorage.getItem('role');
       const companyName = sessionStorage.getItem('db_name');
@@ -911,15 +973,20 @@ const Dashboard = () => {
 
       const trafoId = sessionStorage.getItem('selectedTrafoId');
 
+      const headers = {
+        'Content-Type': 'application/json',
+        'X-Username': username,
+        'X-DB-Name': companyName,
+        'X-Role': role,
+        'X-Trafo-Id': trafoId || ''
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       await fetch(`${apiUrl}/api/layouts/${layoutId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Username': username,
-          'X-DB-Name': companyName,
-          'X-Role': role,
-          'X-Trafo-Id': trafoId || ''
-        },
+        headers,
         body: JSON.stringify({ layout_name: newName })
       });
     } catch (e) {
@@ -929,6 +996,7 @@ const Dashboard = () => {
 
   const deleteLayoutFromApi = async (layoutId) => {
     try {
+      const token = sessionStorage.getItem('token');
       const username = sessionStorage.getItem('username');
       const role = sessionStorage.getItem('role');
       const companyName = sessionStorage.getItem('db_name');
@@ -936,14 +1004,19 @@ const Dashboard = () => {
 
       const trafoId = sessionStorage.getItem('selectedTrafoId');
 
+      const headers = {
+        'X-Username': username,
+        'X-DB-Name': companyName,
+        'X-Role': role,
+        'X-Trafo-Id': trafoId || ''
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       await fetch(`${apiUrl}/api/layouts/${layoutId}`, {
         method: 'DELETE',
-        headers: {
-          'X-Username': username,
-          'X-DB-Name': companyName,
-          'X-Role': role,
-          'X-Trafo-Id': trafoId || ''
-        }
+        headers
       });
     } catch (e) {
       console.error("Failed to delete layout from DB:", e);
@@ -952,6 +1025,7 @@ const Dashboard = () => {
 
   const setActiveLayoutInApi = async (layoutId) => {
     try {
+      const token = sessionStorage.getItem('token');
       const username = sessionStorage.getItem('username');
       const role = sessionStorage.getItem('role');
       const companyName = sessionStorage.getItem('db_name');
@@ -959,15 +1033,20 @@ const Dashboard = () => {
 
       const trafoId = sessionStorage.getItem('selectedTrafoId');
 
+      const headers = {
+        'Content-Type': 'application/json',
+        'X-Username': username,
+        'X-DB-Name': companyName,
+        'X-Role': role,
+        'X-Trafo-Id': trafoId || ''
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       await fetch(`${apiUrl}/api/layouts/active`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Username': username,
-          'X-DB-Name': companyName,
-          'X-Role': role,
-          'X-Trafo-Id': trafoId || ''
-        },
+        headers,
         body: JSON.stringify({ id: layoutId })
       });
     } catch (e) {
@@ -1153,7 +1232,10 @@ const Dashboard = () => {
     if (!id || id.trim() === '') return;
 
     try {
-      const response = await fetch(`${apiUrl}/api/layouts/export/${id.trim()}`);
+      const token = sessionStorage.getItem('token');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch(`${apiUrl}/api/layouts/export/${id.trim()}`, { headers });
       if (response.ok) {
         const importedData = await response.json();
         
@@ -1379,6 +1461,181 @@ const Dashboard = () => {
     }
   };
 
+  const handleApplyAiLayout = async (aiPanels, mode = 'replace', backendLayouts = null) => {
+    pushToHistory(panels, gridLayouts);
+    skipLayoutChangeRef.current = true;
+
+    const panelsToAdd = Array.isArray(aiPanels) ? aiPanels : [aiPanels];
+    const basePanels = (mode === 'append' && Array.isArray(panels)) ? [...panels] : [];
+
+    const processedAiPanels = panelsToAdd.map((p, idx) => ({
+      ...p,
+      id: p.id && String(p.id).startsWith('p_') ? String(p.id) : `p_ai_${Date.now()}_${idx}`
+    }));
+
+    const newIds = new Set(processedAiPanels.map(p => String(p.id)));
+    setNewlyAddedPanelIds(newIds);
+
+    const bps = ['lg', 'md', 'sm', 'xs', 'xxs'];
+    const colsMap = { lg: 12, md: 10, sm: 6, xs: 2, xxs: 1 };
+    let finalLayouts = {};
+
+    if (mode === 'append') {
+      bps.forEach(bp => {
+        const existingItems = Array.isArray(gridLayouts[bp]) ? [...gridLayouts[bp]] : [];
+        let maxBottom = 0;
+        existingItems.forEach(item => {
+          const bottom = (Number(item.y) || 0) + (Number(item.h) || 4);
+          if (bottom > maxBottom) maxBottom = bottom;
+        });
+
+        const newItems = [];
+        let curX = 0;
+        let curY = maxBottom;
+        let rowMaxH = 0;
+
+        processedAiPanels.forEach(p => {
+          const sizes = getDefaultSize(p.type);
+          const { w, h, minW, minH } = sizes[bp];
+          const actualW = Math.min(w, colsMap[bp]);
+
+          if (curX + actualW > colsMap[bp]) {
+            curX = 0;
+            curY += rowMaxH;
+            rowMaxH = 0;
+          }
+
+          newItems.push({
+            i: String(p.id),
+            x: curX,
+            y: curY,
+            w: actualW,
+            h,
+            minW,
+            minH,
+            isDraggable: true,
+            isResizable: true
+          });
+
+          curX += actualW;
+          if (h > rowMaxH) rowMaxH = h;
+        });
+
+        finalLayouts[bp] = [...existingItems, ...newItems];
+      });
+    } else {
+      bps.forEach(bp => {
+        const cols = colsMap[bp];
+        let curX = 0, curY = 0, rowMaxH = 0;
+        finalLayouts[bp] = [];
+
+        processedAiPanels.forEach(p => {
+          const sizes = getDefaultSize(p.type);
+          const { w, h, minW, minH } = sizes[bp];
+          const actualW = Math.min(w, cols);
+
+          if (curX + actualW > cols) {
+            curX = 0;
+            curY += rowMaxH;
+            rowMaxH = 0;
+          }
+
+          finalLayouts[bp].push({
+            i: String(p.id),
+            x: curX,
+            y: curY,
+            w: actualW,
+            h,
+            minW,
+            minH,
+            isDraggable: true,
+            isResizable: true
+          });
+
+          curX += actualW;
+          if (h > rowMaxH) rowMaxH = h;
+        });
+      });
+    }
+
+    finalLayouts = ensureResponsiveLayouts(finalLayouts);
+
+    if (mode === 'replace') {
+      scrollToTop();
+    }
+
+    setAssemblingInfo({
+      active: true,
+      current: 0,
+      total: processedAiPanels.length,
+      currentTitle: processedAiPanels[0]?.title || 'Memulai perakitan...',
+      progress: 5,
+      completed: false
+    });
+
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    const progressivePanels = [...basePanels];
+
+    for (let i = 0; i < processedAiPanels.length; i++) {
+      const p = processedAiPanels[i];
+      progressivePanels.push(p);
+
+      const currentPlacedIds = new Set(progressivePanels.map(item => String(item.id)));
+      const partialLayouts = {};
+      Object.keys(finalLayouts).forEach(bp => {
+        partialLayouts[bp] = (finalLayouts[bp] || []).filter(item => currentPlacedIds.has(String(item.i)));
+      });
+
+      setPanels([...progressivePanels]);
+      setGridLayouts(partialLayouts);
+
+      setAssemblingInfo({
+        active: true,
+        current: i + 1,
+        total: processedAiPanels.length,
+        currentTitle: p.title,
+        progress: Math.round(((i + 1) / processedAiPanels.length) * 100),
+        completed: false
+      });
+
+      await sleep(260);
+    }
+
+    setPanels([...basePanels, ...processedAiPanels]);
+    setGridLayouts(finalLayouts);
+    setLayoutGeneration(g => g + 1);
+
+    if (mode === 'append') {
+      setTimeout(() => {
+        if (containerRef.current) {
+          const scrollParent = containerRef.current.closest('.overflow-y-auto') || containerRef.current.parentElement;
+          if (scrollParent) {
+            scrollParent.scrollTo({ top: scrollParent.scrollHeight, behavior: 'smooth' });
+          }
+        }
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }, 350);
+    }
+
+    setAssemblingInfo({
+      active: true,
+      current: processedAiPanels.length,
+      total: processedAiPanels.length,
+      currentTitle: 'Selesai! Panel berhasil dirakit ke dashboard.',
+      progress: 100,
+      completed: true
+    });
+
+    setTimeout(() => {
+      setAssemblingInfo(null);
+      skipLayoutChangeRef.current = false;
+    }, 2200);
+
+    setTimeout(() => {
+      setNewlyAddedPanelIds(new Set());
+    }, 4500);
+  };
+
   const handleDeletePanel = (panelId) => {
     pushToHistory(panels, gridLayouts);
     const pid = String(panelId);
@@ -1427,9 +1684,39 @@ const Dashboard = () => {
   };
 
   const handleResetDashboard = async () => {
-    const isConfirmed = await confirm('Reset the entire dashboard to defaults? All custom panels will be deleted.');
+    const isConfirmed = await confirm('Reset the entire dashboard to defaults? All custom panels will be deleted.', { title: 'Reset Dashboard' });
     if (isConfirmed) {
       loadDefaults();
+
+      const activeId = profilesState.activeProfileId;
+      const currentProf = profilesState.profiles[activeId];
+      const defaultLayoutData = {
+        panels: [...DEFAULT_PANELS],
+        layouts: JSON.parse(JSON.stringify(DEFAULT_GRID_LAYOUTS))
+      };
+
+      setProfilesState(prev => {
+        const pActiveId = prev.activeProfileId;
+        const pCurrentProf = prev.profiles[pActiveId];
+        if (!pCurrentProf) return prev;
+        return {
+          ...prev,
+          profiles: {
+            ...prev.profiles,
+            [pActiveId]: {
+              ...pCurrentProf,
+              panels: [...DEFAULT_PANELS],
+              layouts: JSON.parse(JSON.stringify(DEFAULT_GRID_LAYOUTS))
+            }
+          }
+        };
+      });
+
+      if (currentProf) {
+        saveLayoutToApi(activeId, currentProf.name, defaultLayoutData, true).catch(err => {
+          console.error("Failed to auto-save reset layout to DB:", err);
+        });
+      }
     }
   };
 
@@ -1546,8 +1833,15 @@ const Dashboard = () => {
         </p>
         <div className="flex flex-col sm:flex-row gap-3">
           <button
+            onClick={() => setIsAiModalOpen(true)}
+            className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white font-bold shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all text-sm cursor-pointer"
+          >
+            <Sparkles size={18} className="animate-pulse" />
+            Atur dengan Prompt
+          </button>
+          <button
             onClick={loadDefaults}
-            className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all text-sm"
+            className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[#172b4d] dark:text-gray-300 font-bold hover:bg-gray-50 dark:hover:bg-white/10 transition-colors shadow-sm text-sm"
           >
             <Layers size={18} />
             ⚡ Load Default Dashboard
@@ -1579,6 +1873,43 @@ const Dashboard = () => {
   return (
     <div ref={containerRef} className={`relative flex flex-col gap-4 animate-[fadeIn_0.3s_ease-out] w-full ${isFullscreen ? 'p-2 bg-[#f4f7fe] dark:bg-[#111217] min-h-screen' : ''}`}>
       
+      {/* Assembly Progress Animation HUD */}
+      {assemblingInfo && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] max-w-md w-[92vw] sm:w-auto min-w-[320px] p-3.5 rounded-2xl bg-white/95 dark:bg-[#1a1a2e]/95 backdrop-blur-md shadow-2xl border border-purple-500/40 dark:border-purple-500/50 flex flex-col gap-2 animate-[slideDownFade_0.3s_cubic-bezier(0.16,1,0.3,1)]">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-blue-500 flex items-center justify-center text-white shadow-md shadow-purple-500/25 shrink-0">
+                {assemblingInfo.completed ? (
+                  <Check size={16} strokeWidth={3} className="text-white" />
+                ) : (
+                  <Sparkles size={16} className="animate-spin" />
+                )}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                  {assemblingInfo.completed ? 'Perakitan Selesai' : 'Menyusun Dashboard...'}
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
+                    {assemblingInfo.current}/{assemblingInfo.total}
+                  </span>
+                </span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                  {assemblingInfo.currentTitle}
+                </span>
+              </div>
+            </div>
+            <span className="text-xs font-mono font-bold text-purple-600 dark:text-purple-400 shrink-0">
+              {assemblingInfo.progress}%
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 transition-all duration-300 rounded-full"
+              style={{ width: `${assemblingInfo.progress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {copySuccess && (
         <div className="fixed top-20 right-8 z-[1000] bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-[slideDownFade_0.3s_ease-out]">
           <Check size={16} />
@@ -1723,10 +2054,18 @@ const Dashboard = () => {
 
           {!isFullscreen && (
             <>
-              <button onClick={() => setShowExportModal(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 border border-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors shadow-sm">
+              <button onClick={() => setShowExportModal(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 border border-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors shadow-sm cursor-pointer">
                 <FileDown strokeWidth={2.5} size={14} /> Export
               </button>
-              <button onClick={() => { setEditingPanel(null); setEditorOpen(true); }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all">
+              <button
+                onClick={() => setIsAiModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white text-xs font-bold shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                title="Buka Asisten Dashboard"
+              >
+                <Bot strokeWidth={2.2} size={15} />
+                <span className="hidden sm:inline">Asisten Layout</span>
+              </button>
+              <button onClick={() => { setEditingPanel(null); setEditorOpen(true); }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all cursor-pointer">
                 <PlusSquare strokeWidth={2.5} size={14} /><span className="hidden sm:inline">Add Panel</span>
               </button>
             </>
@@ -1806,25 +2145,41 @@ const Dashboard = () => {
           isResizable={isEditing}
           compactType="vertical"
         >
-          {(panels || []).map(panel => (
-            <div key={panel.id} className="flex">
-              <div className={`bg-white dark:bg-[#181b1f] rounded-none p-3 shadow-sm border transition-all h-full w-full flex flex-col relative group overflow-hidden ${isEditing ? 'border-blue-200 dark:border-blue-500/20 ring-1 ring-blue-100 dark:ring-blue-500/10' : 'border-[#e5e7eb] dark:border-[#22252b] hover:border-[#d1d5db] dark:hover:border-[#32363e]'}`}>
-                
-                <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-50">
-                  {panel.type !== 'status' && (
-                    <button onClick={() => handleEditPanel(panel)} className="p-1.5 rounded-lg bg-white/80 dark:bg-black/40 backdrop-blur-sm hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-blue-500 transition-colors shadow-sm" title="Edit Panel">
-                      <Settings2 size={13} />
-                    </button>
+          {(panels || []).map(panel => {
+            const isNewlyAdded = newlyAddedPanelIds.has(String(panel.id));
+            return (
+              <div key={panel.id} className="flex">
+                <div
+                  className={`bg-white dark:bg-[#181b1f] rounded-none p-3 shadow-sm border transition-all duration-500 h-full w-full flex flex-col relative group overflow-hidden ${
+                    isNewlyAdded
+                      ? 'border-purple-500 dark:border-purple-400 ring-2 ring-purple-500/70 dark:ring-purple-400/70 shadow-[0_0_25px_rgba(168,85,247,0.35)] animate-[slideUpFade_0.4s_ease-out]'
+                      : isEditing
+                      ? 'border-blue-200 dark:border-blue-500/20 ring-1 ring-blue-100 dark:ring-blue-500/10'
+                      : 'border-[#e5e7eb] dark:border-[#22252b] hover:border-[#d1d5db] dark:hover:border-[#32363e]'
+                  }`}
+                >
+                  {isNewlyAdded && (
+                    <div className="absolute top-2 left-2 z-40 px-2 py-0.5 rounded-md bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white text-[9.5px] font-bold shadow-md flex items-center gap-1 animate-pulse pointer-events-none">
+                      <Sparkles size={10} /> Baru Ditambahkan
+                    </div>
                   )}
-                  <button onClick={() => handleDeletePanel(panel.id)} className="p-1.5 rounded-lg bg-white/80 dark:bg-black/40 backdrop-blur-sm hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors shadow-sm" title="Delete Panel">
-                    <Trash2 size={13} />
-                  </button>
-                </div>
 
-                <PanelRenderer panel={panel} latestData={latestData} chartData={getChartDataForPanel(panel)} tempData={tempData} isLive={isLive} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} updatePanel={handleUpdatePanel} />
+                  <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                    {panel.type !== 'status' && (
+                      <button onClick={() => handleEditPanel(panel)} className="p-1.5 rounded-lg bg-white/80 dark:bg-black/40 backdrop-blur-sm hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-blue-500 transition-colors shadow-sm cursor-pointer" title="Edit Panel">
+                        <Settings2 size={13} />
+                      </button>
+                    )}
+                    <button onClick={() => handleDeletePanel(panel.id)} className="p-1.5 rounded-lg bg-white/80 dark:bg-black/40 backdrop-blur-sm hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors shadow-sm cursor-pointer" title="Delete Panel">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+
+                  <PanelRenderer panel={panel} latestData={latestData} chartData={getChartDataForPanel(panel)} tempData={tempData} isLive={isLive} isEditing={isEditing} isSyncHoverActive={isSyncHoverActive} updatePanel={handleUpdatePanel} />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </ResponsiveGridLayout>
       </div>
 
@@ -1918,6 +2273,13 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
+      <AiLayoutModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        onApply={handleApplyAiLayout}
+        currentPanelsCount={panels?.length || 0}
+      />
     </div>
   );
 };
