@@ -66,6 +66,16 @@ async function patchCompanyDb(db) {
       await ensureColumn(db, table, "trafoId", "INT NOT NULL DEFAULT 1");
     }
   }
+  // Tabel kecil milik web: nama kustom dan foto. id = transformer_data.trafoId.
+  if (!(await hasTable(db, "trafo"))) {
+    await db.query(`CREATE TABLE trafo (
+      id INT NOT NULL PRIMARY KEY,
+      nama VARCHAR(100) NULL,
+      image_url VARCHAR(255) NULL,
+      created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
+    )`);
+    console.log("[SchemaPatch] tabel trafo dibuat");
+  }
   if (await hasTable(db, "temp_reading_data_realtime")) {
     await ensureIndex(
       db,
