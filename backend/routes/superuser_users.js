@@ -1,168 +1,123 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const bcrypt = require('bcryptjs');
-const { getDbConnection } = require('../utils/db');
-const formatPhoneNumber = require('../utils/phoneFormatter');
+const { getMasterDb } = require("../utils/db");
+const { requireRole } = require("../utils/authMiddleware");
+const { makeSalt, hashPassword } = require("../utils/userAuth");
+const { listUsersByCompany } = require("../utils/masterModel");
+const formatPhoneNumber = require("../utils/phoneFormatter");
 
-const checkSuperuser = async (req, res, next) => {
-  const dbName = req.headers['x-db-name'];
-  const username = req.headers['x-username'];
-  
-  if (!dbName || !username) {
-    return res.status(400).json({ error: 'Missing X-DB-Name or X-Username header' });
-  }
-  
+router.use(requireRole("superuser"), async (req, res, next) => {
   try {
-    const masterDb = await getDbConnection('tmu_master');
-    const [rows] = await masterDb.execute('SELECT ROLE as role FROM users WHERE username = ? LIMIT 1', [username]);
-    
-    if (rows.length === 0 || (rows[0].role || '').toLowerCase() !== 'superuser') {
-      return res.status(403).json({ error: 'Unauthorized. Superuser role required.' });
-    }
-    
-    req.dbName = dbName;
-    req.db = masterDb;
+    req.masterDb = await getMasterDb();
     next();
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error: ' + error.message });
+  } catch (e) {
+    res.status(500).json({ error: "Server error: " + e.message });
   }
-};
+});
 
-router.post('/', checkSuperuser, async (req, res) => {
+const FIELD_LABEL = { username: "Username", phone: "Phone number", email: "Email" };
+
+// null kalau unik, atau pesan error kalau nilai sudah dipakai user lain.
+async function assertUnique(masterDb, field, value, exceptId = null) {
+  if (!value || value === "-") return null;
+  const [rows] = await masterDb.execute(
+    `SELECT user_id FROM user WHERE ${field} = ?${exceptId ? " AND user_id != ?" : ""} LIMIT 1`,
+    exceptId ? [value, exceptId] : [value],
+  );
+  return rows.length > 0 ? `${FIELD_LABEL[field]} is already used by another user` : null;
+}
+
+router.post("/", async (req, res) => {
   try {
-    let { username, password, nomor_telpon, email, role } = req.body;
-    
+    let { username, password, nomor_telpon, email, role } = req.body || {};
     if (!username || !password || !nomor_telpon || !email) {
-      return res.status(400).json({ error: 'Username, password, nomor telepon, dan email wajib diisi' });
+      return res.status(400).json({ error: "Username, password, nomor telepon, dan email wajib diisi" });
     }
-    
     nomor_telpon = formatPhoneNumber(nomor_telpon);
-    
-    const [existing] = await req.db.execute('SELECT id FROM users WHERE username = ? LIMIT 1', [username]);
-    if (existing.length > 0) {
-      return res.status(400).json({ error: 'Username already exists' });
+    for (const [f, v] of [["username", username], ["phone", nomor_telpon], ["email", email]]) {
+      const err = await assertUnique(req.masterDb, f, v);
+      if (err) return res.status(400).json({ error: err });
     }
-    
-    if (nomor_telpon !== '-') {
-      const [existingPhone] = await req.db.execute('SELECT id FROM users WHERE nomor_telpon = ? LIMIT 1', [nomor_telpon]);
-      if (existingPhone.length > 0) {
-        return res.status(400).json({ error: 'Phone number is already used by another user' });
-      }
-    }
-    
-    if (email !== '-') {
-      const [existingEmail] = await req.db.execute('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
-      if (existingEmail.length > 0) {
-        return res.status(400).json({ error: 'Email is already used by another user' });
-      }
-    }
-    
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    const newRole = (role === 'superuser') ? 'superuser' : 'user';
-    
-    await req.db.execute(
-      'INSERT INTO users (nama_db, username, nomor_telpon, password, email, ROLE, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
-      [req.dbName, username, nomor_telpon, hashedPassword, email, newRole]
+    const salt = makeSalt();
+    const status = role === "superuser" ? 9 : 2;
+    await req.masterDb.execute(
+      "INSERT INTO user (username, password, role, salt, company_id, status, email, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      [username, hashPassword(password, salt), status, salt, req.user.companyId, status, email, nomor_telpon],
     );
-    
-    res.status(201).json({ message: 'User created successfully!' });
+    res.status(201).json({ message: "User created successfully!" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Server error: ' + error.message });
+    res.status(500).json({ error: "Server error: " + error.message });
   }
 });
 
-router.get('/', checkSuperuser, async (req, res) => {
+router.get("/", async (req, res) => {
   try {
-    const query = "SELECT u.id, u.username, u.ROLE as role, u.nama_db, u.nomor_telpon, u.email, u.created_at, c.nama_perusahaan FROM users u LEFT JOIN companies c ON (u.company_id = c.id OR (u.nama_db = c.nama_db AND u.nama_db != '-')) WHERE u.ROLE != 'admin' AND u.nama_db = ? ORDER BY u.id DESC";
-    const [users] = await req.db.execute(query, [req.dbName]);
-    const formattedUsers = users.map(u => ({
-      ...u,
-      company_name: u.nama_perusahaan || u.nama_db || '-'
-    }));
-    res.json(formattedUsers);
+    res.json(await listUsersByCompany(req.masterDb, req.user.companyId, { excludeAdmin: true }));
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Server error: ' + error.message });
+    res.status(500).json({ error: "Server error: " + error.message });
   }
 });
 
-router.put('/:id', checkSuperuser, async (req, res) => {
-  const { id } = req.params;
-  let { username, password, nomor_telpon, email, role } = req.body;
-  if (!nomor_telpon || !email) {
-    return res.status(400).json({ error: 'Nomor telepon dan email wajib diisi' });
-  }
+router.put("/:id", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  let { username, password, nomor_telpon, email, role } = req.body || {};
+  if (!nomor_telpon || !email) return res.status(400).json({ error: "Nomor telepon dan email wajib diisi" });
   nomor_telpon = formatPhoneNumber(nomor_telpon);
 
   try {
-    const [existing] = await req.db.execute("SELECT id FROM users WHERE id = ? AND ROLE != 'admin' AND nama_db = ? LIMIT 1", [id, req.dbName]);
-    if (existing.length === 0) return res.status(404).json({ error: 'User not found in your database' });
+    const [existing] = await req.masterDb.execute(
+      "SELECT user_id FROM user WHERE user_id = ? AND status != 1 AND company_id = ? LIMIT 1",
+      [id, req.user.companyId],
+    );
+    if (existing.length === 0) return res.status(404).json({ error: "User not found in your company" });
 
-    let query = 'UPDATE users SET ';
-    const params = [];
-    const updates = [];
-    
-    if (nomor_telpon !== '-') {
-      const [existingPhone] = await req.db.execute('SELECT id FROM users WHERE nomor_telpon = ? AND id != ? LIMIT 1', [nomor_telpon, id]);
-      if (existingPhone.length > 0) {
-        return res.status(400).json({ error: 'Phone number is already used by another user' });
-      }
+    for (const [f, v] of [["username", username], ["phone", nomor_telpon], ["email", email]]) {
+      const err = await assertUnique(req.masterDb, f, v, id);
+      if (err) return res.status(400).json({ error: err });
     }
 
-    if (email && email !== '-') {
-      const [existingEmail] = await req.db.execute('SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1', [email, id]);
-      if (existingEmail.length > 0) {
-        return res.status(400).json({ error: 'Email is already used by another user' });
-      }
+    const updates = ["phone = ?", "email = ?"];
+    const params = [nomor_telpon, email];
+    if (username !== undefined) {
+      updates.push("username = ?");
+      params.push(username);
     }
-
-    if (username !== undefined) { 
-      const [existingUser] = await req.db.execute('SELECT id FROM users WHERE username = ? AND id != ? LIMIT 1', [username, id]);
-      if (existingUser.length > 0) {
-        return res.status(400).json({ error: 'Username is already taken' });
-      }
-      updates.push('username = ?'); params.push(username); 
-    }
-    if (nomor_telpon !== undefined) { updates.push('nomor_telpon = ?'); params.push(nomor_telpon); }
-    if (email !== undefined) { updates.push('email = ?'); params.push(email); }
-    if (role !== undefined) { 
-      updates.push('ROLE = ?'); 
-      params.push(role === 'superuser' ? 'superuser' : 'user'); 
+    if (role !== undefined) {
+      const s = role === "superuser" ? 9 : 2;
+      updates.push("status = ?, role = ?");
+      params.push(s, s);
     }
     if (password) {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        updates.push('password = ?');
-        params.push(hashedPassword);
+      const salt = makeSalt();
+      updates.push("password = ?, salt = ?");
+      params.push(hashPassword(password, salt), salt);
     }
-
-    if (updates.length > 0) {
-      query += updates.join(', ') + ' WHERE id = ? AND nama_db = ?';
-      params.push(id, req.dbName);
-      await req.db.execute(query, params);
-    }
-
-    res.json({ message: 'User updated successfully' });
+    params.push(id, req.user.companyId);
+    await req.masterDb.execute(
+      `UPDATE user SET ${updates.join(", ")} WHERE user_id = ? AND company_id = ?`,
+      params,
+    );
+    res.json({ message: "User updated successfully" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Server error: ' + error.message });
+    res.status(500).json({ error: "Server error: " + error.message });
   }
 });
 
-router.delete('/:id', checkSuperuser, async (req, res) => {
-  const { id } = req.params;
-
+router.delete("/:id", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
   try {
-    const [existing] = await req.db.execute("SELECT id FROM users WHERE id = ? AND ROLE != 'admin' AND nama_db = ? LIMIT 1", [id, req.dbName]);
-    if (existing.length === 0) return res.status(404).json({ error: 'User not found in your database' });
-
-    await req.db.execute('DELETE FROM users WHERE id = ? AND nama_db = ?', [id, req.dbName]);
-    res.json({ message: 'User deleted successfully' });
+    const [r] = await req.masterDb.execute(
+      "DELETE FROM user WHERE user_id = ? AND status != 1 AND company_id = ?",
+      [id, req.user.companyId],
+    );
+    if (r.affectedRows === 0) return res.status(404).json({ error: "User not found in your company" });
+    res.json({ message: "User deleted successfully" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Server error: ' + error.message });
+    res.status(500).json({ error: "Server error: " + error.message });
   }
 });
 

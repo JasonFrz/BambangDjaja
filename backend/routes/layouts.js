@@ -1,29 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
-const { getDbConnection } = require('../utils/db');
-
-let isLayoutTableChecked = false;
-
-const ensureTrafoIdColumn = async (masterDb) => {
-  if (isLayoutTableChecked) return;
-  try {
-    const [cols] = await masterDb.execute("SHOW COLUMNS FROM user_layouts LIKE 'trafo_id'");
-    if (cols.length === 0) {
-      await masterDb.execute('ALTER TABLE user_layouts ADD COLUMN trafo_id VARCHAR(50)');
-      console.log('Added trafo_id to user_layouts');
-    }
-    isLayoutTableChecked = true;
-  } catch (error) {
-    console.error('Error ensuring trafo_id column:', error);
-  }
-};
+const { getMasterDb } = require('../utils/db');
 
 const getUserId = async (req, masterDb) => {
   if (req.user?.id) return req.user.id;
   const username = req.user?.username || req.headers['x-username'];
   if (username) {
-    const [rows] = await masterDb.execute('SELECT id FROM users WHERE username = ? LIMIT 1', [username]);
+    const [rows] = await masterDb.execute('SELECT user_id AS id FROM user WHERE username = ? LIMIT 1', [username]);
     if (rows.length > 0) return rows[0].id;
   }
   return null;
@@ -525,7 +509,7 @@ router.post('/ai-generate', async (req, res) => {
 router.get('/export/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const masterDb = await getDbConnection('tmu_master');
+    const masterDb = await getMasterDb();
     const [layouts] = await masterDb.execute('SELECT layout_name, layout_data FROM user_layouts WHERE id = ?', [id]);
     
     if (layouts.length === 0) {
@@ -553,8 +537,7 @@ router.get('/', async (req, res) => {
     
     if (!dbName) return res.status(400).json({ error: 'Company name is missing' });
     
-    const masterDb = await getDbConnection('tmu_master');
-    await ensureTrafoIdColumn(masterDb);
+    const masterDb = await getMasterDb();
     
     const userId = await getUserId(req, masterDb);
     if (!userId) return res.status(403).json({ error: 'User ID missing or unauthorized' });
@@ -600,8 +583,7 @@ router.post('/', async (req, res) => {
     const trafoId = req.headers['x-trafo-id'];
     if (!dbName) return res.status(400).json({ error: 'Company name is missing' });
     
-    const masterDb = await getDbConnection('tmu_master');
-    await ensureTrafoIdColumn(masterDb);
+    const masterDb = await getMasterDb();
     
     const userId = await getUserId(req, masterDb);
     if (!userId) return res.status(403).json({ error: 'User ID missing or unauthorized' });
@@ -665,7 +647,7 @@ router.put('/active', async (req, res) => {
     const trafoId = req.headers['x-trafo-id'];
     if (!dbName) return res.status(400).json({ error: 'Company name is missing' });
     
-    const masterDb = await getDbConnection('tmu_master');
+    const masterDb = await getMasterDb();
     const userId = await getUserId(req, masterDb);
     if (!userId) return res.status(403).json({ error: 'User ID missing or unauthorized' });
     
@@ -704,7 +686,7 @@ router.put('/:id', async (req, res) => {
     const dbName = req.headers['x-db-name'];
     if (!dbName) return res.status(400).json({ error: 'Company name is missing' });
     
-    const masterDb = await getDbConnection('tmu_master');
+    const masterDb = await getMasterDb();
     const userId = await getUserId(req, masterDb);
     if (!userId) return res.status(403).json({ error: 'User ID missing or unauthorized' });
     
@@ -730,7 +712,7 @@ router.delete('/:id', async (req, res) => {
     const dbName = req.headers['x-db-name'];
     if (!dbName) return res.status(400).json({ error: 'Company name is missing' });
     
-    const masterDb = await getDbConnection('tmu_master');
+    const masterDb = await getMasterDb();
     const userId = await getUserId(req, masterDb);
     if (!userId) return res.status(403).json({ error: 'User ID missing or unauthorized' });
     

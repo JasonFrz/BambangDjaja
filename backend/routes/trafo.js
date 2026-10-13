@@ -1,270 +1,270 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const { getDbConnection } = require('../utils/db');
-const { uploadToCloudinary } = require('../utils/cloudinaryClient');
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const { getDbConnection, getMasterDb } = require("../utils/db");
+const { requireRole } = require("../utils/authMiddleware");
+const { uploadToCloudinary } = require("../utils/cloudinaryClient");
+const { sendToRaspi } = require("../utils/raspiWebSocket");
+const { logActivity } = require("../utils/activityLog");
+const { getCompanyByDb } = require("../utils/masterModel");
+const rm = require("../utils/readingModel");
+const sm = require("../utils/statusModel");
+const tm = require("../utils/trafoModel");
 
-const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+const uploadDir = path.join(__dirname, "..", "public", "uploads");
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadDir),
+    filename: (req, file, cb) =>
+      cb(null, "trafo-" + Date.now() + "-" + Math.round(Math.random() * 1e9) + path.extname(file.originalname)),
+  }),
+});
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir)
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    cb(null, 'trafo-' + uniqueSuffix + path.extname(file.originalname))
+// Kolom transformer_data yang boleh diubah dari web (allowlist, bukan dari body).
+const EDITABLE_TD = [
+  "trafoSerialNo", "ratedPower", "ratedHighVoltage", "ratedLowVoltage", "ratedCurrentHighVoltage", "ratedCurrentLowVoltage",
+  "frequency", "vectorGroup", "phase", "tapType", "impedance", "noLoadLoss", "fullLoadLoss",
+  "tapPercentagePlus", "tapPercentageMinus", "tapNumberPlus", "tapNumberMinus",
+  "topOilHv", "topOilLv", "gradientHv", "gradientLv", "windTempHv", "windTempLv", "losses", "hotspotFactor",
+  "ctRatio", "coolingMode", "SuddenPressure", "latitude", "longitude", "intervalDelay", "krated", "productionStatus",
+];
+
+const HARMONIC_ORDERS = [
+  "1st", "3rd", "5th", "7th", "9th", "11th", "13th", "15th", "17th", "19th", "21th", "23th", "25th", "27th", "29th", "31th",
+];
+
+router.use(async (req, res, next) => {
+  const dbName = req.headers["x-db-name"];
+  if (!dbName) return res.status(400).json({ error: "Missing X-DB-Name header" });
+  try {
+    req.dbName = dbName;
+    req.db = await getDbConnection(dbName);
+    next();
+  } catch (e) {
+    res.status(500).json({ error: "Database tidak bisa diakses: " + e.message });
   }
 });
-const upload = multer({ storage: storage });
 
-const checkedTrafoTables = new Set();
+const trafoIdParam = (req) => parseInt(req.params.id, 10);
 
-const ensureTrafoTable = async (db, dbName) => {
-  if (checkedTrafoTables.has(dbName)) return;
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS trafo (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      nama VARCHAR(100),
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      image_url VARCHAR(255),
-      device_serial VARCHAR(100)
-    )
-  `);
-  
+// Harus didaftarkan sebelum /:id supaya "company-info" tidak dibaca sebagai id.
+router.get("/company-info", async (req, res) => {
   try {
-    await db.execute('ALTER TABLE trafo ADD COLUMN device_serial VARCHAR(100)');
-  } catch (err) {
-    if (err.code !== 'ER_DUP_FIELDNAME') {
-      console.error('Error adding device_serial column:', err);
-    }
-  }
-  
-  checkedTrafoTables.add(dbName);
-};
-
-router.post('/:id/image', upload.single('image'), async (req, res) => {
-  const trafoId = req.params.id;
-  const dbName = req.headers['x-db-name'];
-  
-  if (!dbName) {
-    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    return res.status(400).json({ error: 'Missing X-DB-Name header' });
-  }
-
-  if (!req.file) {
-    return res.status(400).json({ error: 'No image uploaded' });
-  }
-
-  try {
-    const db = await getDbConnection(dbName);
-    await ensureTrafoTable(db, dbName);
-    
-    const imageUrl = await uploadToCloudinary(req.file);
-
-    const [existing] = await db.execute('SELECT id FROM trafo WHERE id = ?', [trafoId]);
-    
-    if (existing.length === 0) {
-      await db.execute('INSERT INTO trafo (id, nama, image_url) VALUES (?, ?, ?)', [trafoId, 'Trafo ' + trafoId, imageUrl]);
-    } else {
-      await db.execute('UPDATE trafo SET image_url = ? WHERE id = ?', [imageUrl, trafoId]);
-    }
-
-    res.json({ success: true, imageUrl, message: 'Image uploaded to Cloudinary successfully' });
+    const c = await getCompanyByDb(await getMasterDb(), req.dbName);
+    // company_key adalah kredensial Raspi; hanya pengelola yang boleh melihatnya.
+    const canSeeKey = ["admin", "superuser"].includes(String(req.user?.role || "").toLowerCase());
+    res.json({
+      success: true,
+      nama_perusahaan: c ? c.company_name : req.dbName,
+      nama_db: req.dbName,
+      company_key: c && canSeeKey ? c.company_key : null,
+      tmu_version: c ? c.tmu_version : null,
+    });
   } catch (error) {
-    console.error('Error uploading trafo image:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-router.delete('/:id/image', async (req, res) => {
-  const trafoId = req.params.id;
-  const dbName = req.headers['x-db-name'];
-  
-  if (!dbName) return res.status(400).json({ error: 'Missing X-DB-Name header' });
-
+router.get("/", async (req, res) => {
   try {
-    const db = await getDbConnection(dbName);
-    await ensureTrafoTable(db, dbName);
-    
-    await db.execute('UPDATE trafo SET image_url = NULL WHERE id = ?', [trafoId]);
-    res.json({ success: true, message: 'Image reset successfully' });
+    res.json(await tm.listTrafos(req.db));
   } catch (error) {
-    console.error('Error resetting trafo image:', error);
-    res.status(500).json({ error: error.message });
+    console.error("Error fetching all trafos:", error);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-router.put('/:id/name', async (req, res) => {
-  const trafoId = req.params.id;
-  const dbName = req.headers['x-db-name'];
-  const { name } = req.body;
-  
-  if (!dbName) return res.status(400).json({ error: 'Missing X-DB-Name header' });
-  if (!name || name.trim() === '') return res.status(400).json({ error: 'Name is required' });
-
+router.get("/:id", async (req, res) => {
   try {
-    const db = await getDbConnection(dbName);
-    await ensureTrafoTable(db, dbName);
-    
-    await db.execute('UPDATE trafo SET nama = ? WHERE id = ?', [name.trim(), trafoId]);
-    res.json({ success: true, message: 'Name updated successfully' });
+    const list = await tm.listTrafos(req.db);
+    const t = list.find((x) => x.id === trafoIdParam(req));
+    if (!t) return res.status(404).json({ error: "Trafo not found in db" });
+    res.json(t);
   } catch (error) {
-    console.error('Error updating trafo name:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-router.get('/:id', async (req, res) => {
-  const trafoId = req.params.id;
-  const dbName = req.headers['x-db-name'];
-  
-  if (!dbName) return res.status(400).json({ error: 'Missing X-DB-Name header' });
+// ---------- nama kustom dan foto (tabel trafo) ----------
 
+router.put("/:id/name", async (req, res) => {
+  const name = String(req.body?.name || "").trim();
+  if (!name) return res.status(400).json({ error: "Name is required" });
   try {
-    const db = await getDbConnection(dbName);
-    await ensureTrafoTable(db, dbName);
-    
-    const [rows] = await db.execute('SELECT * FROM trafo WHERE id = ?', [trafoId]);
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Trafo not found in db' });
-    }
-    
-    res.json(rows[0]);
-  } catch (error) {
-    console.error('Error fetching trafo:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-router.get('/', async (req, res) => {
-  const dbName = req.headers['x-db-name'];
-  if (!dbName) return res.status(400).json({ error: 'Missing X-DB-Name header' });
-
-  try {
-    const db = await getDbConnection(dbName);
-    await ensureTrafoTable(db, dbName);
-    
-    const [rows] = await db.execute('SELECT * FROM trafo ORDER BY id ASC');
-
-    const transformers = await Promise.all(rows.map(async (t) => {
-      let isOnline = false;
-      try {
-        let lastDiffSeconds = null;
-
-        // Cek data sensor electrical_readings
-        try {
-          const [elecReadings] = await db.execute(
-            'SELECT timestamp, TIMESTAMPDIFF(SECOND, timestamp, NOW()) AS sec_diff FROM electrical_readings WHERE trafo_id = ? ORDER BY timestamp DESC LIMIT 1',
-            [t.id]
-          );
-          if (elecReadings.length > 0) {
-            const row = elecReadings[0];
-            const mySqlDiff = row.sec_diff !== null && row.sec_diff !== undefined ? Number(row.sec_diff) : null;
-            const nodeDiff = row.timestamp ? (Date.now() - new Date(row.timestamp).getTime()) / 1000 : null;
-            
-            const candidates = [mySqlDiff, nodeDiff].filter(d => d !== null && !isNaN(d) && d >= 0);
-            if (candidates.length > 0) {
-              lastDiffSeconds = Math.min(...candidates);
-            }
-          }
-        } catch (elecErr) {
-          if (elecErr.code === 'ER_BAD_FIELD_ERROR' && rows.length === 1) {
-            try {
-              const [elecReadings] = await db.execute(
-                'SELECT timestamp, TIMESTAMPDIFF(SECOND, timestamp, NOW()) AS sec_diff FROM electrical_readings ORDER BY timestamp DESC LIMIT 1'
-              );
-              if (elecReadings.length > 0) {
-                const row = elecReadings[0];
-                const mySqlDiff = row.sec_diff !== null && row.sec_diff !== undefined ? Number(row.sec_diff) : null;
-                const nodeDiff = row.timestamp ? (Date.now() - new Date(row.timestamp).getTime()) / 1000 : null;
-                const candidates = [mySqlDiff, nodeDiff].filter(d => d !== null && !isNaN(d) && d >= 0);
-                if (candidates.length > 0) {
-                  lastDiffSeconds = Math.min(...candidates);
-                }
-              }
-            } catch (_) {}
-          }
-        }
-
-        // Jika belum ada data atau belum online, periksa juga oil_readings
-        if (lastDiffSeconds === null || lastDiffSeconds > 20) {
-          try {
-            const [oilReadings] = await db.execute(
-              'SELECT timestamp, TIMESTAMPDIFF(SECOND, timestamp, NOW()) AS sec_diff FROM oil_readings WHERE trafo_id = ? ORDER BY timestamp DESC LIMIT 1',
-              [t.id]
-            );
-            if (oilReadings.length > 0) {
-              const row = oilReadings[0];
-              const mySqlDiff = row.sec_diff !== null && row.sec_diff !== undefined ? Number(row.sec_diff) : null;
-              const nodeDiff = row.timestamp ? (Date.now() - new Date(row.timestamp).getTime()) / 1000 : null;
-              const candidates = [mySqlDiff, nodeDiff].filter(d => d !== null && !isNaN(d) && d >= 0);
-              if (candidates.length > 0) {
-                const oilDiff = Math.min(...candidates);
-                if (lastDiffSeconds === null || oilDiff < lastDiffSeconds) {
-                  lastDiffSeconds = oilDiff;
-                }
-              }
-            }
-          } catch (_) {}
-        }
-
-        // HANYA Online jika benar-benar ada data masuk dalam 20 detik terakhir!
-        // Jika tidak ada data (null) atau data lama (> 20s), status tetap Offline!
-        if (lastDiffSeconds !== null && lastDiffSeconds >= 0 && lastDiffSeconds <= 20) {
-          isOnline = true;
-        }
-      } catch (err) {
-        console.error(`Error checking status for trafo ${t.id}:`, err.message);
-      }
-
-      return {
-        ...t,
-        status: isOnline ? 'Online' : 'Offline'
-      };
-    }));
-
-    res.json(transformers);
-  } catch (error) {
-    console.error('Error fetching all trafos:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-router.get('/company-info', async (req, res) => {
-  const dbName = req.headers['x-db-name'];
-  if (!dbName) return res.status(400).json({ error: 'Missing X-DB-Name header' });
-
-  try {
-    const masterDb = await getDbConnection('tmu_master');
-    const [rows] = await masterDb.execute(
-      'SELECT id, nama_perusahaan, nama_db FROM companies WHERE nama_db = ? LIMIT 1',
-      [dbName]
+    await req.db.execute(
+      "INSERT INTO trafo (id, nama) VALUES (?, ?) ON DUPLICATE KEY UPDATE nama = VALUES(nama)",
+      [trafoIdParam(req), name],
     );
-
-    if (rows.length > 0 && rows[0].nama_perusahaan) {
-      return res.json({ success: true, nama_perusahaan: rows[0].nama_perusahaan, nama_db: rows[0].nama_db });
-    }
-
-    const username = req.user?.username || req.headers['x-username'];
-    if (username) {
-      const [uRows] = await masterDb.execute(
-        'SELECT c.nama_perusahaan FROM users u JOIN companies c ON (u.company_id = c.id OR u.nama_db = c.nama_db) WHERE u.username = ? LIMIT 1',
-        [username]
-      );
-      if (uRows.length > 0 && uRows[0].nama_perusahaan) {
-        return res.json({ success: true, nama_perusahaan: uRows[0].nama_perusahaan, nama_db: dbName });
-      }
-    }
-
-    res.json({ success: true, nama_perusahaan: dbName, nama_db: dbName });
+    res.json({ success: true, message: "Name updated successfully" });
   } catch (error) {
-    console.error('Error fetching company info:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/:id/image", upload.single("image"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+  try {
+    const imageUrl = await uploadToCloudinary(req.file);
+    await req.db.execute(
+      "INSERT INTO trafo (id, image_url) VALUES (?, ?) ON DUPLICATE KEY UPDATE image_url = VALUES(image_url)",
+      [trafoIdParam(req), imageUrl],
+    );
+    res.json({ success: true, imageUrl, message: "Image uploaded to Cloudinary successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete("/:id/image", async (req, res) => {
+  try {
+    await req.db.execute("UPDATE trafo SET image_url = NULL WHERE id = ?", [trafoIdParam(req)]);
+    res.json({ success: true, message: "Image reset successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ---------- nameplate (transformer_data) ----------
+
+router.get("/:id/data", async (req, res) => {
+  try {
+    const td = await tm.getTransformerData(req.db, trafoIdParam(req));
+    if (!td) return res.status(404).json({ error: "transformer_data tidak ditemukan" });
+    res.json({ success: true, data: td, editable: EDITABLE_TD });
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.put("/:id/data", requireRole("admin", "superuser"), async (req, res) => {
+  const trafoId = trafoIdParam(req);
+  const body = req.body || {};
+  const keys = Object.keys(body).filter((k) => EDITABLE_TD.includes(k));
+  if (keys.length === 0) return res.status(400).json({ error: "Tidak ada kolom nameplate yang valid" });
+  try {
+    const before = await tm.getTransformerData(req.db, trafoId);
+    if (!before) return res.status(404).json({ error: "transformer_data tidak ditemukan" });
+
+    const sets = keys.map((k) => `\`${k}\` = ?`).join(", ");
+    const values = keys.map((k) => (body[k] === "" ? null : body[k]));
+    await req.db.execute(`UPDATE transformer_data SET ${sets} WHERE trafoId = ?`, [...values, trafoId]);
+
+    const after = await tm.getTransformerData(req.db, trafoId);
+    const pushed = sendToRaspi(after.raspiSerialNo, { type: "updateSyncTransformerDataFromServer", data: after });
+
+    const master = await getMasterDb();
+    const company = await getCompanyByDb(master, req.dbName);
+    logActivity(master, {
+      userId: req.user.id, companyId: company?.company_id, username: req.user.username,
+      type: "TRANSFORMER_DATA_UPDATE", description: `Ubah nameplate trafo ${trafoId}`, module: "transformer-data",
+      trafoId, trafoSerialNo: after.trafoSerialNo,
+      oldValue: Object.fromEntries(keys.map((k) => [k, before[k]])),
+      newValue: Object.fromEntries(keys.map((k) => [k, after[k]])),
+      ip: req.ip, userAgent: req.headers["user-agent"],
+    });
+    res.json({ success: true, data: after, pushed });
+  } catch (error) {
+    res.status(500).json({ error: "Server error", details: error.message });
+  }
+});
+
+// ---------- status per parameter + rekomendasi ----------
+
+router.get("/:id/status", async (req, res) => {
+  const trafoId = trafoIdParam(req);
+  try {
+    const [row, trip, recs] = await Promise.all([
+      tm.getStatusRow(req.db, trafoId),
+      tm.getTripStatusRow(req.db, trafoId),
+      tm.getRecommendations(await getMasterDb()),
+    ]);
+    const tripActive = trip ? sm.STATUS_COLUMNS.filter((c) => Number(trip[c]) === 1) : [];
+    res.json({ success: true, ...sm.buildStatusItems(row, recs), tripActive });
+  } catch (error) {
+    res.status(500).json({ error: "Server error", details: error.message });
+  }
+});
+
+// ---------- panel Physical: tap, oil level, pressure, gas fault, sudden pressure ----------
+
+router.get("/:id/physical", async (req, res) => {
+  const trafoId = trafoIdParam(req);
+  try {
+    const [td, status, latest] = await Promise.all([
+      tm.getTransformerData(req.db, trafoId),
+      tm.getStatusRow(req.db, trafoId),
+      rm.getLatest(req.db, trafoId),
+    ]);
+    const LOG_COLS = "failure_id, time_start, duration, failure_type, parameter, parameterValue";
+    const [gas] = await req.db.execute(
+      `SELECT ${LOG_COLS} FROM failure_log WHERE trafoId = ? AND (failure_type LIKE '%Gas%' OR parameter = 'GasFault') ORDER BY time_start DESC LIMIT 1`,
+      [trafoId],
+    );
+    const [sudden] = await req.db.execute(
+      `SELECT ${LOG_COLS} FROM failure_log WHERE trafoId = ? AND (failure_type LIKE '%Sudden%' OR parameter = 'SuddenPressure') ORDER BY time_start DESC LIMIT 1`,
+      [trafoId],
+    );
+    const oilCode = sm.normalizeCode(status && status.OilLevel);
+    const pressCode = sm.normalizeCode(status && status.Pressure);
+    res.json({
+      success: true,
+      tap: {
+        type: td ? td.tapType : null,
+        position: td && td.tapType === "OCTC" ? td.impedance : null,
+        plus: td ? td.tapNumberPlus : null,
+        minus: td ? td.tapNumberMinus : null,
+      },
+      oilLevel: { code: oilCode, label: sm.STATUS_LABELS[oilCode], level: sm.levelOf(oilCode), raw: latest ? latest.oilLevelRaw : null },
+      pressure: { value: latest ? latest.oil_pressure : null, code: pressCode, level: sm.pressureLevel(pressCode), reference: 0.5 },
+      gasFault: gas[0] || null,
+      suddenPressure: { flag: td ? td.SuddenPressure : null, lastLog: sudden[0] || null },
+      timestamp: latest ? latest.timestamp : null,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Server error", details: error.message });
+  }
+});
+
+// Kolom oil quality tidak ada di dump base_tmu; balas available:false kalau memang tidak ada.
+router.get("/:id/oil-quality", async (req, res) => {
+  try {
+    const [rows] = await req.db.execute(
+      "SELECT waterActivity, oilBDV, oilCondition FROM transformer_data WHERE trafoId = ?",
+      [trafoIdParam(req)],
+    );
+    const r = rows[0] || {};
+    res.json({
+      success: true, available: true,
+      waterActivity: r.waterActivity ?? null, oilBDV: r.oilBDV ?? null, oilCondition: r.oilCondition ?? null,
+    });
+  } catch (error) {
+    if (error.code === "ER_BAD_FIELD_ERROR") return res.json({ success: true, available: false });
+    res.status(500).json({ error: "Server error", details: error.message });
+  }
+});
+
+router.get("/:id/harmonics", async (req, res) => {
+  const type = req.query.type === "current" ? "current" : "voltage";
+  const table = type === "current" ? "temp_current_harmonic" : "temp_voltage_harmonic";
+  try {
+    const cols = HARMONIC_ORDERS.map((o) => `\`${o}\``).join(", ");
+    const [rows] = await req.db.query(`SELECT Phase, ${cols} FROM ${table} WHERE trafoId = ? ORDER BY Phase ASC`, [
+      trafoIdParam(req),
+    ]);
+    res.json({
+      success: true,
+      type,
+      orders: HARMONIC_ORDERS,
+      data: rows.map((r) => ({
+        phase: r.Phase,
+        orders: Object.fromEntries(HARMONIC_ORDERS.map((o) => [o, rm.toNumber(r[o]) ?? 0])),
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Server error", details: error.message });
   }
 });
 

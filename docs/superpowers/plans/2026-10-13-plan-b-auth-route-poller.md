@@ -1125,7 +1125,7 @@ Tabel ini hanya menyimpan nama kustom dan foto; `id` = `transformer_data.trafoId
 1. Test "patchCompanyDb menambah trafoId ke tabel temp dan index unik": responder-nya sekarang menjawab semua `SHOW TABLES` dengan 1 baris, jadi `trafo` dianggap sudah ada. Ubah responder menjadi
 
 ```js
-  const db = makeFakeDb((sql) => (/SHOW TABLES/i.test(sql) && !/'trafo'/.test(sql) ? [{ t: 1 }] : []));
+  const db = makeFakeDb((sql, params) => (/SHOW TABLES/i.test(sql) && params[0] !== 'trafo' ? [{ t: 1 }] : []));
 ```
 
 dan tambahkan assert di akhir test:
@@ -1383,11 +1383,13 @@ const trafoIdParam = (req) => parseInt(req.params.id, 10);
 router.get('/company-info', async (req, res) => {
   try {
     const c = await getCompanyByDb(await getMasterDb(), req.dbName);
+    // company_key adalah kredensial Raspi; hanya pengelola yang boleh melihatnya.
+    const canSeeKey = ['admin', 'superuser'].includes(String(req.user?.role || '').toLowerCase());
     res.json({
       success: true,
       nama_perusahaan: c ? c.company_name : req.dbName,
       nama_db: req.dbName,
-      company_key: c ? c.company_key : null,
+      company_key: c && canSeeKey ? c.company_key : null,
       tmu_version: c ? c.tmu_version : null,
     });
   } catch (error) {

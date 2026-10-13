@@ -218,6 +218,7 @@ module.exports = {
   WATT_COLUMNS,
   mapRow,
   buildSelect,
+  toNumber,
   getLatest,
   getRealtimeSeries,
   getHistory,

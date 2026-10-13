@@ -1,319 +1,277 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { getAllDatabases, getDbConnection, getAdminPool } = require('../utils/db');
-const bcrypt = require('bcryptjs');
+const { getAllDatabases, getDbConnection, getAdminPool, getMasterDb, getMasterDbName } = require("../utils/db");
+const { requireRole } = require("../utils/authMiddleware");
+const { assertValidDbName } = require("../utils/sqlTemplate");
+const { makeSalt, hashPassword } = require("../utils/userAuth");
+const { USER_SELECT, formatUser } = require("../utils/masterModel");
+const formatPhoneNumber = require("../utils/phoneFormatter");
 
-const authenticateSuperAdmin = (req, res, next) => {
-  const isSuper = req.headers['x-super-admin'];
-  if (isSuper === 'true') {
-    next();
-  } else {
-    return res.status(401).json({ error: 'Unauthorized. Super admin access required.' });
+const SYSTEM_DBS = ["information_schema", "mysql", "performance_schema", "sys", "defaultdb"];
+const isProtectedDb = (name) => SYSTEM_DBS.includes(name) || name === getMasterDbName();
+
+router.use(requireRole("admin"), (req, res, next) => {
+  if (req.headers["x-super-admin"] !== "true") {
+    return res.status(401).json({ error: "Unauthorized. Super admin access required." });
   }
-};
+  next();
+});
 
-router.use(authenticateSuperAdmin);
+// ---------- database ----------
 
-router.get('/databases', async (req, res) => {
+router.get("/databases", async (req, res) => {
   try {
-    const databases = await getAllDatabases();
-    res.json({ success: true, databases });
+    res.json({ success: true, databases: await getAllDatabases() });
   } catch (error) {
-    console.error('Error fetching databases:', error);
-    res.status(500).json({ error: 'Failed to fetch databases', details: error.message });
+    res.status(500).json({ error: "Failed to fetch databases", details: error.message });
   }
 });
 
-router.get('/databases/:dbName/tables', async (req, res) => {
-  const { dbName } = req.params;
+router.get("/databases/:dbName/tables", async (req, res) => {
   try {
-    const pool = await getDbConnection(dbName);
-    const [rows] = await pool.execute('SHOW TABLES');
-
-    const tables = rows.map(row => Object.values(row)[0]);
-    res.json({ success: true, tables });
+    assertValidDbName(req.params.dbName);
+    const pool = await getDbConnection(req.params.dbName);
+    const [rows] = await pool.query("SHOW TABLES");
+    res.json({ success: true, tables: rows.map((r) => Object.values(r)[0]) });
   } catch (error) {
-    console.error(`Error fetching tables for db ${dbName}:`, error);
-    res.status(500).json({ error: 'Failed to fetch tables', details: error.message });
+    res.status(500).json({ error: "Failed to fetch tables", details: error.message });
   }
 });
 
-router.get('/databases/:dbName/tables/:tableName', async (req, res) => {
+router.get("/databases/:dbName/tables/:tableName", async (req, res) => {
   const { dbName, tableName } = req.params;
   const { limit, sort } = req.query;
   try {
+    assertValidDbName(dbName);
+    assertValidDbName(tableName);
     const pool = await getDbConnection(dbName);
-
-    const [cols] = await pool.execute(`SHOW COLUMNS FROM \`${tableName}\``);
-    const colNames = cols.map(c => c.Field);
-
-    let orderClause = '';
-    if (sort === 'latest') {
-      if (colNames.includes('id')) orderClause = 'ORDER BY id DESC';
-      else if (colNames.includes('timestamp')) orderClause = 'ORDER BY timestamp DESC';
-      else if (colNames.includes('created_at')) orderClause = 'ORDER BY created_at DESC';
-    } else if (sort === 'oldest') {
-      if (colNames.includes('id')) orderClause = 'ORDER BY id ASC';
-      else if (colNames.includes('timestamp')) orderClause = 'ORDER BY timestamp ASC';
-      else if (colNames.includes('created_at')) orderClause = 'ORDER BY created_at ASC';
-    }
-
-    let limitClause = 'LIMIT 100';
-    if (limit === 'all') {
-      limitClause = '';
-    } else if (limit) {
-      const parsed = parseInt(limit);
-      if (!isNaN(parsed) && parsed > 0) {
-        limitClause = `LIMIT ${parsed}`;
-      }
-    }
-
-    const query = `SELECT * FROM \`${tableName}\` ${orderClause} ${limitClause}`;
-    const [rows] = await pool.execute(query);
+    const [cols] = await pool.query(`SHOW COLUMNS FROM \`${tableName}\``);
+    const names = cols.map((c) => c.Field);
+    const orderCol = ["id", "timestamp", "created_at", "data_id", "rowId", "trafoId"].find((c) => names.includes(c));
+    const orderClause =
+      orderCol && (sort === "latest" || sort === "oldest")
+        ? `ORDER BY \`${orderCol}\` ${sort === "latest" ? "DESC" : "ASC"}`
+        : "";
+    const parsed = parseInt(limit, 10);
+    const limitClause = limit === "all" ? "" : `LIMIT ${Number.isFinite(parsed) && parsed > 0 ? parsed : 100}`;
+    const [rows] = await pool.query(`SELECT * FROM \`${tableName}\` ${orderClause} ${limitClause}`);
     res.json({ success: true, data: rows });
   } catch (error) {
-    console.error(`Error fetching data for table ${tableName}:`, error);
-    res.status(500).json({ error: 'Failed to fetch table data', details: error.message });
+    res.status(500).json({ error: "Failed to fetch table data", details: error.message });
   }
 });
 
-router.put('/databases/:oldDbName', async (req, res) => {
+router.put("/databases/:oldDbName", async (req, res) => {
   const { oldDbName } = req.params;
-  const { newDbName } = req.body;
-
-  if (!newDbName || newDbName.trim() === '') {
-    return res.status(400).json({ error: 'New database name is required' });
+  const newDbName = String(req.body?.newDbName || "").trim();
+  if (!newDbName) return res.status(400).json({ error: "New database name is required" });
+  if (isProtectedDb(oldDbName) || isProtectedDb(newDbName)) {
+    return res.status(403).json({ error: "Cannot rename system database" });
   }
-
-  const systemDbs = ['information_schema', 'mysql', 'performance_schema', 'sys', 'defaultdb', 'tmu_master'];
-  if (systemDbs.includes(oldDbName) || systemDbs.includes(newDbName)) {
-    return res.status(403).json({ error: 'Cannot rename system database' });
-  }
-
   try {
+    assertValidDbName(oldDbName);
+    assertValidDbName(newDbName);
     const pool = await getAdminPool();
-    const [rows] = await pool.query('SHOW DATABASES LIKE ?', [newDbName]);
-    if (rows.length > 0) return res.status(400).json({ error: 'Database with new name already exists' });
+    const [rows] = await pool.query("SHOW DATABASES LIKE ?", [newDbName]);
+    if (rows.length > 0) return res.status(400).json({ error: "Database with new name already exists" });
 
     await pool.query(`CREATE DATABASE \`${newDbName}\``);
-
-    const [tables] = await pool.query(`SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = ?`, [oldDbName]);
-    for (const table of tables) {
-      const tableName = table.TABLE_NAME;
-      await pool.query(`RENAME TABLE \`${oldDbName}\`.\`${tableName}\` TO \`${newDbName}\`.\`${tableName}\``);
+    const [tables] = await pool.query(
+      "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = ?",
+      [oldDbName],
+    );
+    for (const t of tables) {
+      await pool.query(`RENAME TABLE \`${oldDbName}\`.\`${t.TABLE_NAME}\` TO \`${newDbName}\`.\`${t.TABLE_NAME}\``);
     }
-
     await pool.query(`DROP DATABASE \`${oldDbName}\``);
-    await pool.query(`UPDATE tmu_master.users SET nama_db = ? WHERE nama_db = ?`, [newDbName, oldDbName]);
-
+    const master = await getMasterDb();
+    await master.execute("UPDATE company SET database_name = ? WHERE database_name = ?", [newDbName, oldDbName]);
     res.json({ success: true, message: `Database successfully renamed to ${newDbName}.` });
   } catch (error) {
-    console.error(`Error renaming database ${oldDbName} to ${newDbName}:`, error);
-    res.status(500).json({ error: 'Failed to rename database', details: error.message });
+    res.status(500).json({ error: "Failed to rename database", details: error.message });
   }
 });
 
-router.delete('/databases/:dbName', async (req, res) => {
+router.delete("/databases/:dbName", async (req, res) => {
   const { dbName } = req.params;
-
-  const systemDbs = ['information_schema', 'mysql', 'performance_schema', 'sys', 'defaultdb', 'tmu_master'];
-  if (systemDbs.includes(dbName)) {
-    return res.status(403).json({ error: 'Cannot delete system database' });
-  }
-
+  if (isProtectedDb(dbName)) return res.status(403).json({ error: "Cannot delete system database" });
   try {
-
+    assertValidDbName(dbName);
     const pool = await getAdminPool();
     await pool.query(`DROP DATABASE \`${dbName}\``);
-
     res.json({ success: true, message: `Database ${dbName} successfully deleted.` });
   } catch (error) {
-    console.error(`Error dropping database ${dbName}:`, error);
-    res.status(500).json({ error: 'Failed to delete database', details: error.message });
+    res.status(500).json({ error: "Failed to delete database", details: error.message });
   }
 });
 
-// Admin Users CRUD endpoints
-router.get('/users', async (req, res) => {
+// ---------- admin platform (status 1) ----------
+
+router.get("/users", async (req, res) => {
   try {
-    const pool = await getDbConnection('tmu_master');
-    const [users] = await pool.execute("SELECT u.id, u.username, u.ROLE as role, u.email, u.nomor_telpon, u.created_at, c.nama_perusahaan FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.role = 'admin' ORDER BY u.created_at DESC");
-    res.json({ success: true, data: users });
+    const master = await getMasterDb();
+    const [rows] = await master.execute(`${USER_SELECT} WHERE u.status = 1 ORDER BY u.user_id DESC`);
+    res.json({ success: true, data: rows.map(formatUser) });
   } catch (error) {
-    console.error('Error fetching admin users:', error);
-    res.status(500).json({ error: 'Failed to fetch admin users' });
+    res.status(500).json({ error: "Failed to fetch admin users" });
   }
 });
 
-router.post('/users', async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
-
+router.post("/users", async (req, res) => {
+  const { username, password } = req.body || {};
+  if (!username || !password) return res.status(400).json({ error: "Username and password required" });
   try {
-    const pool = await getDbConnection('tmu_master');
-    const [existing] = await pool.execute('SELECT id FROM users WHERE username = ?', [username]);
-    if (existing.length > 0) return res.status(400).json({ error: 'Username already exists' });
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    await pool.execute(
-      "INSERT INTO users (nama_db, username, nomor_telpon, password, email, ROLE, created_at) VALUES (?, ?, ?, ?, ?, 'admin', NOW())",
-      ['tmu_master', username, '-', hashedPassword, '-']
+    const master = await getMasterDb();
+    const [existing] = await master.execute("SELECT user_id FROM user WHERE username = ? LIMIT 1", [username]);
+    if (existing.length > 0) return res.status(400).json({ error: "Username already exists" });
+    const salt = makeSalt();
+    await master.execute(
+      "INSERT INTO user (username, password, role, salt, company_id, status, email, phone) VALUES (?, ?, 1, ?, 0, 1, NULL, NULL)",
+      [username, hashPassword(password, salt), salt],
     );
-    res.json({ success: true, message: 'Admin user created successfully' });
+    res.json({ success: true, message: "Admin user created successfully" });
   } catch (error) {
-    console.error('Error creating admin user:', error);
-    res.status(500).json({ error: 'Failed to create admin user' });
+    res.status(500).json({ error: "Failed to create admin user" });
   }
 });
 
-router.put('/users/:id', async (req, res) => {
-  const { id } = req.params;
-  const { username, password } = req.body;
-
+router.put("/users/:id", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const { username, password } = req.body || {};
   try {
-    const pool = await getDbConnection('tmu_master');
-
+    const master = await getMasterDb();
     if (username) {
-      const [existing] = await pool.execute('SELECT id FROM users WHERE username = ? AND id != ?', [username, id]);
-      if (existing.length > 0) return res.status(400).json({ error: 'Username already taken' });
+      const [dup] = await master.execute(
+        "SELECT user_id FROM user WHERE username = ? AND user_id != ? LIMIT 1",
+        [username, id],
+      );
+      if (dup.length > 0) return res.status(400).json({ error: "Username already taken" });
     }
-
-    if (password) {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      await pool.execute('UPDATE users SET username = ?, password = ? WHERE id = ?', [username, hashedPassword, id]);
-    } else {
-      await pool.execute('UPDATE users SET username = ? WHERE id = ?', [username, id]);
-    }
-
-    res.json({ success: true, message: 'Admin user updated successfully' });
-  } catch (error) {
-    console.error('Error updating admin user:', error);
-    res.status(500).json({ error: 'Failed to update admin user' });
-  }
-});
-
-router.delete('/users/:id', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const pool = await getDbConnection('tmu_master');
-    const [countRow] = await pool.execute("SELECT COUNT(*) as count FROM users WHERE role = 'admin'");
-    if (countRow[0].count <= 1) {
-      return res.status(400).json({ error: 'Cannot delete the last remaining admin user' });
-    }
-
-    await pool.execute("DELETE FROM users WHERE id = ? AND role = 'admin'", [id]);
-    res.json({ success: true, message: 'Admin user deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting admin user:', error);
-    res.status(500).json({ error: 'Failed to delete admin user' });
-  }
-});
-
-router.get('/all-users', async (req, res) => {
-  try {
-    const pool = await getDbConnection('tmu_master');
-    const [users] = await pool.execute("SELECT u.id, u.username, u.ROLE as role, u.email, u.nomor_telpon as nomor_telpon, u.nama_db, u.created_at, c.nama_perusahaan FROM users u LEFT JOIN companies c ON (u.company_id = c.id OR (u.nama_db = c.nama_db AND u.nama_db != '-')) WHERE u.ROLE != 'admin' ORDER BY u.created_at DESC");
-    const formattedUsers = users.map(u => ({
-      ...u,
-      company_name: u.nama_perusahaan || u.nama_db || '-'
-    }));
-    res.json({ success: true, data: formattedUsers });
-  } catch (error) {
-    console.error('Error fetching all users:', error);
-    res.status(500).json({ error: 'Failed to fetch all users' });
-  }
-});
-
-router.put('/app-users/:id', async (req, res) => {
-  const { id } = req.params;
-  const { username, password, role, nama_db, nomor_telpon, email } = req.body;
-
-  try {
-    const pool = await getDbConnection('tmu_master');
-
-    if (username) {
-      const [existing] = await pool.execute('SELECT id FROM users WHERE username = ? AND id != ?', [username, id]);
-      if (existing.length > 0) return res.status(400).json({ error: 'Username already taken' });
-    }
-
-    const formatPhoneNumber = require('../utils/phoneFormatter');
-    let phone = nomor_telpon ? formatPhoneNumber(nomor_telpon) : undefined;
-
-    let query = 'UPDATE users SET ';
-    const params = [];
     const updates = [];
-
-    if (username !== undefined) { updates.push('username = ?'); params.push(username); }
-    if (role !== undefined) { updates.push('ROLE = ?'); params.push(role); }
-    if (nama_db !== undefined) { updates.push('nama_db = ?'); params.push(nama_db); }
-    if (phone !== undefined) { updates.push('nomor_telpon = ?'); params.push(phone || '-'); }
-    if (email !== undefined) { updates.push('email = ?'); params.push(email); }
-
+    const params = [];
+    if (username) {
+      updates.push("username = ?");
+      params.push(username);
+    }
     if (password) {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      updates.push('password = ?'); params.push(hashedPassword);
+      const salt = makeSalt();
+      updates.push("password = ?, salt = ?");
+      params.push(hashPassword(password, salt), salt);
     }
+    if (updates.length === 0) return res.status(400).json({ error: "Nothing to update" });
+    params.push(id);
+    await master.execute(`UPDATE user SET ${updates.join(", ")} WHERE user_id = ? AND status = 1`, params);
+    res.json({ success: true, message: "Admin user updated successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update admin user" });
+  }
+});
 
+router.delete("/users/:id", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  try {
+    const master = await getMasterDb();
+    const [[{ count }]] = await master.execute("SELECT COUNT(*) AS count FROM user WHERE status = 1");
+    if (count <= 1) return res.status(400).json({ error: "Cannot delete the last remaining admin user" });
+    await master.execute("DELETE FROM user WHERE user_id = ? AND status = 1", [id]);
+    res.json({ success: true, message: "Admin user deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete admin user" });
+  }
+});
+
+// ---------- user aplikasi (superuser + user semua perusahaan) ----------
+
+router.get("/all-users", async (req, res) => {
+  try {
+    const master = await getMasterDb();
+    const [rows] = await master.execute(`${USER_SELECT} WHERE u.status != 1 ORDER BY u.user_id DESC`);
+    res.json({ success: true, data: rows.map(formatUser) });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch all users" });
+  }
+});
+
+router.put("/app-users/:id", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const { username, password, role, nama_db, nomor_telpon, email } = req.body || {};
+  try {
+    const master = await getMasterDb();
+    if (username) {
+      const [dup] = await master.execute(
+        "SELECT user_id FROM user WHERE username = ? AND user_id != ? LIMIT 1",
+        [username, id],
+      );
+      if (dup.length > 0) return res.status(400).json({ error: "Username already taken" });
+    }
+    const updates = [];
+    const params = [];
+    if (username !== undefined) {
+      updates.push("username = ?");
+      params.push(username);
+    }
+    if (role !== undefined) {
+      const s = role === "superuser" ? 9 : 2;
+      updates.push("status = ?, role = ?");
+      params.push(s, s);
+    }
+    if (nama_db !== undefined) {
+      const [c] = await master.execute("SELECT company_id FROM company WHERE database_name = ? LIMIT 1", [nama_db]);
+      if (c.length === 0) return res.status(400).json({ error: `Database ${nama_db} tidak terdaftar sebagai perusahaan` });
+      updates.push("company_id = ?");
+      params.push(c[0].company_id);
+    }
+    if (nomor_telpon !== undefined) {
+      updates.push("phone = ?");
+      params.push(formatPhoneNumber(nomor_telpon) || null);
+    }
+    if (email !== undefined) {
+      updates.push("email = ?");
+      params.push(email || null);
+    }
+    if (password) {
+      const salt = makeSalt();
+      updates.push("password = ?, salt = ?");
+      params.push(hashPassword(password, salt), salt);
+    }
     if (updates.length > 0) {
-      query += updates.join(', ') + " WHERE id = ? AND ROLE != 'admin'";
       params.push(id);
-      await pool.execute(query, params);
+      await master.execute(`UPDATE user SET ${updates.join(", ")} WHERE user_id = ? AND status != 1`, params);
     }
-
-    res.json({ success: true, message: 'App user updated successfully' });
+    res.json({ success: true, message: "App user updated successfully" });
   } catch (error) {
-    console.error('Error updating app user:', error);
-    res.status(500).json({ error: 'Failed to update app user' });
+    res.status(500).json({ error: "Failed to update app user" });
   }
 });
 
-router.delete('/app-users/:id', async (req, res) => {
-  const { id } = req.params;
-
+router.delete("/app-users/:id", async (req, res) => {
   try {
-    const pool = await getDbConnection('tmu_master');
-    await pool.execute("DELETE FROM users WHERE id = ? AND ROLE != 'admin'", [id]);
-    res.json({ success: true, message: 'App user deleted successfully' });
+    const master = await getMasterDb();
+    await master.execute("DELETE FROM user WHERE user_id = ? AND status != 1", [parseInt(req.params.id, 10)]);
+    res.json({ success: true, message: "App user deleted successfully" });
   } catch (error) {
-    console.error('Error deleting app user:', error);
-    res.status(500).json({ error: 'Failed to delete app user' });
+    res.status(500).json({ error: "Failed to delete app user" });
   }
 });
 
-router.get('/stats', async (req, res) => {
+router.get("/stats", async (req, res) => {
   try {
-    const { getAllDatabases } = require('../utils/db');
-    const dbRows = await getAllDatabases();
-    const dbCount = dbRows.length;
-
-    let totalTables = 0;
-    if (dbRows.length > 0) {
+    const dbs = await getAllDatabases();
+    let tables = 0;
+    if (dbs.length > 0) {
       const pool = await getAdminPool();
-      const dbNames = dbRows.map(db => `'${db}'`).join(',');
-      const [tableCountRes] = await pool.execute(`SELECT COUNT(*) as count FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA IN (${dbNames})`);
-      totalTables = tableCountRes[0].count;
+      const [[r]] = await pool.query(
+        "SELECT COUNT(*) AS count FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA IN (?)",
+        [dbs],
+      );
+      tables = r.count;
     }
-
-    const poolMaster = await getDbConnection('tmu_master');
-
-    const [userRes] = await poolMaster.execute("SELECT COUNT(*) as count FROM users WHERE ROLE != 'admin'");
-    const [adminRes] = await poolMaster.execute("SELECT COUNT(*) as count FROM users WHERE role = 'admin'");
-
-    res.json({
-      success: true,
-      databases: dbCount,
-      tables: totalTables,
-      appUsers: userRes[0].count,
-      activeAdmins: adminRes[0].count
-    });
+    const master = await getMasterDb();
+    const [[u]] = await master.execute("SELECT COUNT(*) AS count FROM user WHERE status != 1");
+    const [[a]] = await master.execute("SELECT COUNT(*) AS count FROM user WHERE status = 1");
+    res.json({ success: true, databases: dbs.length, tables, appUsers: u.count, activeAdmins: a.count });
   } catch (error) {
-    console.error('Error fetching admin stats:', error);
-    res.status(500).json({ error: 'Failed to fetch stats' });
+    res.status(500).json({ error: "Failed to fetch stats" });
   }
 });
 
