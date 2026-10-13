@@ -1,99 +1,80 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
-const { getDbConnection, getAllDatabases } = require('../utils/db');
-const jwt = require('jsonwebtoken');
-const rateLimit = require('express-rate-limit');
+const jwt = require("jsonwebtoken");
+const rateLimit = require("express-rate-limit");
+const { getMasterDb, getMasterDbName } = require("../utils/db");
+const { verifyPassword, roleFromStatus } = require("../utils/userAuth");
+const { logActivity } = require("../utils/activityLog");
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10, 
-  message: { error: 'Terlalu banyak percobaan login. Silakan coba lagi setelah 15 menit.' },
+  max: 10,
+  message: {
+    error:
+      "Terlalu banyak percobaan login, Silahkan coba lagi setelah 15 menit",
+  },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-router.post('/login', loginLimiter, async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Missing username or password' });
-  }
-  
+router.post("/login", loginLimiter, async (req, res) => {
+  const { username, password } = req.body || {};
+  if (!username || !password)
+    return res.status(400).json({ error: "Missing username or password" });
+
   try {
-    const masterDb = await getDbConnection('tmu_master');
-    
-    const query = 'SELECT u.*, c.nama_perusahaan FROM users u LEFT JOIN companies c ON (u.company_id = c.id OR (u.nama_db = c.nama_db AND u.nama_db != "-")) WHERE u.username = ? OR u.email = ? OR u.nomor_telpon = ? LIMIT 1';
-    const queryParams = [username, username, username];
-    
-    const [rows] = await masterDb.execute(query, queryParams);
-    
-    if (rows.length === 0) {
-      console.log('Login failed: user not found.');
-      return res.status(401).json({ error: 'Username atau password invalid' });
-    }
-    
-    const user = rows[0];
-    const storedHash = user.password;
-    
-    let isMatch = false;
-    if (storedHash) {
-      if (storedHash.startsWith('$2a$') || storedHash.startsWith('$2b$')) {
-        isMatch = await bcrypt.compare(password, storedHash);
-      } else if (storedHash.length === 64 && /^[a-f0-9]+$/i.test(storedHash)) {
-        const sha256 = crypto.createHash('sha256').update(password).digest('hex');
-        isMatch = sha256 === storedHash;
-      } else if (storedHash.length === 32 && /^[a-f0-9]+$/i.test(storedHash)) {
-        const md5 = crypto.createHash('md5').update(password).digest('hex');
-        isMatch = md5 === storedHash;
-      } else {
-        isMatch = password === storedHash;
-      }
-    }
-    
-    if (!isMatch) {
-      console.log('Login failed: password incorrect.');
-      return res.status(401).json({ error: 'Username atau password invalid' });
-    }
-    
-    console.log('User found and authenticated via tmu_master');
-    const foundDbName = user.nama_db || 'tmu_master';
-    const userRole = user.ROLE || user.role || 'user';
-    
-    let companyName = user.nama_perusahaan;
-    if (!companyName && foundDbName && foundDbName !== 'tmu_master' && foundDbName !== '-') {
-      try {
-        const [compRows] = await masterDb.execute(
-          'SELECT nama_perusahaan FROM companies WHERE nama_db = ? LIMIT 1',
-          [foundDbName]
-        );
-        if (compRows.length > 0 && compRows[0].nama_perusahaan) {
-          companyName = compRows[0].nama_perusahaan;
-        }
-      } catch (e) {
-        console.error('Error finding company by db_name:', e.message);
-      }
-    }
-
-    const token = jwt.sign(
-      { id: user.id, username: user.username, role: userRole, dbName: foundDbName, companyName: companyName || foundDbName },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+    const masterDb = await getMasterDb();
+    const [rows] = await masterDb.execute(
+      `SELECT u.user_id, u.username, u.password, u.salt, u.status, u.company_id, u.email, u.phone, c.company_name, c.database_name, c.tmu_version FROM user u LEFT JOIN company c ON u.company_id = c.company_id WHERE u.username = ? OR u.email = ? OR u.phone = ? LIMIT 1`,
+      [username, username, username],
     );
-
-    res.json({ 
+    if (rows.length === 0)
+      return res.status(401).json({ error: "username atau password invalid" });
+    const user = rows[0];
+    const ok = await verifyPassword(password, user.password, user.salt);
+    if (!ok)
+      return res.status(401).json({ error: "Username atau password invalid" });
+    const role = roleFromStatus(user.status);
+    const dbName = user.database_name || getMasterDbName();
+    const companyName = user.company_name || dbName;
+    const payload = {
+      id: user.user_id,
+      username: user.username,
+      role,
+      dbName,
+      companyId: user.company_id || 0,
+      companyName,
+      tmuVersion: user.tmu_version || 2,
+    };
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: "24h",
+    });
+    logActivity(masterDb, {
+      userId: user.user_id,
+      companyId: user.company_id,
+      username: user.username,
+      type: "LOGIN",
+      description: "Login berhasil",
+      module: "auth",
+      ip: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
+    res.json({
       success: true,
       token,
-      username: user.username, 
-      role: userRole, 
-      company_name: companyName || foundDbName,
-      nama_perusahaan: companyName || foundDbName,
-      db_name: foundDbName,
-      phone: user.nomor_telpon || '' 
+      username: user.username,
+      role,
+      company_name: companyName,
+      nama_perusahaan: companyName,
+      db_name: dbName,
+      phone: user.phone || "",
+      email: user.email || "",
+      tmu_version: payload.tmuVersion,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error: ' + error.message });
+    console.error("login error", error);
+    res.status(500).json({ error: "Server error: " + error.message });
   }
 });
+
 module.exports = router;
