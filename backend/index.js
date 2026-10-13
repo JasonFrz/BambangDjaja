@@ -8,8 +8,15 @@ require("dotenv").config();
 
 process.on("unhandledRejection", (reason) => {
   const msg = reason && (reason.message || String(reason));
-  if (msg && (msg.includes("Execution context was destroyed") || msg.includes("Session closed"))) {
-    console.warn("⚠️ Intercepted Puppeteer navigation error (safe, server continuing):", msg);
+  if (
+    msg &&
+    (msg.includes("Execution context was destroyed") ||
+      msg.includes("Session closed"))
+  ) {
+    console.warn(
+      "⚠️ Intercepted Puppeteer navigation error (safe, server continuing):",
+      msg,
+    );
     return;
   }
   console.error("Unhandled Rejection:", reason);
@@ -17,8 +24,15 @@ process.on("unhandledRejection", (reason) => {
 
 process.on("uncaughtException", (error) => {
   const msg = error && (error.message || String(error));
-  if (msg && (msg.includes("Execution context was destroyed") || msg.includes("Session closed"))) {
-    console.warn("⚠️ Intercepted Puppeteer navigation exception (safe, server continuing):", msg);
+  if (
+    msg &&
+    (msg.includes("Execution context was destroyed") ||
+      msg.includes("Session closed"))
+  ) {
+    console.warn(
+      "⚠️ Intercepted Puppeteer navigation exception (safe, server continuing):",
+      msg,
+    );
     return;
   }
   console.error("Uncaught Exception:", error);
@@ -35,31 +49,35 @@ const io = new Server(server, {
     },
     methods: ["GET", "POST"],
     credentials: true,
-    allowedHeaders: ["ngrok-skip-browser-warning"]
+    allowedHeaders: ["ngrok-skip-browser-warning"],
   },
 });
 
-const PORT = process.env.SERVER_PORT || (process.env.PORT && process.env.PORT != 3306 ? process.env.PORT : 5000);
+const PORT =
+  process.env.SERVER_PORT ||
+  (process.env.PORT && process.env.PORT != 3306 ? process.env.PORT : 5000);
 
 app.use(helmet());
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
-  max: 1000, 
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
   message: { error: "Terlalu banyak request dari IP ini, coba lagi nanti." },
-  standardHeaders: true, 
-  legacyHeaders: false, 
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 app.use("/api/", limiter);
 
-app.use(cors({
-  origin: function (origin, callback) {
-    callback(null, origin || "*");
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      callback(null, origin || "*");
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.set("io", io);
 
@@ -81,7 +99,9 @@ io.on("connection", (socket) => {
           if (!roomData || roomData.size === 0) {
             activeSubscriptions.delete(room);
             roomIntervals.delete(room);
-            console.log(`Removed ${room} from active subscriptions as client switched trafo`);
+            console.log(
+              `Removed ${room} from active subscriptions as client switched trafo`,
+            );
           }
         }
       }
@@ -89,9 +109,14 @@ io.on("connection", (socket) => {
       const roomName = `trafo_${dbName}_${trafoId}`;
       socket.join(roomName);
       activeSubscriptions.set(roomName, dbName);
-      const pollInterval = socket.requestedPollInterval !== undefined ? socket.requestedPollInterval : (roomIntervals.get(roomName) ?? 0);
+      const pollInterval =
+        socket.requestedPollInterval !== undefined
+          ? socket.requestedPollInterval
+          : (roomIntervals.get(roomName) ?? 0);
       roomIntervals.set(roomName, pollInterval);
-      console.log(`Client ${socket.id} subscribed to ${roomName} for DB: ${dbName} (interval: ${pollInterval}ms)`);
+      console.log(
+        `Client ${socket.id} subscribed to ${roomName} for DB: ${dbName} (interval: ${pollInterval}ms)`,
+      );
     }
   });
 
@@ -128,7 +153,9 @@ io.on("connection", (socket) => {
         if (room && room.size === 1) {
           activeSubscriptions.delete(roomName);
           roomIntervals.delete(roomName);
-          console.log(`Removed ${roomName} from active subscriptions as last client is leaving`);
+          console.log(
+            `Removed ${roomName} from active subscriptions as last client is leaving`,
+          );
         }
       }
     }
@@ -153,8 +180,7 @@ const { verifyToken } = require("./utils/authMiddleware");
 const trafoRoutes = require("./routes/trafo");
 const companiesRoutes = require("./routes/companies");
 
-
-app.use("/api", authRoutes); 
+app.use("/api", authRoutes);
 app.use("/api/users", verifyToken, userRoutes);
 app.use("/api/trends", verifyToken, trendRoutes);
 app.use("/api/admin", verifyToken, adminRoutes);
@@ -167,12 +193,11 @@ app.use("/api/settings", verifyToken, settingsRoutes);
 app.use("/api/trafo", verifyToken, trafoRoutes);
 app.use("/api/admin/companies", verifyToken, companiesRoutes);
 
-
 const startRealtimePoller = require("./utils/realtimePoller");
 const { initWhatsApp } = require("./utils/whatsappClient");
 const { initRaspiWebSocket } = require("./utils/raspiWebSocket");
 const whatsappRoutes = require("./routes/whatsappRoutes");
-const autoAddIndexes = require("./utils/autoIndex");
+const { runSchemaPatch } = require("./utils/schemaPatch");
 
 app.use("/api/whatsapp", verifyToken, whatsappRoutes);
 
@@ -180,13 +205,12 @@ initRaspiWebSocket(server);
 
 server.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
-  
-  autoAddIndexes();
-  
+
+  runSchemaPatch();
+
   startRealtimePoller(io, activeSubscriptions, roomIntervals);
 
   setTimeout(() => {
     initWhatsApp();
   }, 2000);
 });
-
