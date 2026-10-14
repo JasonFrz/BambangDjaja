@@ -201,7 +201,7 @@ const { runSchemaPatch } = require("./utils/schemaPatch");
 
 app.use("/api/whatsapp", verifyToken, whatsappRoutes);
 
-initRaspiWebSocket(server);
+initRaspiWebSocket(server, { activeSubscriptions });
 
 server.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
