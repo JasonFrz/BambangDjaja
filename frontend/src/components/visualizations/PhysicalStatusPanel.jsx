@@ -29,7 +29,7 @@ export const PhysicalStatusPanel = memo(({ panel, isEditing }) => {
       : (
         <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar grid grid-cols-2 lg:grid-cols-3 gap-2 text-[#172b4d] dark:text-white">
           <Card title="Tap Position">
-            <div className="text-xl font-bold">{p.tap && p.tap.type === 'OCTC' ? (p.tap.position ?? '-') : (p.tap && p.tap.type ? p.tap.type : '-')}</div>
+            <div className="text-xl font-bold">{p.tap && p.tap.display !== null && p.tap.display !== undefined ? p.tap.display : '-'}</div>
             <div className="text-[10px] text-gray-500">{p.tap && p.tap.type ? `${p.tap.type}${p.tap.plus !== null ? ` · +${p.tap.plus}/-${p.tap.minus}` : ''}` : 'Belum ada nameplate'}</div>
           </Card>
           <Card title="Oil Level">

@@ -214,7 +214,7 @@ router.get("/:id/physical", async (req, res) => {
       success: true,
       tap: {
         type: td ? td.tapType : null,
-        position: td && td.tapType === "OCTC" ? td.impedance : null,
+        display: sm.tapDisplay(td),
         plus: td ? td.tapNumberPlus : null,
         minus: td ? td.tapNumberMinus : null,
       },

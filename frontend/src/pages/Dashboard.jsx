@@ -20,8 +20,10 @@ import {
   StateTimelinePanel, HeatmapPanel, StatusHistoryPanel,
   HistogramPanel, NewsPanel, CandlestickPanel, OilStatusPanel,
   PhasorDiagramPanel, TransformerSLDPanel, HealthIndexPanel, EventStreamPanel,
-  HarmonicPanel, DeratingPanel, TransformerStatusPanel, PhysicalStatusPanel, OilQualityPanel
+  HarmonicPanel, DeratingPanel, TransformerStatusPanel, PhysicalStatusPanel, OilQualityPanel,
+  ElectricalStatusPanel
 } from "../components/visualizations";
+import { DeviceStateBanner } from "../components/DeviceStateBanner";
 import { UniversalTimePicker } from "../components/UniversalTimePicker";
 import TransformerMapCard from '../components/TransformerMapCard';
 import AiLayoutModal from '../components/AiLayoutModal';
@@ -118,6 +120,7 @@ const PanelRenderer = memo(({ panel, latestData, chartData, tempData, isLive, is
     case 'trafostatus': return <TransformerStatusPanel panel={panel} isEditing={isEditing} />;
     case 'physicalstatus': return <PhysicalStatusPanel panel={panel} isEditing={isEditing} />;
     case 'oilquality': return <OilQualityPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
+    case 'electricalstatus': return <ElectricalStatusPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
     default:
       return (
         <div className="h-full w-full flex items-center justify-center bg-gray-50 dark:bg-white/5 rounded-xl border border-dashed border-gray-300 dark:border-white/20">
@@ -252,7 +255,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     sld: 8,          
   };
   const SINGLE_METRIC_PANELS = ['gauge', 'bargauge', 'candlestick', 'histogram'];
-  const NO_METRIC_PANELS = ['oilstatus', 'eventstream', 'news', 'harmonic', 'derating', 'trafostatus', 'physicalstatus', 'oilquality'];
+  const NO_METRIC_PANELS = ['oilstatus', 'eventstream', 'news', 'harmonic', 'derating', 'trafostatus', 'physicalstatus', 'oilquality', 'electricalstatus'];
   const OPTIONAL_METRIC_PANELS = ['phasor', 'sld', 'healthindex'];
 
   const toggleMetric = (key) => {
@@ -498,7 +501,8 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     { v: 'derating', l: 'De-rating', d: 'Kapasitas terpakai vs hilang per fase', i: PieChartIcon },
     { v: 'trafostatus', l: 'Transformer Status', d: '29 status alarm/trip + rekomendasi', i: AlertTriangle },
     { v: 'physicalstatus', l: 'Physical Status', d: 'Tap, oil level, pressure, gas fault', i: Thermometer },
-    { v: 'oilquality', l: 'Oil Quality', d: 'H2, moisture, BDV, water activity', i: Database }
+    { v: 'oilquality', l: 'Oil Quality', d: 'H2, moisture, BDV, water activity', i: Database },
+    { v: 'electricalstatus', l: 'Electrical Status', d: 'Badge status V/I/PF/Freq + leading/lagging', i: Zap }
   ].filter(t => t.l.toLowerCase().includes(visSearchQuery.toLowerCase()) || t.d.toLowerCase().includes(visSearchQuery.toLowerCase())).map(t => (
                     <div key={t.v} className={`rounded-xl border transition-all flex flex-col overflow-hidden ${panelType === t.v ? 'bg-blue-50 border-blue-500 dark:bg-blue-500/10 dark:border-blue-500 shadow-sm' : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#151521] hover:border-blue-300 dark:hover:border-blue-500/50'}`}>
                       <button
@@ -527,7 +531,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
 };
 
 const Dashboard = () => {
-  const { liveData, wsData, isConnected, isLive, isLoading: isLoadingTrend, updateInterval, setUpdateInterval, fetchHistoricalData, resetToLive } = useTrendData();
+  const { liveData, wsData, isConnected, isLive, isLiveMode, isLoading: isLoadingTrend, updateInterval, setUpdateInterval, fetchHistoricalData, resetToLive } = useTrendData();
   const { apiUrl } = useApi();
   const { data: tempData, liveData: oilLiveData } = useTemperatureData();
   const { confirm, prompt, alert } = useDialog();
@@ -2083,6 +2087,12 @@ const Dashboard = () => {
           )}
         </div>
       </div>
+
+      <DeviceStateBanner
+        isLiveMode={isLiveMode}
+        isLoading={isLoadingTrend}
+        lastTimestamp={liveData && liveData.length > 0 ? liveData[liveData.length - 1].timestamp : null}
+      />
 
       <div className={`transition-all ${isEditing ? 'ring-2 ring-blue-500/30 rounded-xl p-1 bg-blue-500/5 dark:bg-blue-500/10' : ''}`}>
 

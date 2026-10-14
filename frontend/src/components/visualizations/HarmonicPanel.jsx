@@ -2,6 +2,7 @@ import React, { memo, useMemo, useState } from 'react';
 import { GripVertical } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts';
 import { useTrafoApi } from '../../hooks/useTrafoApi';
+import { harmonicRows, harmonicPhaseLabel } from '../../config/panelHelpers';
 
 const PHASE_COLORS = { 1: '#ef4444', 2: '#eab308', 3: '#3b82f6' };
 
@@ -11,14 +12,7 @@ export const HarmonicPanel = memo(({ panel, isEditing, updatePanel }) => {
   const source = (localSource ?? panel.source) === 'current' ? 'current' : 'voltage';
   const { data, isLoading, error } = useTrafoApi('harmonics', 60000, { type: source });
 
-  const rows = useMemo(() => {
-    if (!data || !Array.isArray(data.data) || data.data.length === 0) return [];
-    return (data.orders || []).filter((o) => o !== '1st').map((o) => {
-      const row = { order: o };
-      for (const p of data.data) row[`phase${p.phase}`] = Number(p.orders[o] || 0);
-      return row;
-    });
-  }, [data]);
+  const rows = useMemo(() => harmonicRows(data), [data]);
 
   const setSource = (s) => { setLocalSource(s); if (updatePanel) updatePanel(panel.id, { source: s }); };
 
@@ -45,7 +39,7 @@ export const HarmonicPanel = memo(({ panel, isEditing, updatePanel }) => {
               <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} unit="%" />
               <Tooltip contentStyle={{ fontSize: 11 }} formatter={(v) => [`${Number(v).toFixed(2)} %`]} />
               <Legend wrapperStyle={{ fontSize: 10 }} />
-              {[1, 2, 3].map((p) => <Bar key={p} dataKey={`phase${p}`} name={`Fase ${['', 'R', 'S', 'T'][p]}`} fill={PHASE_COLORS[p]} radius={[2, 2, 0, 0]} />)}
+              {[1, 2, 3].map((p) => <Bar key={p} dataKey={`phase${p}`} name={harmonicPhaseLabel(source, p)} fill={PHASE_COLORS[p]} radius={[2, 2, 0, 0]} />)}
             </BarChart>
           </ResponsiveContainer>
         )}

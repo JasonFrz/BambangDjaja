@@ -57,3 +57,16 @@ test("oilFlags dan pressureLevel dari kode status", () => {
   assert.equal(sm.pressureLevel(1), "trip");
   assert.equal(sm.pressureLevel(5), "trip");
 });
+
+// dashboard-documentation 3.2 D: tapType OCTC -> tampilkan "OCTC", selain itu -> nilai impedance.
+test("tapDisplay: OCTC menampilkan 'OCTC', tipe lain menampilkan impedance", () => {
+  assert.equal(sm.tapDisplay({ tapType: "OCTC", impedance: 4 }), "OCTC");
+  assert.equal(sm.tapDisplay({ tapType: "OLTC", impedance: 5 }), 5);
+  assert.equal(sm.tapDisplay({ tapType: "DETC", impedance: 3 }), 3);
+  assert.equal(sm.tapDisplay({ tapType: null, impedance: 2 }), 2);
+});
+
+test("tapDisplay: tanpa transformer_data -> null", () => {
+  assert.equal(sm.tapDisplay(null), null);
+  assert.equal(sm.tapDisplay(undefined), null);
+});
