@@ -110,7 +110,14 @@ cd backend
 npm test
 ```
 
-Status saat serah terima: **46 lulus, 0 gagal**. Test tidak boleh butuh MySQL.
+Status saat serah terima: **48 lulus, 0 gagal**. Test tidak boleh butuh MySQL.
+
+Uji integrasi dengan server hidup (dari `backend/`):
+
+```powershell
+node scripts/smoke_api.js     # login demo, panggil 24 endpoint GET, semua harus OK
+node scripts/ws_probe.js      # subscribe Socket.IO, tunggu 1 event meter + 1 oil_sensor
+```
 
 ---
 
@@ -145,7 +152,7 @@ Status saat serah terima: **46 lulus, 0 gagal**. Test tidak boleh butuh MySQL.
 ### Rencana A — fondasi backend: **selesai** (13 Okt 2026)
 `db.js` + `MASTER_DB`, `import_sql.js`, `schemaPatch.js`, `readingModel.js` + test, seed demo.
 
-### Rencana B — auth, route, poller: **Task 1–5 selesai, sisa Task 6–7**
+### Rencana B — auth, route, poller: **selesai** (14 Okt 2026)
 
 | Task | Isi | Status | Commit |
 |---|---|---|---|
@@ -154,8 +161,8 @@ Status saat serah terima: **46 lulus, 0 gagal**. Test tidak boleh butuh MySQL.
 | 3 | Route trafo: daftar, nameplate, status, physical, harmonics, oil-quality (`trafoModel`, `statusModel`) | selesai, diuji live | `3a7195f`, `4fa81c0` |
 | 4 | Settings: thresholds, trip, `/limits` untuk gauge, dorong ke Raspi (`limitsModel`) | selesai, diuji live 14 Okt | `4fa81c0`, `38fad9f` |
 | 5 | Trends, analytics, export, report, THI, events, news (`trendsHelpers`) | selesai, diuji live 14 Okt | `d76f1e3`, `88afa1e`, `ba1ad96` |
-| 6 | Poller Socket.IO baca `temp_reading_data_realtime`, `alertSender.js`, hapus `efficiency.js` | belum | |
-| 7 | `scripts/smoke_api.js`, bersihkan referensi skema lama | belum | |
+| 6 | Poller Socket.IO baca `temp_reading_data_realtime` (`buildPayloads`), `alertSender.js`, hapus `efficiency.js` | selesai, diuji `ws_probe.js` | `e02515d` |
+| 7 | `scripts/smoke_api.js` (24 GET OK), `whatsappRoutes` ke tabel baru, referensi skema lama bersih | selesai | `d708d52` |
 
 Kode lengkap untuk setiap step ada di file Rencana B. Centang `- [x]` di file plan
 diperbarui per task yang selesai.
@@ -172,17 +179,28 @@ data kosong. Itu normal, bukan bug.
 
 ---
 
-## 6. Cara melanjutkan (Rencana B Task 6)
+## 6. Cara melanjutkan (Rencana C, lalu D)
 
-1. Nyalakan MySQL, `cd backend`, `npm test` harus 46 lulus.
-2. Buka `docs/superpowers/plans/2026-10-13-plan-b-auth-route-poller.md`, cari `### Task 6`
-   (poller Socket.IO membaca `temp_reading_data_realtime` lewat `readingModel`, `alertSender.js`
-   dipindah dari poller, `efficiency.js` dihapus). Ikuti Step 1–7: test dulu (merah),
-   implementasi (hijau), uji Socket.IO dengan script kecil, commit.
-3. Lanjut Task 7: `scripts/smoke_api.js` lalu bersihkan sisa referensi skema lama
-   (`electrical_readings`, `oil_readings`, `threshold_settings`, `tmu_master`, `users`, `companies`).
+Rencana B sudah selesai: seluruh backend membaca `master_tmu_app` dan skema `base_tmu`.
+Langkah berikutnya adalah membuat plan dari spec, lalu mengeksekusinya task per task.
+
+1. **Rencana C — ingest Raspberry Pi + alert** (spec bagian 5 dan 6.4, urutan kerja 8–9).
+   Isi: `raspiSync.js` (handler pesan dari Raspi lewat `utils/raspiWebSocket.js`), tulis ke
+   `temp_reading_data_realtime` / `reading_data` / `transformer_status` / `failure_log` /
+   `trafo_last_connection`, scheduler permintaan berkala, `fake_raspi.js` untuk uji lokal, lalu
+   alert memakai `utils/alertSender.js` + nama parameter dari `parameter_failure_recommendation`.
+   Protokol klien ada di repo lain: `../tmu/tmu-app-client-deploy/websocket.js`.
+   **Catatan penting:** sejak Task 6, poller tidak lagi mengirim alert WhatsApp/email
+   (fungsi lama `checkAndAlert` dihapus). Sampai Rencana C selesai, tidak ada alert otomatis.
+   Timestamp dari Raspi harus dikonversi ke UTC saat insert (lihat bagian 7).
+2. **Rencana D — frontend** (spec bagian 8, urutan kerja 10–12): `config/metrics.js`, context
+   (`TrendDataContext`, `ThresholdContext`, `TemperatureDataContext` masih memetakan `phase_a_v`
+   dan membaca `threshold_settings`), panel baru, preset, halaman Settings dan nameplate.
+3. Cara membuat plan: baca spec, tulis `docs/superpowers/plans/<tanggal>-plan-c-....md` dengan
+   format yang sama seperti Rencana B (Goal, Global Constraints, Review Focus, File Structure,
+   task dengan step test-dulu dan `Expected:`). Kalau memakai Claude Code: skill
+   `superpowers:writing-plans`, lalu `superpowers:executing-plans`.
 4. Sebelum tiap commit cek `git status`; `git add` banyak file kadang hanya men-stage sebagian.
-5. Setelah Rencana B selesai, buat plan untuk Rencana C (ingest Raspi) dan D (frontend) dari spec.
 
 ### Snippet uji manual (PowerShell)
 
