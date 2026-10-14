@@ -1,12 +1,10 @@
 const { WebSocketServer } = require('ws');
 const http = require('http');
-const { getMasterDb, getDbConnection } = require('./db');
+const db = require('./db');
 const rs = require('./raspiSync');
 const ae = require('./alertEngine');
 const rm = require('./readingModel');
 const { buildLimits } = require('./limitsModel');
-// trafoModel meng-require modul ini (raspiClients), jadi di-require lazy untuk menghindari import melingkar.
-const tm = () => require('./trafoModel');
 
 // serial -> ws (dipakai trafoModel untuk status online) dan serial -> meta registrasi
 const raspiClients = new Map();
@@ -14,7 +12,19 @@ const raspiMeta = new Map();
 const cooldown = new ae.Cooldown();
 let subscriptionsRef = new Map();
 
+// Dependensi yang bisa disuntik test (tanpa MySQL/WhatsApp). trafoModel dan alertSender
+// di-require lazy karena trafoModel meng-require modul ini (raspiClients).
+const _deps = {
+  getMasterDb: () => db.getMasterDb(),
+  getDbConnection: (name) => db.getDbConnection(name),
+  getStatusRow: (conn, trafoId) => require('./trafoModel').getStatusRow(conn, trafoId),
+  getTransformerData: (conn, trafoId) => require('./trafoModel').getTransformerData(conn, trafoId),
+  sendAlertMessage: (dbName, trafoId, alerts) => require('./alertSender').sendAlertMessage(dbName, trafoId, alerts),
+};
+
 const INTERVALS = { realtime: 5_000, harmonic: 60_000, status: 60_000, sync: 10 * 60_000 };
+const HEARTBEAT_MS = 30_000;          // ping dari server; tanpa pong sampai ping berikutnya = mati
+const REGISTER_TIMEOUT_MS = 30_000;   // tanpa createConnection dalam 30 s = tutup
 
 // Murni: permintaan apa yang harus dikirim sekarang.
 function dueRequests(state, now, hasWatchers) {
@@ -28,6 +38,13 @@ function dueRequests(state, now, hasWatchers) {
   return out;
 }
 
+// Murni: 'dead' (tidak membalas ping), 'unregistered' (tidak pernah createConnection), atau 'ping'.
+function heartbeatVerdict(conn, now) {
+  if (!conn.isAlive) return 'dead';
+  if (!conn.meta && now - (conn.openedAt || 0) >= REGISTER_TIMEOUT_MS) return 'unregistered';
+  return 'ping';
+}
+
 function hasWatchers(meta) {
   if (!meta) return false;
   return subscriptionsRef.has(`trafo_${meta.dbName}_${meta.trafoId}`);
@@ -38,52 +55,79 @@ function send(ws, payload) {
   return false;
 }
 
-async function getSettings(db, trafoId) {
-  const [rows] = await db.execute('SELECT * FROM transformer_settings WHERE trafoId = ? LIMIT 1', [trafoId]);
+async function getSettings(conn, trafoId) {
+  const [rows] = await conn.execute('SELECT * FROM transformer_settings WHERE trafoId = ? LIMIT 1', [trafoId]);
   return rows[0] || null;
 }
 
 // Alert setelah status baru diterima: bandingkan dengan baris lama, nilai terakhir, dan limits.
-async function alertOnStatus(db, meta, beforeRow, afterRow) {
-  const { sendAlertMessage } = require('./alertSender');
+async function alertOnStatus(conn, meta, beforeRow, afterRow) {
   const changes = ae.diffStatus(beforeRow, afterRow);
   if (changes.length === 0) return;
-  const [latest, td, settings] = await Promise.all([rm.getLatest(db, meta.trafoId), tm().getTransformerData(db, meta.trafoId), getSettings(db, meta.trafoId)]);
+  const [latest, td, settings] = await Promise.all([
+    rm.getLatest(conn, meta.trafoId),
+    _deps.getTransformerData(conn, meta.trafoId),
+    getSettings(conn, meta.trafoId),
+  ]);
   const point = latest ? rm.computeDerived(latest, td) : {};
   const sent = await ae.processStatusChange({
     dbName: meta.dbName, trafoId: meta.trafoId, before: beforeRow, after: afterRow, point,
-    limits: buildLimits(settings, td), cooldown, send: sendAlertMessage,
+    limits: buildLimits(settings, td), cooldown, send: _deps.sendAlertMessage,
   });
   if (sent.length > 0) console.log(`[Raspi WS] alert ${meta.dbName}/trafo ${meta.trafoId}: ${sent.map((a) => `${a.name} ${a.sub}`).join(', ')}`);
 }
 
+function closeConn(conn, reason) {
+  console.warn(`[Raspi WS] ${reason}`);
+  send(conn.ws, { type: 'terminateConnection' });
+  try { conn.ws.close(); } catch (e) { /* abaikan */ }
+}
+
+async function handleCreateConnection(conn, msg) {
+  const { ws } = conn;
+  const serialWanted = String(msg.raspiSerialNo || '').trim();
+  const master = await _deps.getMasterDb();
+  const [[companyRow] = []] = await master.execute('SELECT database_name FROM company WHERE company_key = ? LIMIT 1', [String(msg.companyKey || '')]);
+  if (companyRow && !canRegister(serialWanted, companyRow.database_name)) {
+    return closeConn(conn, `serial ${serialWanted} sedang aktif untuk perusahaan lain, koneksi ditolak`);
+  }
+  // Status lama dibaca sebelum registrasi menimpanya, supaya trafo yang memburuk saat offline tetap memicu alert.
+  let before = null;
+  if (companyRow && serialWanted) {
+    try {
+      const cdb = await _deps.getDbConnection(companyRow.database_name);
+      const [rows] = await cdb.execute('SELECT trafoId FROM transformer_data WHERE raspiSerialNo = ? LIMIT 1', [serialWanted]);
+      if (rows[0]) before = await _deps.getStatusRow(cdb, rows[0].trafoId);
+    } catch (e) { /* ditangani oleh registerConnection di bawah */ }
+  }
+  const reg = await rs.registerConnection(master, _deps.getDbConnection, msg);
+  if (!reg) return closeConn(conn, `companyKey tidak dikenal atau serial kosong (${msg.raspiSerialNo || '-'}), koneksi ditutup`);
+
+  conn.state = { lastRealtime: 0, lastHarmonic: 0, lastStatus: 0, lastSync: 0 };
+  conn.serial = serialWanted;
+  conn.meta = reg;
+  raspiClients.set(conn.serial, ws);
+  raspiMeta.set(conn.serial, reg);
+  await rs.touchLastConnection(master, conn.serial);
+  console.log(`[Raspi WS] terdaftar: serial ${conn.serial} -> ${reg.dbName} trafo ${reg.trafoId} (v${reg.tmuVersion})`);
+  const after = rs.first(msg.transformerStatus);
+  if (after) {
+    try { await alertOnStatus(await _deps.getDbConnection(reg.dbName), reg, before, after); }
+    catch (e) { console.error('[Raspi WS] alert saat registrasi gagal:', e.message); }
+  }
+  await tick(conn);
+}
+
 async function handleMessage(conn, msg) {
   const { ws } = conn;
+  if (!msg || typeof msg !== 'object' || typeof msg.type !== 'string') return;
   if (msg.type === 'createConnection') {
-    const master = await getMasterDb();
-    const serialWanted = String(msg.raspiSerialNo || '').trim();
-    const [[companyRow] = []] = await master.execute('SELECT database_name FROM company WHERE company_key = ? LIMIT 1', [String(msg.companyKey || '')]);
-    if (companyRow && !canRegister(serialWanted, companyRow.database_name)) {
-      console.warn(`[Raspi WS] serial ${serialWanted} sedang aktif untuk perusahaan lain, koneksi ditolak`);
-      send(ws, { type: 'terminateConnection' });
-      ws.close();
-      return;
+    try {
+      await handleCreateConnection(conn, msg);
+    } catch (e) {
+      // Registrasi gagal (DB perusahaan tidak ada, DB mati): tutup supaya klien reconnect dan mencoba lagi.
+      closeConn(conn, `registrasi ${msg.raspiSerialNo || '-'} gagal: ${e.message}`);
     }
-    const reg = await rs.registerConnection(master, getDbConnection, msg);
-    if (!reg) {
-      console.warn(`[Raspi WS] companyKey tidak dikenal atau serial kosong (${msg.raspiSerialNo || '-'}), koneksi ditutup`);
-      send(ws, { type: 'terminateConnection' });
-      ws.close();
-      return;
-    }
-    conn.serial = String(msg.raspiSerialNo).trim();
-    conn.meta = reg;
-    raspiClients.set(conn.serial, ws);
-    raspiMeta.set(conn.serial, reg);
-    await rs.touchLastConnection(master, conn.serial);
-    console.log(`[Raspi WS] terdaftar: serial ${conn.serial} -> ${reg.dbName} trafo ${reg.trafoId} (v${reg.tmuVersion})`);
-    conn.state = { lastRealtime: 0, lastHarmonic: 0, lastStatus: 0, lastSync: 0 };
-    await tick(conn);
     return;
   }
   if (!conn.meta) {
@@ -91,42 +135,52 @@ async function handleMessage(conn, msg) {
     return;
   }
   const meta = conn.meta;
-  const db = await getDbConnection(meta.dbName);
+  const cdb = await _deps.getDbConnection(meta.dbName);
   switch (msg.type) {
     case 'ping_ws':
-      await rs.touchLastConnection(await getMasterDb(), conn.serial);
+      await rs.touchLastConnection(await _deps.getMasterDb(), conn.serial);
       send(ws, { type: 'pong_server' });
       break;
     case 'getReadingDataRealTimeReceived':
-      await rs.handleReadingRealtime(db, meta.trafoId, msg.readingData);
+      await rs.handleReadingRealtime(cdb, meta.trafoId, msg.readingData);
       break;
     case 'receivedRequestCurrentHarmonicRealTime':
-      await rs.handleHarmonic(db, meta.trafoId, 'current', msg.data);
+      await rs.handleHarmonic(cdb, meta.trafoId, 'current', msg.data);
       break;
     case 'receivedRequestVoltageHarmonicRealTime':
-      await rs.handleHarmonic(db, meta.trafoId, 'voltage', msg.data);
+      await rs.handleHarmonic(cdb, meta.trafoId, 'voltage', msg.data);
       break;
     case 'receivedSyncUpdateStatusTransformer': {
-      const before = await tm().getStatusRow(db, meta.trafoId);
+      const before = await _deps.getStatusRow(cdb, meta.trafoId);
       const after = rs.first(msg.transformerStatus);
-      await rs.handleStatusSync(db, meta.trafoId, after, rs.first(msg.tripStatus));
-      if (after) await alertOnStatus(db, meta, before, after);
+      await rs.handleStatusSync(cdb, meta.trafoId, after, rs.first(msg.tripStatus));
+      if (after) await alertOnStatus(cdb, meta, before, after);
       break;
     }
     case 'getTapPositionRealTimeReceived':
-      await rs.handleTapPosition(db, meta.trafoId, rs.first(msg.transformerData));
+      await rs.handleTapPosition(cdb, meta.trafoId, rs.first(msg.transformerData));
       break;
     case 'receivedSyncDataReading': {
-      const n = await rs.handleSyncReading(db, meta.trafoId, msg.data);
+      const n = await rs.handleSyncReading(cdb, meta.trafoId, msg.data);
       send(ws, { type: 'successSyncDataReading' });
-      if (n > 0) console.log(`[Raspi WS] sync reading ${conn.serial}: ${n} baris`);
+      if (n > 0) console.log(`[Raspi WS] sync reading ${conn.serial}: ${n} baris baru`);
       break;
     }
     case 'receivedSyncDataFailureLog': {
-      const n = await rs.handleSyncFailureLog(db, meta.trafoId, msg.data);
+      const n = await rs.handleSyncFailureLog(cdb, meta.trafoId, msg.data);
       if (n > 0) console.log(`[Raspi WS] sync failure log ${conn.serial}: ${n} baris`);
       break;
     }
+    // Perubahan dari UI lokal Raspi
+    case 'updateSyncTransformerSettingsFromClient':
+      await rs.handleSettingsFromClient(cdb, meta.trafoId, msg.data);
+      break;
+    case 'updateSyncTripSettingsFromClient':
+      await rs.handleTripSettingsFromClient(cdb, meta.trafoId, msg.data);
+      break;
+    case 'updateSyncTransformerDataFromClient':
+      await rs.handleTransformerDataFromClient(cdb, meta.trafoId, msg.data);
+      break;
     default:
       console.log(`[Raspi WS] pesan tidak ditangani (${msg.type}) dari ${conn.serial}`);
   }
@@ -134,38 +188,54 @@ async function handleMessage(conn, msg) {
 
 // Kirim permintaan yang jatuh tempo; dipanggil tiap detik per koneksi.
 async function tick(conn) {
-  if (!conn.meta || !conn.ws || conn.ws.readyState !== 1) return;
+  if (!conn.meta || !conn.state || !conn.ws || conn.ws.readyState !== 1) return;
+  if (conn.inFlight) return;
   const now = Date.now();
   const due = dueRequests(conn.state, now, hasWatchers(conn.meta));
   if (due.length === 0) return;
-  const db = await getDbConnection(conn.meta.dbName);
-  for (const type of due) {
-    if (type === 'requestSyncDataReading') {
-      send(conn.ws, { type, timestampRange: await rs.recentTimestamps(db, conn.meta.trafoId, 24) });
-    } else if (type === 'requestSyncDataFailureLog') {
-      send(conn.ws, { type, failureLogRange: await rs.knownFailureIds(db, conn.meta.trafoId) });
-    } else {
-      send(conn.ws, { type });
-    }
-  }
+  // Stempel dulu supaya kegagalan DB tidak membuat permintaan dikirim ulang tiap detik.
   if (due.includes('requestReadingDataRealTime')) conn.state.lastRealtime = now;
   if (due.includes('requestCurrentHarmonicRealTime')) conn.state.lastHarmonic = now;
   if (due.includes('requestSyncUpdateStatusTransformer')) conn.state.lastStatus = now;
   if (due.includes('requestSyncDataReading')) conn.state.lastSync = now;
+  conn.inFlight = true;
+  try {
+    const cdb = await _deps.getDbConnection(conn.meta.dbName);
+    for (const type of due) {
+      if (type === 'requestSyncDataReading') {
+        send(conn.ws, { type, timestampRange: await rs.recentTimestamps(cdb, conn.meta.trafoId) });
+      } else if (type === 'requestSyncDataFailureLog') {
+        send(conn.ws, { type, failureLogRange: await rs.knownFailureIds(cdb, conn.meta.trafoId) });
+      } else {
+        send(conn.ws, { type });
+      }
+    }
+  } finally {
+    conn.inFlight = false;
+  }
 }
 
 function handleRaspiConnection(ws, req) {
-  const conn = { ws, serial: null, meta: null, state: null };
+  const conn = { ws, serial: null, meta: null, state: null, openedAt: Date.now(), isAlive: true, inFlight: false };
   console.log(`[Raspi WS] koneksi masuk dari ${req.socket.remoteAddress}`);
   const timer = setInterval(() => { tick(conn).catch((e) => console.error('[Raspi WS] tick error:', e.message)); }, 1000);
+  const heartbeat = setInterval(() => {
+    const verdict = heartbeatVerdict(conn, Date.now());
+    if (verdict === 'dead') { console.warn(`[Raspi WS] ${conn.serial || '-'} tidak membalas ping, koneksi diputus`); return ws.terminate(); }
+    if (verdict === 'unregistered') { console.warn('[Raspi WS] koneksi tanpa createConnection, ditutup'); return ws.close(); }
+    conn.isAlive = false;
+    try { ws.ping(); } catch (e) { /* socket sudah mati, heartbeat berikutnya terminate */ }
+  }, HEARTBEAT_MS);
 
+  ws.on('pong', () => { conn.isAlive = true; });
   ws.on('message', async (data) => {
     let msg;
     try { msg = JSON.parse(data.toString()); } catch (e) { console.error('[Raspi WS] JSON tidak valid:', e.message); return; }
-    try { await handleMessage(conn, msg); } catch (e) { console.error(`[Raspi WS] gagal menangani ${msg.type} dari ${conn.serial || '-'}:`, e.message); }
+    try { await handleMessage(conn, msg); } catch (e) { console.error(`[Raspi WS] gagal menangani ${msg && msg.type} dari ${conn.serial || '-'}:`, e.message); }
   });
   ws.on('close', () => {
     clearInterval(timer);
+    clearInterval(heartbeat);
     if (conn.serial && raspiClients.get(conn.serial) === ws) { raspiClients.delete(conn.serial); raspiMeta.delete(conn.serial); }
     console.log(`[Raspi WS] koneksi putus: ${conn.serial || '-'}`);
   });
@@ -212,4 +282,7 @@ function sendToRaspi(serialNo, payload, dbName) {
   return send(raspiClients.get(serialNo), payload);
 }
 
-module.exports = { initRaspiWebSocket, sendToRaspi, canRegister, raspiClients, raspiMeta, dueRequests, INTERVALS };
+module.exports = {
+  initRaspiWebSocket, sendToRaspi, canRegister, raspiClients, raspiMeta,
+  dueRequests, heartbeatVerdict, handleMessage, INTERVALS, HEARTBEAT_MS, REGISTER_TIMEOUT_MS, _deps,
+};
