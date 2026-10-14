@@ -2401,7 +2401,7 @@ git commit -m "feat(backend): trends/report/export/thi/events/news dari reading_
 - Consumes: `readingModel.getLatest/computeDerived`, `trafoModel.getTransformerData/getStatusRow`, `statusModel.oilFlags`.
 - Produces: event `meter` = semua key frontend + `efficiency`, `leadLag`, `derating`, `timestamp`, `modbus_connected: true`; event `oil_sensor` = `{ oil_temperature, oil_pressure, oil_level, oil_level_alarm, oil_level_trip, timestamp, adc_connected: true }`. `alertSender.sendAlertMessage(dbName, trafoId, alerts)` untuk Rencana C. `realtimePoller.buildPayloads(point, td, statusRow)` untuk test.
 
-- [ ] **Step 1: Tulis test `backend/tests/realtimePoller.test.js`**
+- [x] **Step 1: Tulis test `backend/tests/realtimePoller.test.js`**
 
 ```js
 const test = require('node:test');
@@ -2431,9 +2431,9 @@ test('buildPayloads tetap jalan tanpa nameplate dan tanpa status', () => {
 });
 ```
 
-- [ ] **Step 2: `npm test`, pastikan gagal (`buildPayloads is not a function`)**
+- [x] **Step 2: `npm test`, pastikan gagal (`buildPayloads is not a function`)**
 
-- [ ] **Step 3: Tulis `backend/utils/alertSender.js`** (dipindahkan dari poller, disesuaikan ke `user`/`company`)
+- [x] **Step 3: Tulis `backend/utils/alertSender.js`** (dipindahkan dari poller, disesuaikan ke `user`/`company`)
 
 ```js
 const { getDbConnection, getMasterDb } = require('./db');
@@ -2501,7 +2501,7 @@ async function sendAlertMessage(dbName, trafoId, alerts) {
 module.exports = { sendAlertMessage, getContacts, getTrafoName };
 ```
 
-- [ ] **Step 4: Tulis ulang `backend/utils/realtimePoller.js`**
+- [x] **Step 4: Tulis ulang `backend/utils/realtimePoller.js`**
 
 ```js
 const { getDbConnection } = require('./db');
@@ -2586,7 +2586,7 @@ module.exports = startRealtimePoller;
 module.exports.buildPayloads = buildPayloads;
 ```
 
-- [ ] **Step 5: Hapus `backend/utils/efficiency.js`**
+- [x] **Step 5: Hapus `backend/utils/efficiency.js`**
 
 ```bash
 git rm backend/utils/efficiency.js
@@ -2595,7 +2595,7 @@ grep -rn "efficiency')\|calculateEfficiency\|METRIC_MAPPING\|checkAndAlert\|inva
 
 Expected: grep tidak menemukan file apa pun (kecuali `node_modules`).
 
-- [ ] **Step 6: `npm test` lulus, lalu uji Socket.IO dengan script kecil**
+- [x] **Step 6: `npm test` lulus, lalu uji Socket.IO dengan script kecil**
 
 Buat sementara `backend/scripts/ws_probe.js` (boleh dibuang setelahnya, atau simpan sebagai alat uji):
 
@@ -2614,7 +2614,7 @@ setTimeout(() => { console.log('tidak ada event dalam 10 detik'); process.exit(1
 
 Catatan: seed hanya menulis 60 baris sekali, jadi setelah event pertama tidak ada event baru (timestamp tidak berubah). Itu benar; data baru datang dari Raspi di Rencana C.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/utils/alertSender.js backend/utils/realtimePoller.js backend/tests/realtimePoller.test.js backend/scripts/ws_probe.js backend/package.json backend/package-lock.json
