@@ -48,6 +48,9 @@ test("oilFlags dan pressureLevel dari kode status", () => {
   assert.deepEqual(sm.oilFlags(2), { oil_level_alarm: 0, oil_level_trip: 1 });
   assert.deepEqual(sm.oilFlags(1), { oil_level_alarm: 0, oil_level_trip: 0 });
   assert.deepEqual(sm.oilFlags(undefined), { oil_level_alarm: 1, oil_level_trip: 1 });
+  // High Alarm (4) dan High Trip (5) juga bukan "Safe"
+  assert.deepEqual(sm.oilFlags(4), { oil_level_alarm: 0, oil_level_trip: 1 });
+  assert.deepEqual(sm.oilFlags(5), { oil_level_alarm: 0, oil_level_trip: 0 });
   assert.equal(sm.pressureLevel(3), "safe");
   assert.equal(sm.pressureLevel(2), "alarm");
   assert.equal(sm.pressureLevel(4), "alarm");
