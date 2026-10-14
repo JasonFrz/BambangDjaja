@@ -1,156 +1,41 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
 const { getDbConnection } = require('../utils/db');
+const rm = require('../utils/readingModel');
 
-const extractDb = (req, res, next) => {
-  const dbName = req.headers['x-db-name'];
-  if (!dbName) {
-    return res.status(400).json({ error: "Missing X-DB-Name header" });
-  }
-  req.dbName = dbName;
-  next();
+const GROUPS = {
+  'Phase Voltage': ['phaseA', 'phaseB', 'phaseC'], 'Line Voltage': ['lineAB', 'lineBC', 'lineCA'],
+  Current: ['currentA', 'currentB', 'currentC', 'currentN', 'avgCurrent'],
+  Power: ['powerActiveTotal', 'powerReactiveTotal', 'powerApparentTotal', 'powerActiveA', 'powerActiveB', 'powerActiveC'],
+  'Power Quality': ['pfTotal', 'pfA', 'pfB', 'pfC', 'frequency', 'thdVA', 'thdVB', 'thdVC', 'thdIA', 'thdIB', 'thdIC'],
+  Energy: ['energyActiveTotal', 'energyReactiveTotal'],
+  Temperature: ['oil_temperature', 'wtiA', 'wtiB', 'wtiC', 'busTempA', 'busTempB', 'busTempC'],
+  Oil: ['oil_pressure', 'h2ppm', 'moisturePpm'],
 };
 
-const METRICS_CATALOG = {
-  electrical: {
-    table: 'electrical_readings',
-    timestampCol: 'timestamp',
-    metrics: {
-      phase_a_v: { label: 'Phase A Voltage', unit: 'V', color: '#ef4444', group: 'Phase Voltage' },
-      phase_b_v: { label: 'Phase B Voltage', unit: 'V', color: '#f59e0b', group: 'Phase Voltage' },
-      phase_c_v: { label: 'Phase C Voltage', unit: 'V', color: '#3b82f6', group: 'Phase Voltage' },
-      line_ab_v: { label: 'Line AB Voltage', unit: 'V', color: '#ec4899', group: 'Line Voltage' },
-      line_bc_v: { label: 'Line BC Voltage', unit: 'V', color: '#8b5cf6', group: 'Line Voltage' },
-      line_ca_v: { label: 'Line CA Voltage', unit: 'V', color: '#06b6d4', group: 'Line Voltage' },
-      current_a: { label: 'Current A', unit: 'A', color: '#ef4444', group: 'Current' },
-      current_b: { label: 'Current B', unit: 'A', color: '#f59e0b', group: 'Current' },
-      current_c: { label: 'Current C', unit: 'A', color: '#3b82f6', group: 'Current' },
-      power_active_total_kw: { label: 'Active Power', unit: 'kW', color: '#10b981', group: 'Power' },
-      power_reactive_total_kvar: { label: 'Reactive Power', unit: 'kVAR', color: '#f59e0b', group: 'Power' },
-      power_apparent_total_kva: { label: 'Apparent Power', unit: 'kVA', color: '#8b5cf6', group: 'Power' },
-      pf_total: { label: 'Power Factor', unit: '', color: '#14b8a6', group: 'Power Quality' },
-      frequency: { label: 'Frequency', unit: 'Hz', color: '#6366f1', group: 'Power Quality' },
-      energy_active_total: { label: 'Active Energy', unit: 'kWh', color: '#22c55e', group: 'Energy' },
-      energy_reactive_total: { label: 'Reactive Energy', unit: 'kVARh', color: '#eab308', group: 'Energy' },
-    }
-  },
-  oil: {
-    table: 'oil_readings',
-    timestampCol: 'timestamp',
-    metrics: {
-      oil_temperature: { label: 'Oil Temperature', unit: '°C', color: '#ef4444', group: 'Oil' },
-      oil_pressure: { label: 'Oil Pressure', unit: 'Bar', color: '#3b82f6', group: 'Oil' },
-    }
-  }
-};
-
-router.get("/metrics", (req, res) => {
-  const result = {};
-  for (const [category, info] of Object.entries(METRICS_CATALOG)) {
-    result[category] = {
-      table: info.table,
-      metrics: info.metrics
-    };
-  }
-  res.json(result);
+router.get('/metrics', (req, res) => {
+  const metrics = {};
+  for (const [group, keys] of Object.entries(GROUPS)) for (const k of keys) metrics[k] = { group, column: rm.KEY_TO_COLUMN[k] };
+  res.json({ reading: { table: 'reading_data', metrics } });
 });
 
-router.get("/query", extractDb, async (req, res) => {
+router.get('/query', async (req, res) => {
   const { metrics, start, end, interval, limit } = req.query;
-
-  if (!metrics) {
-    return res.status(400).json({ error: "Missing 'metrics' parameter" });
-  }
-
-  const requestedMetrics = metrics.split(',').map(m => m.trim()).filter(Boolean);
-  if (requestedMetrics.length === 0) {
-    return res.status(400).json({ error: "No valid metrics specified" });
-  }
-
-  let tableCategory = null;
-  let tableInfo = null;
-
-  for (const [category, info] of Object.entries(METRICS_CATALOG)) {
-    const hasMetric = requestedMetrics.some(m => info.metrics[m]);
-    if (hasMetric) {
-      tableCategory = category;
-      tableInfo = info;
-      break;
-    }
-  }
-
-  if (!tableInfo) {
-    return res.status(400).json({ error: "No valid metrics found in catalog" });
-  }
-
-  const validMetrics = requestedMetrics.filter(m => tableInfo.metrics[m]);
-  if (validMetrics.length === 0) {
-    return res.status(400).json({ error: "No valid metrics for the detected table" });
-  }
-
-  const tableName = tableInfo.table;
-  const tsCol = tableInfo.timestampCol;
-  const isAggregated = interval && parseInt(interval) > 0;
-  const maxRows = Math.min(parseInt(limit) || 5000, 10000);
-
+  const dbName = req.headers['x-db-name'] || req.user?.dbName;
+  if (!dbName) return res.status(400).json({ error: 'Missing X-DB-Name header' });
+  if (!metrics) return res.status(400).json({ error: "Missing 'metrics' parameter" });
+  const keys = String(metrics).split(',').map(s => s.trim()).filter(k => rm.KEY_TO_COLUMN[k]);
+  if (keys.length === 0) return res.status(400).json({ error: 'No valid metrics specified' });
+  if (!start || !end) return res.status(400).json({ error: 'Missing start or end' });
   try {
-    const db = await getDbConnection(req.dbName);
-    const params = [];
-    let query = '';
-
-    if (isAggregated) {
-      const intv = parseInt(interval);
-      const selectCols = validMetrics.map(m => `AVG(\`${m}\`) as \`${m}\``).join(', ');
-      query = `
-        SELECT 
-          FROM_UNIXTIME(UNIX_TIMESTAMP(MIN(${tsCol})) DIV ? * ?) AS timestamp,
-          ${selectCols}
-        FROM \`${tableName}\`
-      `;
-      params.push(intv, intv);
-    } else {
-      const selectCols = validMetrics.map(m => `\`${m}\``).join(', ');
-      query = `SELECT ${tsCol} AS timestamp, ${selectCols} FROM \`${tableName}\``;
-    }
-
-    if (start && end) {
-      query += ` WHERE ${tsCol} >= ? AND ${tsCol} <= ?`;
-      params.push(start, end);
-    }
-
-    if (isAggregated) {
-      query += ` GROUP BY UNIX_TIMESTAMP(${tsCol}) DIV ?`;
-      params.push(parseInt(interval));
-    }
-
-    query += ` ORDER BY timestamp ASC LIMIT ${maxRows}`;
-
-    const [rows] = await db.execute(query, params);
-
-    const formattedRows = rows.map(row => {
-      const formatted = { timestamp: row.timestamp };
-      for (const m of validMetrics) {
-        formatted[m] = row[m] !== null && row[m] !== undefined
-          ? Math.round(parseFloat(row[m]) * 100) / 100
-          : null;
-      }
-      return formatted;
-    });
-
-    res.json({
-      data: formattedRows,
-      meta: {
-        table: tableName,
-        metrics: validMetrics,
-        count: formattedRows.length,
-        aggregated: !!isAggregated,
-        interval: isAggregated ? parseInt(interval) : null
-      }
-    });
-
+    const db = await getDbConnection(dbName);
+    const trafoId = parseInt(req.query.trafo_id || 1, 10) || 1;
+    const rows = await rm.getHistory(db, trafoId, start, end, interval || 0, keys);
+    const maxRows = Math.min(parseInt(limit, 10) || 5000, 10000);
+    const data = rows.slice(0, maxRows).map(r => ({ timestamp: r.timestamp, ...Object.fromEntries(keys.map(k => [k, r[k]])) }));
+    res.json({ data, meta: { table: 'reading_data', metrics: keys, count: data.length, aggregated: !!(parseInt(interval, 10) > 0), interval: parseInt(interval, 10) || null } });
   } catch (error) {
-    console.error("Analytics query error:", error);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
