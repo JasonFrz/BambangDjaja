@@ -17,3 +17,8 @@ export * from './PhasorDiagramPanel';
 export * from './TransformerSLDPanel';
 export * from './HealthIndexPanel';
 export * from './EventStreamPanel';
+export * from './HarmonicPanel';
+export * from './DeratingPanel';
+export * from './TransformerStatusPanel';
+export * from './PhysicalStatusPanel';
+export * from './OilQualityPanel';

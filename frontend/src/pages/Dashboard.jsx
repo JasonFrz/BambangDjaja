@@ -18,7 +18,8 @@ import {
   BarChartPanel, BarGaugePanel, TablePanel, PieChartPanel,
   StateTimelinePanel, HeatmapPanel, StatusHistoryPanel,
   HistogramPanel, NewsPanel, CandlestickPanel, OilStatusPanel,
-  PhasorDiagramPanel, TransformerSLDPanel, HealthIndexPanel, EventStreamPanel
+  PhasorDiagramPanel, TransformerSLDPanel, HealthIndexPanel, EventStreamPanel,
+  HarmonicPanel, DeratingPanel, TransformerStatusPanel, PhysicalStatusPanel, OilQualityPanel
 } from "../components/visualizations";
 import { UniversalTimePicker } from "../components/UniversalTimePicker";
 import TransformerMapCard from '../components/TransformerMapCard';
@@ -173,6 +174,11 @@ const PanelRenderer = memo(({ panel, latestData, chartData, tempData, isLive, is
     case 'sld': return <TransformerSLDPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
     case 'healthindex': return <HealthIndexPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
     case 'eventstream': return <EventStreamPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
+    case 'harmonic': return <HarmonicPanel panel={panel} isEditing={isEditing} updatePanel={updatePanel} />;
+    case 'derating': return <DeratingPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
+    case 'trafostatus': return <TransformerStatusPanel panel={panel} isEditing={isEditing} />;
+    case 'physicalstatus': return <PhysicalStatusPanel panel={panel} isEditing={isEditing} />;
+    case 'oilquality': return <OilQualityPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
     default:
       return (
         <div className="h-full w-full flex items-center justify-center bg-gray-50 dark:bg-white/5 rounded-xl border border-dashed border-gray-300 dark:border-white/20">
@@ -307,7 +313,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     sld: 8,          
   };
   const SINGLE_METRIC_PANELS = ['gauge', 'bargauge', 'candlestick', 'histogram'];
-  const NO_METRIC_PANELS = ['oilstatus', 'eventstream', 'news'];
+  const NO_METRIC_PANELS = ['oilstatus', 'eventstream', 'news', 'harmonic', 'derating', 'trafostatus', 'physicalstatus', 'oilquality'];
   const OPTIONAL_METRIC_PANELS = ['phasor', 'sld', 'healthindex'];
 
   const toggleMetric = (key) => {
@@ -547,7 +553,12 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     { v: 'phasor', l: 'Phasor Diagram', d: '3-Phase vector polar plot', i: Compass },
     { v: 'sld', l: 'Transformer SLD', d: 'Single Line Diagram & power flow', i: GitCommit },
     { v: 'healthindex', l: 'Health Index', d: 'Composite THI & IEEE Aging', i: HeartPulse },
-    { v: 'eventstream', l: 'Event Stream', d: 'Real-time terminal log & alert', i: Terminal }
+    { v: 'eventstream', l: 'Event Stream', d: 'Real-time terminal log & alert', i: Terminal },
+    { v: 'harmonic', l: 'Harmonics', d: 'THD per orde, tegangan/arus', i: BarChart3 },
+    { v: 'derating', l: 'De-rating', d: 'Kapasitas terpakai vs hilang per fase', i: PieChartIcon },
+    { v: 'trafostatus', l: 'Transformer Status', d: '29 status alarm/trip + rekomendasi', i: AlertTriangle },
+    { v: 'physicalstatus', l: 'Physical Status', d: 'Tap, oil level, pressure, gas fault', i: Thermometer },
+    { v: 'oilquality', l: 'Oil Quality', d: 'H2, moisture, BDV, water activity', i: Database }
   ].filter(t => t.l.toLowerCase().includes(visSearchQuery.toLowerCase()) || t.d.toLowerCase().includes(visSearchQuery.toLowerCase())).map(t => (
                     <div key={t.v} className={`rounded-xl border transition-all flex flex-col overflow-hidden ${panelType === t.v ? 'bg-blue-50 border-blue-500 dark:bg-blue-500/10 dark:border-blue-500 shadow-sm' : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#151521] hover:border-blue-300 dark:hover:border-blue-500/50'}`}>
                       <button
@@ -1389,9 +1400,10 @@ const Dashboard = () => {
   }, []);
 
   const getDefaultSize = (type) => {
-    const isSmall = type === 'stat' || type === 'gauge' || type === 'oilstatus';
+    const isSmall = type === 'stat' || type === 'gauge' || type === 'oilstatus' || type === 'oilquality';
+    const isTall = type === 'trafostatus' || type === 'physicalstatus';
     return {
-      lg:  { w: isSmall ? 3 : 6,  h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 },
+      lg:  { w: isSmall ? 3 : 6,  h: isSmall ? 4 : (isTall ? 6 : 5), minW: 2, minH: isSmall ? 2 : 4 },
       md:  { w: isSmall ? 3 : 5,  h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 },
       sm:  { w: isSmall ? 3 : 6,  h: isSmall ? 4 : 5, minW: 2, minH: isSmall ? 2 : 4 },
       xs:  { w: 2,                h: isSmall ? 4 : 5, minW: 1, minH: 2 },
