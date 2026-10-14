@@ -52,7 +52,7 @@
 - Consumes: `readingModel.COLUMN_MAP`, `statusModel.STATUS_COLUMNS`, `limitsModel.SETTINGS_COLUMNS/TRIP_COLUMNS`.
 - Produces: `parseRaspiTimestamp(v, offset='+07:00') -> Date|null`, `pickColumns(row, allowlist) -> {col: val}` (case-insensitive), `buildInsert(table, rows, allowlist, extra, { ignore }) -> { sql, params } | null`, `mapHarmonicRow(row) -> { Phase, '1st'.. '31th' }`, konstanta `READING_COLUMNS`, `TD_COLUMNS`, `SETTINGS_ALL_COLUMNS`, `TRIP_SETTINGS_COLUMNS`, `STATUS_ALL_COLUMNS`, `FAILURE_COLUMNS`, `HARMONIC_ORDERS`.
 
-- [ ] **Step 1: Tulis test**
+- [x] **Step 1: Tulis test**
 
 ```js
 const test = require('node:test');
@@ -103,9 +103,9 @@ test('allowlist kolom diturunkan dari model, bukan ditulis ulang', () => {
 });
 ```
 
-- [ ] **Step 2: `npm test`, pastikan gagal karena modul belum ada**
+- [x] **Step 2: `npm test`, pastikan gagal karena modul belum ada**
 
-- [ ] **Step 3: Tulis bagian helper `backend/utils/raspiSync.js`**
+- [x] **Step 3: Tulis bagian helper `backend/utils/raspiSync.js`**
 
 ```js
 const rm = require('./readingModel');
@@ -190,7 +190,7 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 4: `npm test` lulus (Task 1), commit**
+- [x] **Step 4: `npm test` lulus (Task 1), commit**
 
 ```bash
 git add backend/utils/raspiSync.js backend/tests/raspiSync.test.js
@@ -219,7 +219,7 @@ git commit -m "feat(backend): raspiSync helper murni: timestamp Raspi, pickColum
   - `recentTimestamps(db, trafoId, hours = 24) -> [{ timestamp: ISO }]`
   - `knownFailureIds(db, trafoId) -> [{ failure_id }]`
 
-- [ ] **Step 1: Tambah test**
+- [x] **Step 1: Tambah test**
 
 ```js
 const { makeFakeDb } = require('./helpers/fakeDb');
@@ -340,9 +340,9 @@ test('touchLastConnection upsert dengan Date JS; recentTimestamps dan knownFailu
 });
 ```
 
-- [ ] **Step 2: `npm test`, pastikan test baru gagal (`registerConnection is not a function`)**
+- [x] **Step 2: `npm test`, pastikan test baru gagal (`registerConnection is not a function`)**
 
-- [ ] **Step 3: Tambah handler ke `backend/utils/raspiSync.js`** (sebelum `module.exports`, lalu tambahkan nama-namanya ke exports)
+- [x] **Step 3: Tambah handler ke `backend/utils/raspiSync.js`** (sebelum `module.exports`, lalu tambahkan nama-namanya ke exports)
 
 ```js
 // ---------- handler DB ----------
@@ -467,7 +467,7 @@ async function knownFailureIds(db, trafoId) {
 }
 ```
 
-- [ ] **Step 4: `npm test` lulus, commit**
+- [x] **Step 4: `npm test` lulus, commit**
 
 ```bash
 git add backend/utils/raspiSync.js backend/tests/raspiSync.test.js
@@ -486,7 +486,7 @@ git commit -m "feat(backend): raspiSync handler: registrasi Raspi, realtime, har
 - Consumes: `statusModel.normalizeCode/levelOf/STATUS_LABELS`.
 - Produces: `diffStatus(before, after) -> [{ parameter, from, to, level }]` (hanya yang memburuk), `PARAM_METRIC`, `buildAlerts(changes, point, limits) -> [{ name, sub, val, limit, type }]`, `class Cooldown(ms=15min) { allow(key, now) }`, `processStatusChange({ dbName, trafoId, before, after, point, limits, cooldown, now, send }) -> alerts terkirim`.
 
-- [ ] **Step 1: Tulis test**
+- [x] **Step 1: Tulis test**
 
 ```js
 const test = require('node:test');
@@ -539,9 +539,9 @@ test('processStatusChange: kirim hanya yang lolos cooldown, tidak kirim kalau ko
 });
 ```
 
-- [ ] **Step 2: `npm test`, pastikan gagal karena modul belum ada**
+- [x] **Step 2: `npm test`, pastikan gagal karena modul belum ada**
 
-- [ ] **Step 3: Tulis `backend/utils/alertEngine.js`**
+- [x] **Step 3: Tulis `backend/utils/alertEngine.js`**
 
 ```js
 const sm = require('./statusModel');
@@ -625,7 +625,7 @@ async function processStatusChange({ dbName, trafoId, before, after, point, limi
 module.exports = { PARAM_METRIC, diffStatus, buildAlerts, Cooldown, processStatusChange };
 ```
 
-- [ ] **Step 4: `npm test` lulus, commit**
+- [x] **Step 4: `npm test` lulus, commit**
 
 ```bash
 git add backend/utils/alertEngine.js backend/tests/alertEngine.test.js
@@ -645,7 +645,7 @@ git commit -m "feat(backend): alertEngine: diff status memburuk, cooldown 15 men
 - Consumes: Task 1–3, `alertSender.sendAlertMessage`, `readingModel.getLatest/computeDerived`, `trafoModel.getTransformerData/getStatusRow`, `limitsModel.buildLimits`, `db.getMasterDb/getDbConnection`.
 - Produces: `initRaspiWebSocket(server, { activeSubscriptions })`, `sendToRaspi(serial, payload)`, `raspiClients` (Map serial → ws, dipakai `trafoModel`), `raspiMeta` (Map serial → `{ dbName, trafoId, tmuVersion }`), `dueRequests(state, now, hasWatchers) -> string[]` (murni), `INTERVALS`.
 
-- [ ] **Step 1: Tulis test scheduler**
+- [x] **Step 1: Tulis test scheduler**
 
 ```js
 const test = require('node:test');
@@ -669,9 +669,9 @@ test('dueRequests menghormati interval', () => {
 });
 ```
 
-- [ ] **Step 2: `npm test`, pastikan gagal (`dueRequests is not a function`)**
+- [x] **Step 2: `npm test`, pastikan gagal (`dueRequests is not a function`)**
 
-- [ ] **Step 3: Tulis ulang `backend/utils/raspiWebSocket.js`**
+- [x] **Step 3: Tulis ulang `backend/utils/raspiWebSocket.js`**
 
 ```js
 const { WebSocketServer } = require('ws');
@@ -869,9 +869,9 @@ function sendToRaspi(serialNo, payload) {
 module.exports = { initRaspiWebSocket, sendToRaspi, raspiClients, raspiMeta, dueRequests, INTERVALS };
 ```
 
-- [ ] **Step 4: Ubah `backend/index.js`**: `initRaspiWebSocket(server);` → `initRaspiWebSocket(server, { activeSubscriptions });`
+- [x] **Step 4: Ubah `backend/index.js`**: `initRaspiWebSocket(server);` → `initRaspiWebSocket(server, { activeSubscriptions });`
 
-- [ ] **Step 5: `npm test` lulus; `node -e "require('./utils/raspiWebSocket')"` tanpa error; commit**
+- [x] **Step 5: `npm test` lulus; `node -e "require('./utils/raspiWebSocket')"` tanpa error; commit**
 
 ```bash
 git add backend/utils/raspiWebSocket.js backend/index.js backend/tests/raspiScheduler.test.js
@@ -889,7 +889,7 @@ git commit -m "feat(backend): raspiWebSocket menangani protokol Raspi penuh, sch
 **Interfaces:**
 - Consumes: protokol Task 4. Perlu `company_key` perusahaan demo (`SELECT company_key FROM company WHERE database_name='db_demo'`).
 
-- [ ] **Step 1: Tulis `backend/scripts/fake_raspi.js`**
+- [x] **Step 1: Tulis `backend/scripts/fake_raspi.js`**
 
 ```js
 // Simulator klien Raspberry Pi.
@@ -1006,7 +1006,7 @@ async function main() {
 main().catch((e) => { console.error(e.message); process.exit(1); });
 ```
 
-- [ ] **Step 2: Uji ujung ke ujung dengan server hidup**
+- [x] **Step 2: Uji ujung ke ujung dengan server hidup**
 
 Terminal 1: `cd backend && npm start`. Terminal 2: `cd backend && node scripts/fake_raspi.js` (biarkan jalan 90 detik). Terminal 3 (PowerShell):
 
@@ -1021,7 +1021,7 @@ Lalu dengan trafo baru (id dari daftar, misal 2): `GET /api/trends/meter?trafo_i
 
 Expected tambahan: hentikan fake_raspi, setelah 2 menit `GET /api/trafo` menampilkan `Offline` untuk trafo 2.
 
-- [ ] **Step 3: Dokumentasi dan commit**
+- [x] **Step 3: Dokumentasi dan commit**
 
 Tambah `RASPI_TZ_OFFSET=+07:00` ke `backend/.env.example`; README bagian 3.5 tambah `node scripts/fake_raspi.js`; bagian 6 Rencana C dicatat selesai, catatan "alert belum aktif" dihapus.
 

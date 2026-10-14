@@ -153,7 +153,7 @@ router.put("/:id/data", requireRole("admin", "superuser"), async (req, res) => {
     await req.db.execute(`UPDATE transformer_data SET ${sets} WHERE trafoId = ?`, [...values, trafoId]);
 
     const after = await tm.getTransformerData(req.db, trafoId);
-    const pushed = sendToRaspi(after.raspiSerialNo, { type: "updateSyncTransformerDataFromServer", data: after });
+    const pushed = sendToRaspi(after.raspiSerialNo, { type: "updateSyncTransformerDataFromServer", data: after }, req.dbName);
 
     const master = await getMasterDb();
     const company = await getCompanyByDb(master, req.dbName);
