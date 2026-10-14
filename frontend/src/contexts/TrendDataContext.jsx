@@ -7,40 +7,13 @@ const TrendDataContext = createContext();
 
 export const useTrendData = () => useContext(TrendDataContext);
 
-const mapReadingToPoint = (reading) => {
-  const date = new Date(reading.timestamp);
+// Respons backend sudah memakai key frontend; hanya pastikan time/timestamp ada.
+const toPoint = (r) => {
+  const date = new Date(r.timestamp);
   return {
-    time: date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' }),
+    ...r,
+    time: r.time || date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' }),
     timestamp: date.toISOString(),
-    phaseA: parseFloat(reading.phase_a_v) || 0,
-    phaseB: parseFloat(reading.phase_b_v) || 0,
-    phaseC: parseFloat(reading.phase_c_v) || 0,
-    lineAB: parseFloat(reading.line_ab_v) || 0,
-    lineBC: parseFloat(reading.line_bc_v) || 0,
-    lineCA: parseFloat(reading.line_ca_v) || 0,
-    currentA: parseFloat(reading.current_a) || 0,
-    currentB: parseFloat(reading.current_b) || 0,
-    currentC: parseFloat(reading.current_c) || 0,
-    currentN: parseFloat(reading.current_n) || 0,
-    currentUnbalance: parseFloat(reading.current_unbalance) || 0,
-    powerActiveTotal: parseFloat(reading.power_active_total || reading.power_active_total_kw) || 0,
-    powerReactiveTotal: parseFloat(reading.power_reactive_total || reading.power_reactive_total_kvar) || 0,
-    powerApparentTotal: parseFloat(reading.power_apparent_total || reading.power_apparent_total_kva) || 0,
-    pfTotal: Number((parseFloat(reading.pf_total) || 0).toFixed(2)),
-    powerActiveA: parseFloat(reading.power_active_a) || 0,
-    powerActiveB: parseFloat(reading.power_active_b) || 0,
-    powerActiveC: parseFloat(reading.power_active_c) || 0,
-    frequency: parseFloat(reading.frequency) || 0,
-    energyActiveTotal: parseFloat(reading.energy_active_total) || 0,
-    energyReactiveTotal: parseFloat(reading.energy_reactive_total) || 0,
-    avgPhaseV: parseFloat(reading.avg_phase_v) || 0,
-    avgLineV: parseFloat(reading.avg_line_v) || 0,
-    avgCurrent: parseFloat(reading.avg_current) || 0,
-    onOffStatus: parseInt(reading.on_off_status, 10) || 0,
-    relayStatus: parseInt(reading.relay_status, 10) || 0,
-    alarmStatus: parseInt(reading.alarm_status, 10) || 0,
-    synced: parseInt(reading.synced, 10) || 0,
-    efficiency: parseFloat(reading.efficiency) || 0,
   };
 };
 
@@ -85,7 +58,7 @@ export const TrendDataProvider = ({ children }) => {
           'ngrok-skip-browser-warning': '69420'
         }
       });
-      const historical = (res.data || []).map(mapReadingToPoint);
+      const historical = (res.data || []).map(toPoint);
       if (historical.length > 0) {
         const receiptTime = Date.now();
         lastDataRef.current = { ...historical[historical.length - 1], _receivedAt: receiptTime };
@@ -100,6 +73,13 @@ export const TrendDataProvider = ({ children }) => {
 
   useEffect(() => {
     fetchLiveInitial();
+  }, [fetchLiveInitial]);
+
+  // Ganti trafo: buang data lama dan ambil ulang untuk trafo yang baru dipilih.
+  useEffect(() => {
+    const onTrafoChange = () => { lastDataRef.current = null; setLiveData([]); fetchLiveInitial(); };
+    window.addEventListener('trafoChanged', onTrafoChange);
+    return () => window.removeEventListener('trafoChanged', onTrafoChange);
   }, [fetchLiveInitial]);
 
   const fetchRangeData = useCallback(async (preset, customStart = null, customEnd = null) => {
@@ -170,7 +150,7 @@ export const TrendDataProvider = ({ children }) => {
         params
       });
 
-      const historical = (res.data || []).map(mapReadingToPoint);
+      const historical = (res.data || []).map(toPoint);
       setLiveData(historical);
       setTimeRange({
         mode: 'historical',

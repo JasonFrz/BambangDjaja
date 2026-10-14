@@ -13,6 +13,8 @@ axios.interceptors.request.use((config) => {
   if (token) config.headers['Authorization'] = `Bearer ${token}`;
   if (dbName) config.headers['X-DB-Name'] = dbName;
   if (username) config.headers['X-Username'] = username;
+  const trafoId = sessionStorage.getItem('selectedTrafoId');
+  if (trafoId) config.headers['X-Trafo-Id'] = trafoId;
   return config;
 });
 
@@ -38,6 +40,7 @@ window.fetch = async (...args) => {
   const dbName = sessionStorage.getItem('db_name');
   const username = sessionStorage.getItem('username');
   const token = sessionStorage.getItem('token');
+  const trafoId = sessionStorage.getItem('selectedTrafoId');
 
   const urlStr = typeof resource === 'string' ? resource : (resource instanceof URL ? resource.toString() : resource?.url || '');
   const isMapApi = urlStr && (urlStr.includes('openfreemap.org') || urlStr.includes('cartocdn.com') || urlStr.includes('openstreetmap.org') || urlStr.includes('basemaps'));
@@ -48,11 +51,13 @@ window.fetch = async (...args) => {
       config.headers.append('ngrok-skip-browser-warning', '69420');
       if (dbName) config.headers.append('X-DB-Name', dbName);
       if (username) config.headers.append('X-Username', username);
+      if (trafoId) config.headers.set('X-Trafo-Id', trafoId);
     } else {
       config.headers['ngrok-skip-browser-warning'] = '69420';
       if (token) config.headers['Authorization'] = `Bearer ${token}`;
       if (dbName) config.headers['X-DB-Name'] = dbName;
       if (username) config.headers['X-Username'] = username;
+      if (trafoId) config.headers['X-Trafo-Id'] = trafoId;
     }
   }
   
