@@ -9,5 +9,5 @@ export const FIX = {
     suddenPressure: { flag: 0, lastLog: null }, timestamp: '2026-10-14T02:54:04.000Z' },
   'oil-quality': { success: true, available: false },
 };
-export function useTrafoApi(path) { return { data: FIX[path], error: null, isLoading: false, reload() {} }; }
+export function useTrafoApi(path) { const o = globalThis.__FIX_OVERRIDE || {}; return { data: path in o ? o[path] : FIX[path], error: null, isLoading: false, reload() {} }; }
 export const useApi = () => ({ apiUrl: 'http://localhost:5000' });

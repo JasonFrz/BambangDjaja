@@ -190,6 +190,16 @@ preset (`config/presets.js`: Electrical default, Physical, Status, Oil Quality; 
 pilihan disimpan di `localStorage.tmu_active_preset`), halaman Settings per grup
 `transformer_settings` + trip enable, nameplate di Transformer Data dengan edit admin.
 
+**Hasil review akhir Rencana D (14 Okt), sudah diperbaiki:** auto-save/reset/rename Dashboard tidak
+lagi menulis preset ke DB (`canPersist`), baris default tetap bernama `Main Dashboard` di DB,
+memilih preset melepaskan profil kustom aktif, panel status menampilkan "belum ada data" bila
+Raspi belum mengirim status (`hasStatus` dari backend), rentang bawaan gauge per grup metric
+(`config/gaugeRanges.js`), `source` panel harmonik tidak hilang saat edit. Masih ditunda (kecil):
+`useTrafoApi` menampilkan data trafo lama sesaat setelah ganti trafo; mode historis tidak di-reset
+saat ganti trafo; nilai oli lama tampil sampai event pertama; `max: 0` dari limits dianggap aktif;
+`refreshThresholds` + event memuat limits dua kali; tile Stat di preset Status hanya menampilkan
+metric pertama; daftar profil perlu scroll karena empat preset.
+
 **Verifikasi yang dilakukan:** `npm run build`, `npx oxlint` (tidak ada peringatan baru), dan
 `npm run check:render` (render headless lima panel baru dengan data berbentuk respons backend
 nyata + konsistensi preset). **Uji di browser belum dilakukan** karena sesi pengerjaan tidak

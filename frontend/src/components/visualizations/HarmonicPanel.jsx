@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import { GripVertical } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts';
 import { useTrafoApi } from '../../hooks/useTrafoApi';
@@ -6,7 +6,9 @@ import { useTrafoApi } from '../../hooks/useTrafoApi';
 const PHASE_COLORS = { 1: '#ef4444', 2: '#eab308', 3: '#3b82f6' };
 
 export const HarmonicPanel = memo(({ panel, isEditing, updatePanel }) => {
-  const source = panel.source === 'current' ? 'current' : 'voltage';
+  // Sumber disimpan di panel (updatePanel); di preview tanpa updatePanel dipakai state lokal.
+  const [localSource, setLocalSource] = useState(null);
+  const source = (localSource ?? panel.source) === 'current' ? 'current' : 'voltage';
   const { data, isLoading, error } = useTrafoApi('harmonics', 60000, { type: source });
 
   const rows = useMemo(() => {
@@ -18,7 +20,7 @@ export const HarmonicPanel = memo(({ panel, isEditing, updatePanel }) => {
     });
   }, [data]);
 
-  const setSource = (s) => updatePanel && updatePanel(panel.id, { source: s });
+  const setSource = (s) => { setLocalSource(s); if (updatePanel) updatePanel(panel.id, { source: s }); };
 
   return (
     <div className="h-full w-full flex flex-col">
