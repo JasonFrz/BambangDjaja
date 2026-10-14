@@ -6,7 +6,7 @@ async function main() {
   const auth = await login.json();
   if (!auth.token) throw new Error('Login gagal: ' + JSON.stringify(auth));
   const H = { Authorization: `Bearer ${auth.token}`, 'X-DB-Name': auth.db_name, 'X-Trafo-Id': '1' };
-  const end = new Date().toISOString(), start = new Date(Date.now() - 3600e3).toISOString();
+  const end = new Date().toISOString(), start = new Date(Date.now() - 24 * 3600e3).toISOString(); // 24 jam: data seed boleh berumur sampai sehari
   const urls = [
     '/api/profile', '/api/superuser-users', '/api/layouts', '/api/trafo', '/api/trafo/company-info', '/api/trafo/1', '/api/trafo/1/data',
     '/api/trafo/1/status', '/api/trafo/1/physical', '/api/trafo/1/oil-quality', '/api/trafo/1/harmonics?type=voltage', '/api/trafo/1/harmonics?type=current',

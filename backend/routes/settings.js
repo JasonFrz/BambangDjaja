@@ -90,7 +90,7 @@ router.put("/thresholds/:trafoId", requireRole("admin", "superuser"), async (req
       [...cols.map((c) => updates[c]), trafoId],
     );
     const after = await getSettings(req.db, trafoId);
-    const pushed = sendToRaspi(td && td.raspiSerialNo, { type: "updateSyncTransformerSettingsFromServer", data: after });
+    const pushed = sendToRaspi(td && td.raspiSerialNo, { type: "updateSyncTransformerSettingsFromServer", data: after }, req.dbName);
     await writeLog(req, trafoId, "THRESHOLD_UPDATE", `Ubah threshold trafo ${trafoId}`, pick(before, cols), pick(after, cols));
     res.json({
       success: true, settings: after, pushed,
@@ -116,7 +116,7 @@ router.put("/trip/:trafoId", requireRole("admin", "superuser"), async (req, res)
     );
     const after = await getTrip(req.db, trafoId);
     const td = await getTransformerData(req.db, trafoId);
-    const pushed = sendToRaspi(td && td.raspiSerialNo, { type: "updateSyncTripSettingsFromServer", data: after });
+    const pushed = sendToRaspi(td && td.raspiSerialNo, { type: "updateSyncTripSettingsFromServer", data: after }, req.dbName);
     await writeLog(req, trafoId, "TRIP_SETTING_UPDATE", `Ubah trip enable trafo ${trafoId}`, pick(before, keys), pick(after, keys));
     res.json({ success: true, trip: after, pushed });
   } catch (error) {

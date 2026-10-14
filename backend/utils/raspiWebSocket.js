@@ -61,6 +61,14 @@ async function handleMessage(conn, msg) {
   const { ws } = conn;
   if (msg.type === 'createConnection') {
     const master = await getMasterDb();
+    const serialWanted = String(msg.raspiSerialNo || '').trim();
+    const [[companyRow] = []] = await master.execute('SELECT database_name FROM company WHERE company_key = ? LIMIT 1', [String(msg.companyKey || '')]);
+    if (companyRow && !canRegister(serialWanted, companyRow.database_name)) {
+      console.warn(`[Raspi WS] serial ${serialWanted} sedang aktif untuk perusahaan lain, koneksi ditolak`);
+      send(ws, { type: 'terminateConnection' });
+      ws.close();
+      return;
+    }
     const reg = await rs.registerConnection(master, getDbConnection, msg);
     if (!reg) {
       console.warn(`[Raspi WS] companyKey tidak dikenal atau serial kosong (${msg.raspiSerialNo || '-'}), koneksi ditutup`);
@@ -189,8 +197,19 @@ function initRaspiWebSocket(server, { activeSubscriptions } = {}) {
   return { wss, raspiClients };
 }
 
-function sendToRaspi(serialNo, payload) {
+// Serial boleh didaftarkan kalau belum ada koneksi hidup untuk serial itu dari perusahaan lain.
+function canRegister(serialNo, dbName) {
+  const meta = raspiMeta.get(serialNo);
+  const ws = raspiClients.get(serialNo);
+  if (!meta || !ws || ws.readyState !== 1) return true;
+  return meta.dbName === dbName;
+}
+
+// dbName (opsional) memastikan dorongan dari route perusahaan A tidak sampai ke Raspi perusahaan B.
+function sendToRaspi(serialNo, payload, dbName) {
+  const meta = raspiMeta.get(serialNo);
+  if (dbName && meta && meta.dbName !== dbName) return false;
   return send(raspiClients.get(serialNo), payload);
 }
 
-module.exports = { initRaspiWebSocket, sendToRaspi, raspiClients, raspiMeta, dueRequests, INTERVALS };
+module.exports = { initRaspiWebSocket, sendToRaspi, canRegister, raspiClients, raspiMeta, dueRequests, INTERVALS };

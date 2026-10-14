@@ -110,14 +110,19 @@ cd backend
 npm test
 ```
 
-Status saat serah terima: **52 lulus, 0 gagal**. Test tidak boleh butuh MySQL.
+Status saat serah terima: **76 lulus, 0 gagal**. Test tidak boleh butuh MySQL.
 
 Uji integrasi dengan server hidup (dari `backend/`):
 
 ```powershell
-node scripts/smoke_api.js     # login demo, panggil 24 endpoint GET, semua harus OK
+node scripts/smoke_api.js     # login demo, panggil 24 endpoint GET, semua harus OK (data seed < 24 jam)
 node scripts/ws_probe.js      # subscribe Socket.IO, tunggu 1 event meter + 1 oil_sensor
+node scripts/fake_raspi.js    # simulator Raspberry Pi: mendaftar sebagai trafo baru di db_demo, kirim data
 ```
+
+`fake_raspi.js` memakai `company_key` perusahaan `db_demo` dari DB master (atau argumen pertama),
+serial `FAKE-RASPI-001`, dan setiap permintaan status ke-2 dari 3 mengubah `OilTemp` ke High Alarm
+sehingga jalur alert ikut teruji (lihat log server `alert db_demo/trafo N`).
 
 ---
 
@@ -167,11 +172,13 @@ node scripts/ws_probe.js      # subscribe Socket.IO, tunggu 1 event meter + 1 oi
 Kode lengkap untuk setiap step ada di file Rencana B. Centang `- [x]` di file plan
 diperbarui per task yang selesai.
 
-### Rencana C — ingest Raspberry Pi + alert: **belum dibuat plannya**
-Spec bagian 5 dan 6.4. Protokol klien ada di repo lain (`../tmu/tmu-app-client-deploy/websocket.js`,
-tidak ada di repo ini). Server lama tidak ada sumbernya; harus ditulis ulang dari protokol klien.
-Alert memakai nama parameter dari `parameter_failure_recommendation` (BusTemp, WTITemp, OilTemp,
-Vab/Vbc/Vca, Uab/Ubc/Uca).
+### Rencana C — ingest Raspberry Pi + alert: **selesai** (14 Okt 2026)
+Plan: `docs/superpowers/plans/2026-10-14-plan-c-raspi-ingest-alert.md`. Server menerima protokol klien
+Raspi (`../tmu/tmu-app-client-deploy/websocket.js`) di `/bd-iot-socket` (port utama dan 2083):
+`utils/raspiWebSocket.js` (koneksi, scheduler permintaan, alert), `utils/raspiSync.js` (penulisan DB),
+`utils/alertEngine.js` (diff status, cooldown 15 menit), `scripts/fake_raspi.js` (simulator).
+Alert WhatsApp/email aktif kembali: dipicu saat `transformer_status` memburuk, dikirim lewat
+`utils/alertSender.js` ke user perusahaan yang punya `phone`/`email`.
 
 ### Rencana D — frontend: **belum dibuat plannya**
 Spec bagian 8. Sampai Rencana D selesai, halaman Settings dan grafik tren di frontend memakai
@@ -184,16 +191,10 @@ data kosong. Itu normal, bukan bug.
 Rencana B sudah selesai: seluruh backend membaca `master_tmu_app` dan skema `base_tmu`.
 Langkah berikutnya adalah membuat plan dari spec, lalu mengeksekusinya task per task.
 
-1. **Rencana C — ingest Raspberry Pi + alert** (spec bagian 5 dan 6.4, urutan kerja 8–9).
-   Isi: `raspiSync.js` (handler pesan dari Raspi lewat `utils/raspiWebSocket.js`), tulis ke
-   `temp_reading_data_realtime` / `reading_data` / `transformer_status` / `failure_log` /
-   `trafo_last_connection`, scheduler permintaan berkala, `fake_raspi.js` untuk uji lokal, lalu
-   alert memakai `utils/alertSender.js` + nama parameter dari `parameter_failure_recommendation`.
-   Protokol klien ada di repo lain: `../tmu/tmu-app-client-deploy/websocket.js`.
-   **Catatan penting:** sejak Task 6, poller tidak lagi mengirim alert WhatsApp/email
-   (fungsi lama `checkAndAlert` dihapus). Sampai Rencana C selesai, tidak ada alert otomatis.
-   Timestamp dari Raspi harus dikonversi ke UTC saat insert (lihat bagian 7).
-2. **Rencana D — frontend** (spec bagian 8, urutan kerja 10–12): `config/metrics.js`, context
+1. **Rencana C selesai.** Untuk Raspi asli: isi `COMPANY_KEY` di Raspi dengan `company.company_key`
+   perusahaan (lihat halaman admin perusahaan) dan `SERVER_DOMAIN` ke host server ini. Trafo akan
+   muncul otomatis di daftar saat Raspi pertama kali terhubung.
+2. **Rencana D — frontend (berikutnya)** (spec bagian 8, urutan kerja 10–12): `config/metrics.js`, context
    (`TrendDataContext`, `ThresholdContext`, `TemperatureDataContext` masih memetakan `phase_a_v`
    dan membaca `threshold_settings`), panel baru, preset, halaman Settings dan nameplate.
 3. Cara membuat plan: baca spec, tulis `docs/superpowers/plans/<tanggal>-plan-c-....md` dengan
@@ -227,6 +228,13 @@ Endpoint login adalah `POST /api/login` (bukan `/api/auth/login`).
 - Trafo tanpa baris `transformer_settings`/`transformer_status` harus menghasilkan
   `/limits` = `{}` dan status semua Normal, bukan 500.
 - Unit test tidak boleh menyentuh MySQL. Pakai `tests/helpers/fakeDb.js`.
+- **Autentikasi Raspi** hanya `companyKey` (acak 32 hex, unik per perusahaan) dan `raspiSerialNo`
+  yang dikirim perangkat, mengikuti protokol klien yang sudah terpasang. Siapa pun yang memegang
+  `company_key` bisa mengirim data atas nama perusahaan itu; serial yang sedang aktif untuk
+  perusahaan lain ditolak, dan dorongan setting dari web dicek ke perusahaan pemilik serial.
+- **Timestamp dari Raspi.** String ISO ber-`Z` dipakai apa adanya; string polos `YYYY-MM-DD HH:mm:ss`
+  (dari view `shrink_data_temp` di Raspi) dianggap waktu lokal Raspi dengan `RASPI_TZ_OFFSET`
+  (default `+07:00`). Nama kolom dicocokkan tanpa peduli huruf besar-kecil (`TIMESTAMP`, `deRatingB`).
 - **Zona waktu.** Driver mysql2 memakai `timezone: "Z"` dan tiap koneksi pool menjalankan
   `SET time_zone = '+00:00'` (`utils/db.js`, juga `seed_demo.js`). Jadi `NOW()` di SQL dan
   `new Date()` di JS sama-sama UTC. Script baru yang membuka koneksi sendiri harus ikut
