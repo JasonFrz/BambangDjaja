@@ -13,6 +13,7 @@ import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
 import { METRICS, METRIC_GROUPS } from "../config/metrics";
+import { PRESETS, isPresetId } from "../config/presets";
 import {
   TimeSeriesPanel, StatPanel, GaugePanel, StatusPanel,
   BarChartPanel, BarGaugePanel, TablePanel, PieChartPanel,
@@ -25,82 +26,6 @@ import { UniversalTimePicker } from "../components/UniversalTimePicker";
 import TransformerMapCard from '../components/TransformerMapCard';
 import AiLayoutModal from '../components/AiLayoutModal';
 
-
-const DEFAULT_PANELS = [
-  { id: 'p_uphase_chart', type: 'areachart', title: 'Phase Voltage Overview', metrics: ['phaseA', 'phaseC', 'phaseB'], chartType: 'line', colorScheme: 'spectral' },
-  { id: 'p_oilstatus', type: 'oilstatus', title: 'Oil Status', metrics: [], chartType: 'line' },
-  { id: 'p_uline_chart', type: 'linechart', title: 'Line Voltage Overview', metrics: ['lineCA', 'lineBC', 'lineAB'], chartType: 'line' },
-  { id: 'p_freq_gauge', type: 'gauge', title: 'Frequency', metrics: ['frequency'], chartType: 'line' },
-  { id: 'p_phasea_candle', type: 'candlestick', title: 'Phase A Voltage', metrics: ['phaseA'], chartType: 'line' },
-  { id: 'p_mixed_metrics', type: 'heatmap', title: 'Mixed Metrics Overview', metrics: ['oil_temperature', 'oil_pressure', 'energyActiveTotal', 'energyReactiveTotal', 'efficiency'], chartType: 'line' },
-  { id: 'p_1tgstpm5z', type: 'piechart', title: 'Oil Overview', metrics: ['oil_temperature', 'oil_pressure'], chartType: 'area', colorScheme: 'spectral' },
-  { id: 'p_od6kgu6a0', type: 'barchart', title: 'Phase Voltage Overview', metrics: ['phaseA', 'phaseB', 'lineAB'], chartType: 'area', colorScheme: 'spectral' },
-  { id: 'p_k18z2kmbp', type: 'sld', title: 'Transformer SLD', metrics: ['phaseA', 'phaseB', 'phaseC'], chartType: 'area', colorScheme: 'spectral' },
-  { id: 'p_w4nm3z94b', type: 'healthindex', title: 'Transformer Health Index', metrics: ['phaseA', 'phaseB', 'phaseC'], chartType: 'area', colorScheme: 'spectral' }
-];
-
-const DEFAULT_GRID_LAYOUTS = {
-  lg: [
-    { h: 4, i: 'p_uphase_chart', w: 5, x: 0, y: 0, minH: 3, minW: 3, moved: false, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_oilstatus', w: 2, x: 5, y: 0, minH: 2, minW: 2, moved: false, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_uline_chart', w: 5, x: 7, y: 0, minH: 3, minW: 3, moved: false, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_freq_gauge', w: 2, x: 0, y: 4, minH: 3, minW: 2, moved: false, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_phasea_candle', w: 6, x: 2, y: 4, minH: 3, minW: 3, moved: false, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_mixed_metrics', w: 4, x: 8, y: 4, minH: 3, minW: 3, moved: false, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_1tgstpm5z', w: 4, x: 0, y: 8, minH: 4, minW: 2, moved: false, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_od6kgu6a0', w: 8, x: 4, y: 8, minH: 4, minW: 2, moved: false, isDraggable: true, isResizable: true },
-    { h: 6, i: 'p_k18z2kmbp', w: 6, x: 0, y: 13, minH: 4, minW: 2, moved: false, isDraggable: true, isResizable: true },
-    { h: 6, i: 'p_w4nm3z94b', w: 6, x: 6, y: 13, minH: 4, minW: 2, moved: false, isDraggable: true, isResizable: true }
-  ],
-  md: [
-    { h: 4, i: 'p_uphase_chart', w: 4, x: 0, y: 0, minH: 3, minW: 3, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_oilstatus', w: 2, x: 4, y: 0, minH: 2, minW: 2, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_uline_chart', w: 4, x: 6, y: 0, minH: 3, minW: 3, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_freq_gauge', w: 2, x: 0, y: 4, minH: 3, minW: 2, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_phasea_candle', w: 4, x: 2, y: 4, minH: 3, minW: 3, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_mixed_metrics', w: 4, x: 6, y: 4, minH: 3, minW: 3, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_1tgstpm5z', w: 5, x: 0, y: 8, minH: 4, minW: 2, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_od6kgu6a0', w: 5, x: 0, y: 13, minH: 4, minW: 2, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_k18z2kmbp', w: 5, x: 0, y: 18, minH: 4, minW: 2, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_w4nm3z94b', w: 5, x: 0, y: 23, minH: 4, minW: 2, isDraggable: true, isResizable: true }
-  ],
-  sm: [
-    { h: 4, i: 'p_uphase_chart', w: 6, x: 0, y: 0, minH: 3, minW: 2, isDraggable: true, isResizable: true },
-    { h: 3, i: 'p_oilstatus', w: 6, x: 0, y: 4, minH: 2, minW: 2, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_uline_chart', w: 6, x: 0, y: 7, minH: 3, minW: 2, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_freq_gauge', w: 6, x: 0, y: 11, minH: 3, minW: 2, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_phasea_candle', w: 6, x: 0, y: 15, minH: 3, minW: 2, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_mixed_metrics', w: 6, x: 0, y: 19, minH: 3, minW: 2, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_1tgstpm5z', w: 6, x: 0, y: 23, minH: 4, minW: 2, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_od6kgu6a0', w: 6, x: 0, y: 28, minH: 4, minW: 2, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_k18z2kmbp', w: 6, x: 0, y: 33, minH: 4, minW: 2, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_w4nm3z94b', w: 6, x: 0, y: 38, minH: 4, minW: 2, isDraggable: true, isResizable: true }
-  ],
-  xs: [
-    { h: 4, i: 'p_uphase_chart', w: 2, x: 0, y: 0, minH: 3, minW: 1, isDraggable: true, isResizable: true },
-    { h: 3, i: 'p_oilstatus', w: 2, x: 0, y: 4, minH: 2, minW: 1, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_uline_chart', w: 2, x: 0, y: 7, minH: 3, minW: 1, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_freq_gauge', w: 2, x: 0, y: 11, minH: 3, minW: 1, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_phasea_candle', w: 2, x: 0, y: 15, minH: 3, minW: 1, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_mixed_metrics', w: 2, x: 0, y: 19, minH: 3, minW: 1, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_1tgstpm5z', w: 2, x: 0, y: 23, minH: 2, minW: 1, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_od6kgu6a0', w: 2, x: 0, y: 28, minH: 2, minW: 1, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_k18z2kmbp', w: 2, x: 0, y: 33, minH: 2, minW: 1, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_w4nm3z94b', w: 2, x: 0, y: 38, minH: 2, minW: 1, isDraggable: true, isResizable: true }
-  ],
-  xxs: [
-    { h: 4, i: 'p_uphase_chart', w: 1, x: 0, y: 0, minH: 3, minW: 1, isDraggable: true, isResizable: true },
-    { h: 3, i: 'p_oilstatus', w: 1, x: 0, y: 4, minH: 2, minW: 1, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_uline_chart', w: 1, x: 0, y: 7, minH: 3, minW: 1, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_freq_gauge', w: 1, x: 0, y: 11, minH: 3, minW: 1, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_phasea_candle', w: 1, x: 0, y: 15, minH: 3, minW: 1, isDraggable: true, isResizable: true },
-    { h: 4, i: 'p_mixed_metrics', w: 1, x: 0, y: 19, minH: 3, minW: 1, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_1tgstpm5z', w: 1, x: 0, y: 23, minH: 2, minW: 1, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_od6kgu6a0', w: 1, x: 0, y: 28, minH: 2, minW: 1, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_k18z2kmbp', w: 1, x: 0, y: 33, minH: 2, minW: 1, isDraggable: true, isResizable: true },
-    { h: 5, i: 'p_w4nm3z94b', w: 1, x: 0, y: 38, minH: 2, minW: 1, isDraggable: true, isResizable: true }
-  ]
-};
 
 const ensureResponsiveLayouts = (layouts) => {
   if (!layouts || typeof layouts !== 'object') return DEFAULT_GRID_LAYOUTS;
@@ -140,6 +65,20 @@ const ensureResponsiveLayouts = (layouts) => {
     }));
   }
   return result;
+};
+
+// Profil bawaan: preset Electrical adalah "default"; tiga preset lain ditambahkan lewat withPresets.
+const DEFAULT_PANELS = PRESETS.electrical.panels;
+const DEFAULT_GRID_LAYOUTS = ensureResponsiveLayouts(PRESETS.electrical.layouts);
+const DEFAULT_PROFILE_NAME = PRESETS.electrical.name;
+const withPresets = (profiles) => {
+  const out = { ...profiles };
+  for (const key of ['physical', 'status', 'oilquality']) {
+    const pr = PRESETS[key];
+    out[pr.id] = { id: pr.id, name: pr.name, panels: [...pr.panels], layouts: ensureResponsiveLayouts(pr.layouts), isEditable: false };
+  }
+  if (out['default']) out['default'] = { ...out['default'], name: DEFAULT_PROFILE_NAME };
+  return out;
 };
 
 const PANELS_KEY = 'grafana_panels_v2';
@@ -645,9 +584,9 @@ const Dashboard = () => {
 
   const [profilesState, setProfilesState] = useState({
     activeProfileId: 'default',
-    profiles: {
-      default: { id: 'default', name: 'Main Dashboard', panels: null, layouts: DEFAULT_GRID_LAYOUTS, isEditable: false }
-    }
+    profiles: withPresets({
+      default: { id: 'default', name: DEFAULT_PROFILE_NAME, panels: null, layouts: DEFAULT_GRID_LAYOUTS, isEditable: false }
+    })
   });
   const [isLayoutsLoading, setIsLayoutsLoading] = useState(true);
 
@@ -714,12 +653,16 @@ const Dashboard = () => {
             });
             
             if (!newProfiles['default']) {
-              newProfiles['default'] = { id: 'default', name: 'Main Dashboard', panels: [...DEFAULT_PANELS], layouts: DEFAULT_GRID_LAYOUTS, isEditable: false };
+              newProfiles['default'] = { id: 'default', name: DEFAULT_PROFILE_NAME, panels: [...DEFAULT_PANELS], layouts: DEFAULT_GRID_LAYOUTS, isEditable: false };
             }
+            const profilesWithPresets = withPresets(newProfiles);
+            // Preset tidak disimpan di DB; pilihan terakhir diingat di browser.
+            const savedPreset = localStorage.getItem('tmu_active_preset');
+            if (activeId === 'default' && savedPreset && profilesWithPresets[savedPreset]) activeId = savedPreset;
 
             setProfilesState({
               activeProfileId: activeId,
-              profiles: newProfiles
+              profiles: profilesWithPresets
             });
           }
         }
@@ -1183,7 +1126,7 @@ const Dashboard = () => {
       setProfilesState(prev => {
         const newProfiles = { ...prev.profiles };
         if (isDefault) {
-          newProfiles['default'] = { id: 'default', name: 'Main Dashboard', panels: [...DEFAULT_PANELS], layouts: JSON.parse(JSON.stringify(DEFAULT_GRID_LAYOUTS)), isEditable: false };
+          newProfiles['default'] = { id: 'default', name: DEFAULT_PROFILE_NAME, panels: [...DEFAULT_PANELS], layouts: JSON.parse(JSON.stringify(DEFAULT_GRID_LAYOUTS)), isEditable: false };
         } else {
           delete newProfiles[deletedId];
         }
@@ -1993,21 +1936,23 @@ const Dashboard = () => {
             {isProfileDropdownOpen && (
               <div className="absolute top-full mt-1.5 left-0 w-56 bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl z-[100] overflow-hidden flex flex-col animate-[slideDownFade_0.15s_ease-out] origin-top">
                 <div className="px-3 py-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider bg-gray-50/50 dark:bg-black/10 border-b border-gray-100 dark:border-white/5">
-                  Saved Dashboards
+                  Presets & Saved Dashboards
                 </div>
 
                 <div className="max-h-[105px] overflow-y-auto custom-scrollbar">
-                  {Object.values(profilesState.profiles).map(p => {
+                  {[...Object.values(profilesState.profiles)].sort((a, b) => ((isPresetId(a.id) || a.id === 'default') ? 0 : 1) - ((isPresetId(b.id) || b.id === 'default') ? 0 : 1)).map(p => {
                     const isActive = p.id === profilesState.activeProfileId;
                     return (
                       <button
                         key={p.id}
                         onClick={() => {
-                          setProfilesState(prev => {
-                            const newState = { ...prev, activeProfileId: p.id };
+                          setProfilesState(prev => ({ ...prev, activeProfileId: p.id }));
+                          if (isPresetId(p.id) || p.id === 'default') {
+                            localStorage.setItem('tmu_active_preset', p.id);
+                          } else {
+                            localStorage.removeItem('tmu_active_preset');
                             setActiveLayoutInApi(p.id);
-                            return newState;
-                          });
+                          }
                           setIsProfileDropdownOpen(false);
                         }}
                         className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between group transition-colors ${isActive ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300' : 'text-[#172b4d] dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'}`}
@@ -2039,12 +1984,14 @@ const Dashboard = () => {
                     >
                       <PlusSquare size={14} /> Save As New Profile...
                     </button>
+                    {(activeProfile?.isEditable || profilesState.activeProfileId === 'default') && (
                     <button
                       onClick={() => { setIsProfileDropdownOpen(false); handleDeleteProfile(); }}
                       className="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors"
                     >
                       <Trash2 size={14} /> {profilesState.activeProfileId === 'default' ? 'Reset to Default Layout' : 'Delete Current Profile'}
                     </button>
+                    )}
                   </div>
                 )}
               </div>
