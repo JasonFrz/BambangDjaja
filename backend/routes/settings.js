@@ -7,6 +7,7 @@ const { logActivity } = require("../utils/activityLog");
 const { getCompanyByDb } = require("../utils/masterModel");
 const { getTransformerData } = require("../utils/trafoModel");
 const { SETTINGS_COLUMNS, TRIP_COLUMNS, buildLimits, computeVoltageValues } = require("../utils/limitsModel");
+const { parsePositiveInt, parseNumericBody } = require("../utils/validate");
 
 router.use(async (req, res, next) => {
   const dbName = req.headers["x-db-name"];
@@ -66,9 +67,12 @@ router.get("/limits", async (req, res) => {
 });
 
 router.put("/thresholds/:trafoId", requireRole("admin", "superuser"), async (req, res) => {
-  const trafoId = trafoIdOf(req);
-  const body = req.body || {};
-  const keys = Object.keys(body).filter((k) => SETTINGS_COLUMNS.includes(k));
+  // Untuk PUT, trafo hanya dari path (bukan query) supaya tidak salah sasaran.
+  const trafoId = parsePositiveInt(req.params.trafoId);
+  if (!trafoId) return res.status(400).json({ error: "trafoId tidak valid" });
+  const { values, invalid } = parseNumericBody(req.body, SETTINGS_COLUMNS);
+  if (invalid.length > 0) return res.status(400).json({ error: `Nilai bukan angka: ${invalid.join(", ")}` });
+  const keys = Object.keys(values);
   if (keys.length === 0) return res.status(400).json({ error: "Tidak ada kolom threshold yang valid" });
   try {
     const before = await getSettings(req.db, trafoId);
@@ -77,7 +81,7 @@ router.put("/thresholds/:trafoId", requireRole("admin", "superuser"), async (req
 
     // Gabungkan nilai baru ke baris lama, lalu hitung ulang 4 kolom tegangan absolut.
     const merged = { ...before };
-    for (const k of keys) merged[k] = body[k] === "" || body[k] === null ? null : Number(body[k]);
+    for (const k of keys) merged[k] = values[k];
     const updates = { ...pick(merged, keys), ...computeVoltageValues(merged, td && td.ratedLowVoltage) };
 
     const cols = Object.keys(updates);
@@ -98,7 +102,8 @@ router.put("/thresholds/:trafoId", requireRole("admin", "superuser"), async (req
 });
 
 router.put("/trip/:trafoId", requireRole("admin", "superuser"), async (req, res) => {
-  const trafoId = trafoIdOf(req);
+  const trafoId = parsePositiveInt(req.params.trafoId);
+  if (!trafoId) return res.status(400).json({ error: "trafoId tidak valid" });
   const body = req.body || {};
   const keys = Object.keys(body).filter((k) => TRIP_COLUMNS.includes(k));
   if (keys.length === 0) return res.status(400).json({ error: "Tidak ada kolom trip yang valid" });

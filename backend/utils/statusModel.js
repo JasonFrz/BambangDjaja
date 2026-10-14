@@ -85,7 +85,7 @@ function oilFlags(oilLevelCode) {
   const code = normalizeCode(oilLevelCode);
   return {
     oil_level_alarm: code === 3 ? 1 : 0,
-    oil_level_trip: code === 1 ? 0 : 1,
+    oil_level_trip: code === 1 || code === 5 ? 0 : 1, // Low Trip (1) atau High Trip (5)
   };
 }
 

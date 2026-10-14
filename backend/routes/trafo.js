@@ -90,7 +90,7 @@ router.get("/:id", async (req, res) => {
 
 // ---------- nama kustom dan foto (tabel trafo) ----------
 
-router.put("/:id/name", async (req, res) => {
+router.put("/:id/name", requireRole("admin", "superuser"), async (req, res) => {
   const name = String(req.body?.name || "").trim();
   if (!name) return res.status(400).json({ error: "Name is required" });
   try {
@@ -104,7 +104,7 @@ router.put("/:id/name", async (req, res) => {
   }
 });
 
-router.post("/:id/image", upload.single("image"), async (req, res) => {
+router.post("/:id/image", requireRole("admin", "superuser"), upload.single("image"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No image uploaded" });
   try {
     const imageUrl = await uploadToCloudinary(req.file);
@@ -118,7 +118,7 @@ router.post("/:id/image", upload.single("image"), async (req, res) => {
   }
 });
 
-router.delete("/:id/image", async (req, res) => {
+router.delete("/:id/image", requireRole("admin", "superuser"), async (req, res) => {
   try {
     await req.db.execute("UPDATE trafo SET image_url = NULL WHERE id = ?", [trafoIdParam(req)]);
     res.json({ success: true, message: "Image reset successfully" });

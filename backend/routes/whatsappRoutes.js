@@ -4,8 +4,9 @@ const whatsappClient = require('../utils/whatsappClient');
 const emailClient = require('../utils/emailClient');
 const { getMasterDb } = require('../utils/db');
 const { getContacts } = require('../utils/alertSender');
+const { requireRole } = require('../utils/authMiddleware');
 
-router.post('/test', async (req, res) => {
+router.post('/test', requireRole('admin', 'superuser'), async (req, res) => {
   const { frequency, username } = req.body;
   // DB diambil dari header yang sudah dipaksa verifyToken sesuai token (bukan body),
   // supaya user perusahaan A tidak bisa memicu pesan ke kontak perusahaan B.
