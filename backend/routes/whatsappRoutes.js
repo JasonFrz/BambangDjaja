@@ -6,7 +6,10 @@ const { getMasterDb } = require('../utils/db');
 const { getContacts } = require('../utils/alertSender');
 
 router.post('/test', async (req, res) => {
-  const { frequency, dbName, username } = req.body;
+  const { frequency, username } = req.body;
+  // DB diambil dari header yang sudah dipaksa verifyToken sesuai token (bukan body),
+  // supaya user perusahaan A tidak bisa memicu pesan ke kontak perusahaan B.
+  const dbName = req.headers['x-db-name'] || req.user?.dbName;
 
   if (!whatsappClient.waReady) {
     return res.status(503).json({ error: 'WhatsApp client belum siap. Silakan scan QR code di server terminal.' });
