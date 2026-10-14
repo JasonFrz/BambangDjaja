@@ -1598,7 +1598,7 @@ git commit -m "feat(backend): route trafo dari transformer_data: status, physica
 - Consumes: `trafoModel.getTransformerData`, `sendToRaspi`, `logActivity`.
 - Produces: `limitsModel.{ SETTINGS_COLUMNS, TRIP_COLUMNS, buildLimits, computeVoltageValues }`. Task 5 (`/thi`) dan Rencana C (alert) memakai `buildLimits`.
 
-- [ ] **Step 1: Tulis test `backend/tests/limitsModel.test.js`**
+- [x] **Step 1: Tulis test `backend/tests/limitsModel.test.js`**
 
 ```js
 const test = require('node:test');
@@ -1652,9 +1652,9 @@ test('computeVoltageValues dari persen dan tegangan nominal', () => {
 });
 ```
 
-- [ ] **Step 2: `npm test`, pastikan gagal karena modul belum ada**
+- [x] **Step 2: `npm test`, pastikan gagal karena modul belum ada**
 
-- [ ] **Step 3: Tulis `backend/utils/limitsModel.js`**
+- [x] **Step 3: Tulis `backend/utils/limitsModel.js`**
 
 ```js
 // Kolom transformer_settings yang boleh diubah dari web (4 kolom *Value dihitung server).
@@ -1741,7 +1741,7 @@ function computeVoltageValues(s, ratedLowVoltage) {
 module.exports = { SETTINGS_COLUMNS, TRIP_COLUMNS, buildLimits, computeVoltageValues };
 ```
 
-- [ ] **Step 4: Tulis ulang `backend/routes/settings.js`**
+- [x] **Step 4: Tulis ulang `backend/routes/settings.js`**
 
 ```js
 const express = require('express');
@@ -1862,7 +1862,7 @@ router.put('/trip/:trafoId', requireRole('admin', 'superuser'), async (req, res)
 module.exports = router;
 ```
 
-- [ ] **Step 5: `npm test` lulus, restart server, uji manual**
+- [x] **Step 5: `npm test` lulus, restart server, uji manual**
 
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:5000/api/settings/limits?trafo_id=1" -Headers $h | ConvertTo-Json -Depth 3 | Select-Object -First 20
@@ -1872,7 +1872,7 @@ Invoke-RestMethod -Method Put -Uri http://localhost:5000/api/settings/thresholds
 
 Expected: limits `phaseA {min 380, max 420, tripMin 360, tripMax 440}`; PUT pertama mengembalikan `settings.voltageLowAlarmValue = 376` dan `pushed: false` (Raspi belum ada); PUT kedua mengembalikan ke 380. `user_activity_log` punya baris `THRESHOLD_UPDATE`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/utils/limitsModel.js backend/tests/limitsModel.test.js backend/routes/settings.js
