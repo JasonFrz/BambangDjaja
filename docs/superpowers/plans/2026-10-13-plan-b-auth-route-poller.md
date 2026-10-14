@@ -2629,7 +2629,7 @@ git commit -m "feat(backend): poller membaca temp_reading_data_realtime lewat re
 - Create: `backend/scripts/smoke_api.js`
 - Modify: `backend/.env.example` (tambah `MASTER_DB=master_tmu_app` bila belum)
 
-- [ ] **Step 1: Tulis `backend/scripts/smoke_api.js`**
+- [x] **Step 1: Tulis `backend/scripts/smoke_api.js`**
 
 ```js
 // node scripts/smoke_api.js [baseUrl]  -> login demo lalu panggil setiap GET, cetak status.
@@ -2664,12 +2664,12 @@ async function main() {
 main().catch(err => { console.error('Smoke gagal:', err.message); process.exit(1); });
 ```
 
-- [ ] **Step 2: Jalankan dengan server hidup**
+- [x] **Step 2: Jalankan dengan server hidup**
 
 Run: `node scripts/smoke_api.js`
 Expected: 24 baris `OK`, diakhiri `Semua endpoint OK`.
 
-- [ ] **Step 3: Pastikan tidak ada referensi skema lama**
+- [x] **Step 3: Pastikan tidak ada referensi skema lama**
 
 ```bash
 grep -rn "tmu_master\|FROM users\|INTO users\|FROM companies\|electrical_readings\|oil_readings\|threshold_settings\|nama_db\b.*=\|nomor_telpon = ?" backend --include=*.js --exclude-dir=node_modules
@@ -2677,7 +2677,7 @@ grep -rn "tmu_master\|FROM users\|INTO users\|FROM companies\|electrical_reading
 
 Expected: hanya muncul di `backend/utils/db.js` (`"tmu_master"` di daftar `systemDbs`, boleh tetap) dan di respons route yang memang memakai nama field lama untuk frontend (`nama_db:`, `nama_perusahaan:` di `masterModel.js`, `companies.js`, `trafo.js`). Tidak boleh ada di SQL.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/scripts/smoke_api.js backend/.env.example
