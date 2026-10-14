@@ -167,14 +167,35 @@ async function handleTapPosition(db, trafoId, tdRow) {
   await db.execute(`UPDATE transformer_data SET ${cols.map((c) => `\`${c}\` = ?`).join(', ')} WHERE trafoId = ?`, [...cols.map((c) => picked[c]), trafoId]);
 }
 
+// Mengembalikan jumlah baris yang benar-benar baru (affectedRows) bila driver melaporkannya.
 async function handleSyncReading(db, trafoId, rows) {
   const clean = withTimestamp(rows, 'timestamp');
   if (clean.length === 0) return 0;
+  let inserted = 0, reported = false;
   for (let i = 0; i < clean.length; i += 200) {
-    await run(db, buildInsert('reading_data', clean.slice(i, i + 200), READING_COLUMNS, { trafoId }, { ignore: true }));
+    const res = await run(db, buildInsert('reading_data', clean.slice(i, i + 200), READING_COLUMNS, { trafoId }, { ignore: true }));
+    if (res && typeof res.affectedRows === 'number') { inserted += res.affectedRows; reported = true; }
   }
-  return clean.length;
+  return reported ? inserted : clean.length;
 }
+
+// Perubahan dari UI lokal Raspi (updateSync*FromClient). data = objek kolom.
+async function handleSettingsFromClient(db, trafoId, data) {
+  await run(db, upsertSql('transformer_settings', trafoId, data || {}, SETTINGS_ALL_COLUMNS));
+}
+async function handleTripSettingsFromClient(db, trafoId, data) {
+  await run(db, upsertSql('trip_settings', trafoId, data || {}, TRIP_SETTINGS_COLUMNS));
+}
+// Identitas (raspiSerialNo, version, lastSyncTimestamp, foto) tidak boleh diubah dari sini.
+const TD_CLIENT_COLUMNS = TD_COLUMNS.filter((c) => !['raspiSerialNo', 'version', 'lastSyncTimestamp', 'imageFileName'].includes(c));
+async function handleTransformerDataFromClient(db, trafoId, data) {
+  const picked = pickColumns(data || {}, TD_CLIENT_COLUMNS);
+  const cols = Object.keys(picked);
+  if (cols.length === 0) return;
+  await db.execute(BT_UPDATE_TD(cols), [...cols.map((c) => picked[c]), trafoId]);
+}
+const BT_UPDATE_TD = (cols) => 'UPDATE transformer_data SET ' + cols.map((c) => BT + c + BT + ' = ?').join(', ') + ' WHERE trafoId = ?';
+const BT = String.fromCharCode(96);
 
 async function handleSyncFailureLog(db, trafoId, rows) {
   const clean = withTimestamp(rows, 'time_start');
@@ -189,7 +210,8 @@ async function touchLastConnection(masterDb, raspiSerialNo, now = new Date()) {
     [raspiSerialNo, now]);
 }
 
-async function recentTimestamps(db, trafoId, hours = 24) {
+// Klien membangun temp_data_server dari 7 hari terakhir; kirim 8 hari supaya tidak ada kiriman ulang.
+async function recentTimestamps(db, trafoId, hours = 8 * 24) {
   const since = new Date(Date.now() - hours * 3600e3);
   const [rows] = await db.execute('SELECT timestamp FROM reading_data WHERE trafoId = ? AND timestamp >= ? ORDER BY timestamp ASC', [trafoId, since]);
   return rows.map((r) => ({ timestamp: new Date(r.timestamp).toISOString() }));
@@ -205,4 +227,5 @@ module.exports = {
   parseRaspiTimestamp, pickColumns, buildInsert, mapHarmonicRow, first,
   registerConnection, handleReadingRealtime, handleHarmonic, handleStatusSync, handleTapPosition,
   handleSyncReading, handleSyncFailureLog, touchLastConnection, recentTimestamps, knownFailureIds,
+  handleSettingsFromClient, handleTripSettingsFromClient, handleTransformerDataFromClient,
 };
