@@ -110,7 +110,7 @@ cd backend
 npm test
 ```
 
-Status saat serah terima: **48 lulus, 0 gagal**. Test tidak boleh butuh MySQL.
+Status saat serah terima: **52 lulus, 0 gagal**. Test tidak boleh butuh MySQL.
 
 Uji integrasi dengan server hidup (dari `backend/`):
 
@@ -234,6 +234,13 @@ Endpoint login adalah `POST /api/login` (bukan `/api/auth/login`).
 - **Batas tegangan fasa.** Threshold di `transformer_settings` adalah tegangan line (400 V).
   `buildLimits` membagi √3 untuk `phaseA/B/C` (230 V). Spec 6.2 menulis keduanya sama; itu
   sudah diputuskan diubah pada 14 Okt karena THI menilai trafo sehat sebagai CRITICAL.
+- **Hasil review akhir Rencana B (14 Okt).** Sudah diperbaiki: penjaga peran di rename/foto trafo
+  dan uji WhatsApp, validasi angka di PUT settings, `oilFlags` kode 5. Masih ditunda (kecil):
+  `details: error.message` bocor di banyak route; `/news` memakai kolom `OilTemp`/`PFsig` langsung
+  (harus lewat `KEY_TO_COLUMN`); `SET time_zone` di `db.js` tanpa callback error; fallback
+  `req.query.db_name` di `trends.js` sebaiknya dihapus; validasi numerik nameplate butuh daftar
+  tipe per kolom. Spec perlu disesuaikan: bentuk `/limits` adalah `{ success, trafoId, limits }`,
+  dan tabel `trafo` di DB perusahaan dibuat `schemaPatch`.
 - Data seed lama di `failure_log` tidak ikut diperbarui saat `seed_demo.js` dijalankan ulang
   (`ON DUPLICATE KEY`), jadi event demo bisa bertanggal lama. DB baru tidak terdampak.
 - Jangan tambah dependency npm baru tanpa alasan kuat.
