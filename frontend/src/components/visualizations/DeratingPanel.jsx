@@ -2,7 +2,8 @@ import React, { memo } from 'react';
 import { GripVertical } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
-const COLORS = { used: '#3b82f6', free: '#10b981', lost: '#ef4444' };
+// dashboard-documentation 4.2 N: Used kuning, Available hijau, De-rating merah.
+const COLORS = { used: '#eab308', free: '#10b981', lost: '#ef4444' };
 
 const PhasePie = ({ label, d }) => {
   if (!d) return <div className="flex-1 flex items-center justify-center text-xs text-gray-400">-</div>;
@@ -13,7 +14,8 @@ const PhasePie = ({ label, d }) => {
   const data = [{ name: 'Terpakai', key: 'used', value: used }, { name: 'Sisa', key: 'free', value: free }, { name: 'Hilang (de-rating)', key: 'lost', value: lost }];
   return (
     <div className="flex-1 min-w-0 flex flex-col items-center">
-      <ResponsiveContainer width="100%" height="80%">
+      <div className="text-[10px] font-bold text-gray-500">{d.kRated !== null && d.kRated !== undefined ? `K-Factor ${d.kRated}` : 'K-Factor -'}</div>
+      <ResponsiveContainer width="100%" height="75%">
         <PieChart>
           <Pie data={data} dataKey="value" innerRadius="55%" outerRadius="85%" paddingAngle={2} stroke="none">
             {data.map((e) => <Cell key={e.key} fill={COLORS[e.key]} />)}
@@ -22,7 +24,7 @@ const PhasePie = ({ label, d }) => {
         </PieChart>
       </ResponsiveContainer>
       <div className="text-[11px] font-bold text-[#172b4d] dark:text-white">{label}</div>
-      <div className="text-[10px] text-gray-500">{available.toFixed(1)} / {Number(d.full || 0).toFixed(1)} kVA{d.kRated ? ` · K${d.kRated}` : ''}</div>
+      <div className="text-[10px] text-gray-500">{available.toFixed(1)} / {Number(d.full || 0).toFixed(1)} kVA</div>
     </div>
   );
 };
@@ -41,7 +43,7 @@ export const DeratingPanel = memo(({ panel, latestData, isEditing }) => {
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
       {!dr ? <div className="flex-1 flex items-center justify-center text-xs text-gray-400">Menunggu data meter (nameplate ratedPower diperlukan)</div>
-        : <div className="flex-1 min-h-0 flex gap-2"><PhasePie label="Fase R" d={dr.a} /><PhasePie label="Fase S" d={dr.b} /><PhasePie label="Fase T" d={dr.c} /></div>}
+        : <div className="flex-1 min-h-0 flex gap-2"><PhasePie label="Fase A" d={dr.a} /><PhasePie label="Fase B" d={dr.b} /><PhasePie label="Fase C" d={dr.c} /></div>}
     </div>
   );
 });

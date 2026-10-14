@@ -8,6 +8,7 @@ import { METRICS } from "../../config/metrics";
 import EnergyLoader from "../../components/EnergyLoader";
 import { useTrendData } from "../../contexts/TrendDataContext";
 import { useThresholds } from "../../contexts/ThresholdContext";
+import { chartReferenceLines, chartYDomain } from "../../config/panelHelpers";
 
 export const ChartTooltip = ({ active, payload, label }) => {
   if (!active || !payload || !payload.length) return null;
@@ -37,37 +38,18 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
   const { getThreshold } = useThresholds();
   const metrics = panel.metrics || [];
 
-  const referenceLines = useMemo(() => {
-    const lines = [];
-    metrics.forEach(m => {
-      const t = getThreshold(m);
-      if (t?.is_active) {
-        if (t.max !== null && t.max !== undefined) {
-          lines.push({
-            id: `${m}-max`,
-            y: t.max,
-            label: `${METRICS[m]?.label || m} Max (${t.max})`
-          });
-        }
-        if (t.min !== null && t.min !== undefined && metrics.length === 1) {
-          lines.push({
-            id: `${m}-min`,
-            y: t.min,
-            label: `${METRICS[m]?.label || m} Min (${t.min})`
-          });
-        }
-      }
-    });
-    return lines;
-  }, [metrics, getThreshold]);
-  
+  const referenceLines = useMemo(
+    () => chartReferenceLines(panel, metrics, getThreshold, (m) => METRICS[m]?.label || m),
+    [panel, metrics, getThreshold]
+  );
+
   const commonXAxis = {
     dataKey: "time", tick: { fontSize: 10, fill: '#94a3b8' }, tickLine: false,
     axisLine: { stroke: '#e2e8f033' }, interval: 'preserveStartEnd', minTickGap: 50,
   };
   const commonYAxis = {
     tick: { fontSize: 10, fill: '#94a3b8' }, tickLine: false, axisLine: false, width: 50,
-    domain: ['auto', 'auto'],
+    domain: chartYDomain(panel),
   };
   const gridProps = { strokeDasharray: "3 3", stroke: '#e2e8f020', vertical: false };
 
@@ -151,7 +133,7 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
               <Line key={m} type="monotone" dataKey={m} name={METRICS[m]?.label || m} stroke={METRICS[m]?.color || '#8884d8'} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls isAnimationActive={true} animationDuration={300} animationEasing="linear" />
             ))}
             {referenceLines.map(rl => (
-              <ReferenceLine key={rl.id} y={rl.y} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: rl.label, fill: '#ef4444', fontSize: 10 }} />
+              <ReferenceLine key={rl.id} y={rl.y} ifOverflow={rl.ifOverflow} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: rl.label, fill: '#ef4444', fontSize: 10 }} />
             ))}
           </LineChart>
         </ResponsiveContainer>
@@ -178,7 +160,7 @@ export const TimeSeriesPanel = memo(({ panel, chartData, isEditing, isSyncHoverA
             <Area key={m} type="monotone" dataKey={m} name={METRICS[m]?.label || m} stroke={METRICS[m]?.color || '#8884d8'} fill={`url(#areaGrad-${m})`} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls isAnimationActive={true} animationDuration={300} animationEasing="linear" />
           ))}
           {referenceLines.map(rl => (
-            <ReferenceLine key={rl.id} y={rl.y} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: rl.label, fill: '#ef4444', fontSize: 10 }} />
+            <ReferenceLine key={rl.id} y={rl.y} ifOverflow={rl.ifOverflow} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'top', value: rl.label, fill: '#ef4444', fontSize: 10 }} />
           ))}
         </AreaChart>
       </ResponsiveContainer>

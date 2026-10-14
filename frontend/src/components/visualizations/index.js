@@ -22,3 +22,4 @@ export * from './DeratingPanel';
 export * from './TransformerStatusPanel';
 export * from './PhysicalStatusPanel';
 export * from './OilQualityPanel';
+export * from './ElectricalStatusPanel';

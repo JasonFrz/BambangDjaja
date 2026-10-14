@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { GripVertical, Droplets } from 'lucide-react';
 import { useTrafoApi } from '../../hooks/useTrafoApi';
+import { oilConditionClass } from '../../config/panelHelpers';
 
 const Item = ({ label, value, unit }) => (
   <div className="rounded-xl border border-gray-200 dark:border-white/10 p-3 flex flex-col">
@@ -25,7 +26,10 @@ export const OilQualityPanel = memo(({ panel, latestData, isEditing }) => {
           {available ? (<>
             <Item label="Water Activity" value={data.waterActivity} unit="" />
             <Item label="Oil BDV" value={data.oilBDV} unit="kV" />
-            <Item label="Oil Condition" value={data.oilCondition} unit="" />
+            <div className="rounded-xl border border-gray-200 dark:border-white/10 p-3 flex flex-col gap-1">
+              <div className="text-[10px] uppercase tracking-wider font-bold text-gray-500">Oil Condition</div>
+              <span className={`self-start px-2 py-0.5 rounded-md text-sm font-bold ${oilConditionClass(data.oilCondition)}`}>{data.oilCondition || '-'}</span>
+            </div>
           </>) : (
             <div className="col-span-2 rounded-xl border border-dashed border-gray-300 dark:border-white/10 p-3 text-[11px] text-gray-500 flex items-center gap-2">
               <Droplets size={14} /> Water activity, BDV, dan kondisi oli belum tersedia di database ini (kolom tidak ada di skema `transformer_data`).

@@ -17,7 +17,7 @@ sudah selesai** supaya bisa dilanjutkan.
 | `backend/utils/` | Modul inti: `db.js`, `readingModel.js`, `trafoModel.js`, `statusModel.js`, `limitsModel.js`, `trendsHelpers.js`, `schemaPatch.js`, `realtimePoller.js` |
 | `backend/scripts/` | CLI: `import_sql.js`, `seed_demo.js`, `add_company.js`, `check_schema.js` |
 | `backend/tests/` | Unit test `node:test`, tidak butuh MySQL (pakai `tests/helpers/fakeDb.js`) |
-| `frontend/` | React + Vite + Tailwind. Belum disesuaikan ke skema baru (Rencana D). |
+| `frontend/` | React + Vite + Tailwind. Sudah memakai skema baru (Rencana D) dan diselaraskan dengan `dashboard-documentation.md`. |
 | `base_tmu.sql` | Dump skema DB perusahaan legacy (satu DB per perusahaan) |
 | `master_tmu_app.sql` | Dump DB master legacy: `company`, `user`, `parameter_failure_recommendation` (91 baris rekomendasi nyata) |
 | `dashboard-documentation.md` | Dokumentasi dashboard TMU v2 lama (acuan rumus dan panel) |
@@ -111,7 +111,7 @@ cd backend
 npm test
 ```
 
-Status saat serah terima: **76 lulus, 0 gagal**. Test tidak boleh butuh MySQL.
+Status saat serah terima: **84 lulus, 0 gagal**. Test tidak boleh butuh MySQL.
 
 Uji integrasi dengan server hidup (dari `backend/`):
 
@@ -205,6 +205,36 @@ metric pertama; daftar profil perlu scroll karena empat preset.
 nyata + konsistensi preset). **Uji di browser belum dilakukan** karena sesi pengerjaan tidak
 punya akses browser. Langkah uji manual ada di plan D Task 6 Step 2; jalankan sekali sebelum
 dipakai pengguna.
+
+### Penyelarasan dengan `dashboard-documentation.md` (14 Okt 2026)
+
+Setelah Rencana D, kode dicek ulang terhadap dokumen dashboard lama dan yang belum sesuai diperbaiki:
+
+| Bagian dokumen | Perubahan |
+|---|---|
+| 3.2 D Tap Position | Logika sebelumnya terbalik. Sekarang `statusModel.tapDisplay`: `tapType == 'OCTC'` → "OCTC", selain itu → `impedance`. Dikirim sebagai `tap.display` oleh `GET /api/trafo/:id/physical`. |
+| 3.2 A–C Physical | Preset Physical: satu chart suhu (Oil Temp + Bus Temp A/B/C, `suggestedMin` 30), chart WTI, chart Pressure dengan garis "Max" tetap 0.5 Bar dan rentang 0.3–0.52. |
+| 4.2 A–O Electrical | Preset Electrical berisi chart per fase P/Q/S/PF + total, arus dengan Iavg, THD sebagai line chart, Frequency, Efisiensi, harmonik tegangan dan arus terpisah (orde 1st–31th, label Va/Vb/Vc dan Ia/Ib/Ic), de-rating (Used kuning, judul K-Factor, fase A/B/C), kWh/kVARh. |
+| 4.2 P, 4.4 | Panel baru `electricalstatus`: badge status Vab/Vbc/Vca, Current1–3, PF, Freq dan Leading/Lagging Qa/Qb/Qc (`leadLag` dari backend, sebelumnya tidak ditampilkan). |
+| 5.2–5.3 Status | `TransformerStatusPanel` hanya menampilkan parameter yang tidak Normal (tabel Parameter / Status / Keterangan / Rekomendasi yang bisa dibuka) atau "All Systems Optimal". |
+| 6.3–6.4 Oil Quality | Moisture dan H2 sebagai line chart; Oil Condition berwarna (Good hijau, Poor kuning, Severe merah). |
+| 3.5, 8.5 State halaman | `DeviceStateBanner` di atas grid, hanya mode live: "Device is Offline" (tombol Refresh) bila `/api/trafo/:id` Offline, "No Data Found For Today" bila data realtime terakhir bukan hari ini (WIB). Dashboard tidak disembunyikan supaya mode historis tetap bisa dipakai. |
+
+Panel tambahan proyek ini (health index, event stream, SLD, news, unbalance, gauge) tetap ada di
+preset, diletakkan di bawah panel dokumen. Opsi panel baru untuk `linechart`: `suggestedMin`,
+`suggestedMax`, `referenceLines: [{ y, label }]` (menggantikan garis dari `/limits`), dan
+`extendToLines: true` (sumbu Y dilebarkan sampai garis referensi; tanpa ini recharts membuang garis
+di luar rentang data, jadi garis alarm Frequency di preset Electrical memakai opsi ini). Logika
+murninya di `frontend/src/config/panelHelpers.js` dan diuji `npm run check:render`.
+
+**Masih berbeda dari dokumen dengan sengaja** (spec bagian 2 dan 11): rumus efisiensi kuadrat,
+hanya TMU v2, tanpa interval 1/5/10/15 menit, kartu oil quality muncul berdasarkan kolom yang ada
+(bukan `version > 2`), batas tegangan fasa dibagi √3, chart Frequency juga menampilkan garis low
+alarm. De-rating dengan `deRating` NULL tampil 100% hilang, sama seperti web lama (NULL dihitung 0);
+`?? 100` di `computeDerating` tidak pernah terpakai.
+
+**Verifikasi:** backend 84 test lulus, `npm run check:render` semua OK, `npm run build` lulus,
+oxlint tanpa peringatan baru. Uji browser belum dilakukan.
 
 ---
 

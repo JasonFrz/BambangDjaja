@@ -38,6 +38,11 @@ const STATUS_COLUMNS = [
   "Uca",
 ];
 
+function tapDisplay(td) {
+  if (!td) return null;
+  return td.tapType === "OCTC" ? "OCTC" : td.impedance;
+}
+
 function normalizeCode(v) {
   const n = Number(v);
   return STATUS_LABELS[n] ? n : 3;
@@ -103,4 +108,5 @@ module.exports = {
   buildStatusItems,
   oilFlags,
   pressureLevel,
+  tapDisplay,
 };
