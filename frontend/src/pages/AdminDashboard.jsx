@@ -222,7 +222,9 @@ const AdminDashboard = () => {
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
-  const [companyForm, setCompanyForm] = useState({ nama_perusahaan: '', nama_db: '' });
+  const [companyForm, setCompanyForm] = useState({ nama_perusahaan: '', nama_db: '', telegram_api_token: '', telegram_chat_id: '' });
+  const [telegramTest, setTelegramTest] = useState(null);
+  const [isTestingTelegram, setIsTestingTelegram] = useState(false);
   const [companyFormError, setCompanyFormError] = useState('');
   const [isSavingCompany, setIsSavingCompany] = useState(false);
   const [searchCompany, setSearchCompany] = useState('');
@@ -561,6 +563,23 @@ const AdminDashboard = () => {
       setCompanyFormError(err.response?.data?.error || 'Failed to save company');
     } finally {
       setIsSavingCompany(false);
+    }
+  };
+
+  // Kirim pesan uji memakai isian form, jadi bisa dicek sebelum disimpan.
+  const handleTestTelegram = async () => {
+    setTelegramTest(null);
+    setIsTestingTelegram(true);
+    try {
+      const res = await axiosInstance.post('/api/admin/companies/telegram-test', {
+        telegram_api_token: companyForm.telegram_api_token,
+        telegram_chat_id: companyForm.telegram_chat_id,
+      });
+      setTelegramTest({ ok: true, text: res.data.message });
+    } catch (err) {
+      setTelegramTest({ ok: false, text: err.response?.data?.error || 'Failed to send Telegram test message' });
+    } finally {
+      setIsTestingTelegram(false);
     }
   };
 
@@ -1405,6 +1424,26 @@ const AdminDashboard = () => {
                         <input type="text" value={companyForm.nama_db} onChange={e => setCompanyForm({ ...companyForm, nama_db: e.target.value })} className="w-full bg-gray-100 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2 text-sm outline-none text-[#172b4d] dark:text-white" />
                       </div>
                     </div>
+                    <div className="border-t border-gray-200 dark:border-white/10 pt-4">
+                      <h4 className="font-semibold text-sm mb-1">Telegram Alerts</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Trafo alerts for this company are sent to this Telegram group. Leave both fields empty to turn Telegram off.</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-semibold mb-2">Bot Token</label>
+                          <input type="text" autoComplete="off" spellCheck={false} placeholder="123456789:AAH..." value={companyForm.telegram_api_token} onChange={e => setCompanyForm({ ...companyForm, telegram_api_token: e.target.value })} className="w-full bg-gray-100 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2 text-sm outline-none text-[#172b4d] dark:text-white" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold mb-2">Chat ID</label>
+                          <input type="text" autoComplete="off" spellCheck={false} placeholder="-1001234567890" value={companyForm.telegram_chat_id} onChange={e => setCompanyForm({ ...companyForm, telegram_chat_id: e.target.value })} className="w-full bg-gray-100 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2 text-sm outline-none text-[#172b4d] dark:text-white" />
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 mt-3">
+                        <button type="button" onClick={handleTestTelegram} disabled={isTestingTelegram || !companyForm.telegram_api_token.trim() || !companyForm.telegram_chat_id.trim()} className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50">
+                          {isTestingTelegram ? 'Sending...' : 'Send test message'}
+                        </button>
+                        {telegramTest && <p className={`text-sm ${telegramTest.ok ? 'text-green-500' : 'text-red-400'}`}>{telegramTest.text}</p>}
+                      </div>
+                    </div>
                     <div className="flex justify-end gap-3 pt-4">
                       <button type="button" onClick={() => setShowCompanyModal(false)} className="px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Cancel</button>
                       <button type="submit" disabled={isSavingCompany} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold transition-colors">Save</button>
@@ -1470,7 +1509,7 @@ const AdminDashboard = () => {
                             <TrafoListPopover company={c} trafos={c.trafos} />
                           </td>
                           <td className="py-4 px-6 flex justify-end gap-2">
-                            <button onClick={() => { setEditingCompany(c); setCompanyForm({ nama_perusahaan: c.nama_perusahaan, nama_db: c.nama_db || '' }); setShowCompanyModal(true); }} className="p-2 text-blue-400 hover:bg-blue-900/20 rounded-lg" title="Edit"><Edit2 size={16} /></button>
+                            <button onClick={() => { setEditingCompany(c); setCompanyForm({ nama_perusahaan: c.nama_perusahaan, nama_db: c.nama_db || '', telegram_api_token: c.telegram_api_token || '', telegram_chat_id: c.telegram_chat_id || '' }); setTelegramTest(null); setShowCompanyModal(true); }} className="p-2 text-blue-400 hover:bg-blue-900/20 rounded-lg" title="Edit"><Edit2 size={16} /></button>
                             <button onClick={() => handleDeleteCompany(c.id)} className="p-2 text-red-400 hover:bg-red-900/20 rounded-lg" title="Delete"><Trash2 size={16} /></button>
                           </td>
                         </tr>

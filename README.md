@@ -111,7 +111,8 @@ cd backend
 npm test
 ```
 
-Status saat serah terima: **84 lulus, 0 gagal**. Test tidak boleh butuh MySQL.
+Status terakhir (14 Okt 2026, setelah notifikasi Telegram): **100 lulus, 0 gagal**. Test tidak boleh
+butuh MySQL.
 
 Uji integrasi dengan server hidup (dari `backend/`):
 
@@ -236,6 +237,43 @@ alarm. De-rating dengan `deRating` NULL tampil 100% hilang, sama seperti web lam
 **Verifikasi:** backend 84 test lulus, `npm run check:render` semua OK, `npm run build` lulus,
 oxlint tanpa peringatan baru. Uji browser belum dilakukan.
 
+### Notifikasi Telegram (14 Okt 2026)
+
+Alert sekarang punya tiga saluran:
+
+| Saluran | Tujuan | Konfigurasi |
+|---|---|---|
+| WhatsApp | tiap user perusahaan yang punya `user.phone` | sesi `whatsapp-web.js` (scan QR) |
+| Email | tiap user perusahaan yang punya `user.email` | `SMTP_*` di `.env` |
+| Telegram | **satu grup per perusahaan**, satu pesan per alert | `company.telegram_api_token` + `company.telegram_chat_id` |
+
+Kolom Telegram sudah ada di `master_tmu_app.sql` sejak skema lama, jadi tidak ada migrasi. Kode:
+`utils/telegramClient.js` (kirim lewat Bot API dengan `fetch`, validasi token/chat ID),
+`utils/alertSender.js` (`getCompanyTelegram`, `formatTelegramAlert` dengan escape HTML; Telegram
+tetap terkirim walau tidak ada user ber-HP/email, dan kegagalan Telegram tidak menghentikan WA/email),
+`routes/companies.js` (field Telegram di GET/POST/PUT, `POST /api/admin/companies/telegram-test`),
+dan form Edit Company di `AdminDashboard.jsx`. Bot Token atau Chat ID kosong berarti Telegram nonaktif
+untuk perusahaan itu; mengisi salah satu saja ditolak.
+
+**Cara menghubungkan grup Telegram perusahaan:**
+
+1. Di Telegram, chat **@BotFather**, kirim `/newbot`, ikuti langkahnya, salin token
+   (bentuknya `123456789:AAH...`).
+2. Buat grup untuk perusahaan itu dan undang bot ke grup.
+3. Kirim satu pesan di grup (misalnya `/start@nama_bot`), lalu buka
+   `https://api.telegram.org/bot<TOKEN>/getUpdates` di browser. Ambil angka `message.chat.id`
+   (negatif; grup biasa `-12345...`, supergroup `-100...`).
+4. Login super admin → **Companies** → Edit perusahaan → isi **Bot Token** dan **Chat ID** →
+   **Send test message**. Kalau pesan uji masuk ke grup, klik **Save**.
+
+Jebakan: kalau grup lama di-upgrade jadi supergroup, Chat ID-nya berubah (`-100...`) dan pesan
+gagal dengan `chat not found` atau `group chat was upgraded to a supergroup chat`. Ulangi langkah 3.
+
+**Verifikasi:** backend 100 test lulus (test baru: `telegramClient`, `alertSender`,
+`companiesTelegram`), `npm run build` lulus, oxlint tanpa peringatan baru, `npm run check:render`
+semua OK. Belum diuji: pengiriman ke bot Telegram sungguhan dan simpan form ke MySQL (MySQL lokal
+mati saat pengerjaan).
+
 ---
 
 ## 6. Cara melanjutkan
@@ -249,8 +287,8 @@ lewat protokol lama, frontend menampilkan semuanya untuk trafo yang dipilih.
 2. **Rencana D selesai.** Yang tersisa adalah uji browser manual (plan D Task 6 Step 2) dan
    perbaikan yang muncul darinya.
 3. Di luar cakupan yang disengaja (spec bagian 11): halaman `ManageTransformers.jsx` (tidak
-   dirutekan), interval 1/5/10/15 menit, laporan instantaneous/performance dari Raspi, Telegram,
-   migrasi password bcrypt ke sha256.
+   dirutekan), interval 1/5/10/15 menit, laporan instantaneous/performance dari Raspi,
+   migrasi password bcrypt ke sha256. (Telegram sudah dikerjakan, lihat bagian 5.)
 4. Sebelum tiap commit cek `git status`; `git add` banyak file kadang hanya men-stage sebagian.
 
 ### Snippet uji manual (PowerShell)
