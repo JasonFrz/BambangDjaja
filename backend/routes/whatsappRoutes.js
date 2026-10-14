@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const whatsappClient = require('../utils/whatsappClient');
 const emailClient = require('../utils/emailClient');
-const { getDbConnection } = require('../utils/db');
+const { getMasterDb } = require('../utils/db');
+const { getContacts } = require('../utils/alertSender');
 
 router.post('/test', async (req, res) => {
   const { frequency, dbName, username } = req.body;
@@ -16,23 +17,11 @@ router.post('/test', async (req, res) => {
   }
 
   try {
-    const masterDb = await getDbConnection('tmu_master');
-    
-    const [columnsInfo] = await masterDb.execute("SHOW COLUMNS FROM users");
-    const columns = columnsInfo.map(c => c.Field);
-    
-    if (!columns.includes('nomor_telpon') && !columns.includes('email')) {
-      return res.status(400).json({ error: 'Database tidak memiliki fitur nomor telepon atau email untuk pengguna.' });
-    }
-
-    let selectCols = ['username', 'role'];
-    if (columns.includes('nomor_telpon')) selectCols.push('nomor_telpon');
-    if (columns.includes('email')) selectCols.push('email');
-
-    const [users] = await masterDb.execute(`SELECT ${selectCols.join(', ')} FROM users WHERE nama_db = ?`, [dbName]);
+    // Kontak dari master_tmu_app: user JOIN company (database_name = dbName)
+    const users = await getContacts(await getMasterDb(), dbName);
 
     if (users.length === 0) {
-      return res.status(404).json({ error: 'Tidak ada user di database ini.' });
+      return res.status(404).json({ error: 'Tidak ada user dengan nomor telepon atau email di perusahaan ini.' });
     }
 
     const message = `🔔 *[TEST NOTIFIKASI TMU]*\n\nNotifikasi uji coba berhasil.\nFrekuensi saat ini: *${frequency.toFixed(2)} Hz*\n\n_Pesan otomatis dari PT. Bambang Djaja - TMU System_`;
@@ -45,28 +34,28 @@ router.post('/test', async (req, res) => {
     let successCount = 0;
     
     for (const user of users) {
-      const phone = user.nomor_telpon ? user.nomor_telpon.trim() : '';
-      const email = user.email ? user.email.trim() : '';
+      const phone = user.phone || '';
+      const email = user.email || '';
       let sentToUser = false;
 
       if (phone.length >= 10 && phone !== '+62') {
         try {
           await whatsappClient.sendWhatsAppMessage(phone, message);
-          console.log(`- Berhasil WA: ${user.username} (${user.role}) - ${phone}`);
+          console.log(`- Berhasil WA: ${user.username}  - ${phone}`);
           sentToUser = true;
           await new Promise(resolve => setTimeout(resolve, 3000));
         } catch (err) {
-          console.log(`- Gagal WA: ${user.username} (${user.role}) - ${phone} (${err.message})`);
+          console.log(`- Gagal WA: ${user.username}  - ${phone} (${err.message})`);
         }
       }
 
       if (email && email.includes('@')) {
         try {
           await emailClient.sendEmailMessage(email, emailSubject, emailMsg);
-          console.log(`- Berhasil Email: ${user.username} (${user.role}) - ${email}`);
+          console.log(`- Berhasil Email: ${user.username}  - ${email}`);
           sentToUser = true;
         } catch (err) {
-          console.log(`- Gagal Email: ${user.username} (${user.role}) - ${email} (${err.message})`);
+          console.log(`- Gagal Email: ${user.username}  - ${email} (${err.message})`);
         }
       }
 
