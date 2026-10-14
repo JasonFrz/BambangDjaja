@@ -262,6 +262,9 @@ async function seedMaster(conn) {
 async function main() {
   const master = await mysql.createConnection(getDbConfig(getMasterDbName()));
   const company = await mysql.createConnection(getDbConfig(DB));
+  // Sesi UTC, sama seperti pool aplikasi (utils/db.js), supaya NOW() dan JS Date sejalan.
+  await master.query("SET time_zone = '+00:00'");
+  await company.query("SET time_zone = '+00:00'");
   try {
     await seedMaster(master);
     await seedCompany(company);

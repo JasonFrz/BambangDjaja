@@ -44,6 +44,8 @@ function getDbConfig(dbName = null) {
     port,
     user,
     password,
+    // Aplikasi bekerja dalam UTC: driver memakai "Z", dan sesi MySQL disamakan lewat
+    // SET time_zone (lihat utcPool) supaya NOW()/CURRENT_TIMESTAMP tidak meleset 7 jam.
     timezone: "Z",
     waitForConnections: true,
     connectionLimit: 10,
@@ -58,9 +60,16 @@ function getDbConfig(dbName = null) {
   return config;
 }
 
+// Pool yang tiap koneksinya memakai sesi UTC, konsisten dengan timezone "Z" di driver.
+function utcPool(config) {
+  const pool = mysql.createPool(config);
+  pool.on("connection", (conn) => conn.query("SET time_zone = '+00:00'"));
+  return pool;
+}
+
 async function getAdminPool() {
   if (!adminPool) {
-    adminPool = mysql.createPool(getDbConfig());
+    adminPool = utcPool(getDbConfig());
   }
   return adminPool;
 }
@@ -74,7 +83,7 @@ async function getDbConnection(dbName) {
     return connectionPools.get(dbName);
   }
 
-  const pool = mysql.createPool(getDbConfig(dbName));
+  const pool = utcPool(getDbConfig(dbName));
 
   connectionPools.set(dbName, pool);
 
