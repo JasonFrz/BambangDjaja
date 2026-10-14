@@ -102,6 +102,7 @@ sebelum listen di port 5000.
 
 Frontend membaca `VITE_PUBLIC_API_URL` (lihat `frontend/src/contexts/ApiContext.jsx`).
 Untuk lokal buat `frontend/.env.local` berisi `VITE_PUBLIC_API_URL=http://localhost:5000`.
+Tanpa itu frontend menunjuk ke URL cloudflare lama dan tidak akan terhubung.
 
 ### 3.5 Test
 
@@ -180,27 +181,36 @@ Raspi (`../tmu/tmu-app-client-deploy/websocket.js`) di `/bd-iot-socket` (port ut
 Alert WhatsApp/email aktif kembali: dipicu saat `transformer_status` memburuk, dikirim lewat
 `utils/alertSender.js` ke user perusahaan yang punya `phone`/`email`.
 
-### Rencana D — frontend: **belum dibuat plannya**
-Spec bagian 8. Sampai Rencana D selesai, halaman Settings dan grafik tren di frontend memakai
-data kosong. Itu normal, bukan bug.
+### Rencana D — frontend: **selesai** (14 Okt 2026)
+Plan: `docs/superpowers/plans/2026-10-14-plan-d-frontend.md`. Isi: header `X-Trafo-Id` dari
+`sessionStorage.selectedTrafoId` di interceptor axios/fetch (`main.jsx`), key metric baru
+(`config/metrics.js`), context memakai respons backend langsung dan `/api/settings/limits`,
+lima panel baru (`harmonic`, `derating`, `trafostatus`, `physicalstatus`, `oilquality`), empat
+preset (`config/presets.js`: Electrical default, Physical, Status, Oil Quality; tidak bisa diedit,
+pilihan disimpan di `localStorage.tmu_active_preset`), halaman Settings per grup
+`transformer_settings` + trip enable, nameplate di Transformer Data dengan edit admin.
+
+**Verifikasi yang dilakukan:** `npm run build`, `npx oxlint` (tidak ada peringatan baru), dan
+`npm run check:render` (render headless lima panel baru dengan data berbentuk respons backend
+nyata + konsistensi preset). **Uji di browser belum dilakukan** karena sesi pengerjaan tidak
+punya akses browser. Langkah uji manual ada di plan D Task 6 Step 2; jalankan sekali sebelum
+dipakai pengguna.
 
 ---
 
-## 6. Cara melanjutkan (Rencana C, lalu D)
+## 6. Cara melanjutkan
 
-Rencana B sudah selesai: seluruh backend membaca `master_tmu_app` dan skema `base_tmu`.
-Langkah berikutnya adalah membuat plan dari spec, lalu mengeksekusinya task per task.
+Rencana A–D selesai: backend memakai `master_tmu_app` dan skema `base_tmu`, Raspi terhubung
+lewat protokol lama, frontend menampilkan semuanya untuk trafo yang dipilih.
 
 1. **Rencana C selesai.** Untuk Raspi asli: isi `COMPANY_KEY` di Raspi dengan `company.company_key`
    perusahaan (lihat halaman admin perusahaan) dan `SERVER_DOMAIN` ke host server ini. Trafo akan
    muncul otomatis di daftar saat Raspi pertama kali terhubung.
-2. **Rencana D — frontend (berikutnya)** (spec bagian 8, urutan kerja 10–12): `config/metrics.js`, context
-   (`TrendDataContext`, `ThresholdContext`, `TemperatureDataContext` masih memetakan `phase_a_v`
-   dan membaca `threshold_settings`), panel baru, preset, halaman Settings dan nameplate.
-3. Cara membuat plan: baca spec, tulis `docs/superpowers/plans/<tanggal>-plan-c-....md` dengan
-   format yang sama seperti Rencana B (Goal, Global Constraints, Review Focus, File Structure,
-   task dengan step test-dulu dan `Expected:`). Kalau memakai Claude Code: skill
-   `superpowers:writing-plans`, lalu `superpowers:executing-plans`.
+2. **Rencana D selesai.** Yang tersisa adalah uji browser manual (plan D Task 6 Step 2) dan
+   perbaikan yang muncul darinya.
+3. Di luar cakupan yang disengaja (spec bagian 11): halaman `ManageTransformers.jsx` (tidak
+   dirutekan), interval 1/5/10/15 menit, laporan instantaneous/performance dari Raspi, Telegram,
+   migrasi password bcrypt ke sha256.
 4. Sebelum tiap commit cek `git status`; `git add` banyak file kadang hanya men-stage sebagian.
 
 ### Snippet uji manual (PowerShell)
@@ -239,6 +249,9 @@ Endpoint login adalah `POST /api/login` (bukan `/api/auth/login`).
 - **Timestamp dari Raspi.** String ISO ber-`Z` dipakai apa adanya; string polos `YYYY-MM-DD HH:mm:ss`
   (dari view `shrink_data_temp` di Raspi) dianggap waktu lokal Raspi dengan `RASPI_TZ_OFFSET`
   (default `+07:00`). Nama kolom dicocokkan tanpa peduli huruf besar-kecil (`TIMESTAMP`, `deRatingB`).
+- **Header `X-Trafo-Id`.** Interceptor frontend mengirim trafo terpilih di setiap request; backend
+  `trends`/`settings` membacanya saat `trafo_id` tidak ada di query. Ganti trafo memancarkan event
+  `trafoChanged` yang membuat context (trend, oli, limits) dan panel mengambil ulang data.
 - **Zona waktu.** Driver mysql2 memakai `timezone: "Z"` dan tiap koneksi pool menjalankan
   `SET time_zone = '+00:00'` (`utils/db.js`, juga `seed_demo.js`). Jadi `NOW()` di SQL dan
   `new Date()` di JS sama-sama UTC. Script baru yang membuka koneksi sendiri harus ikut
