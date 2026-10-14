@@ -1,1068 +1,297 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const { getDbConnection } = require('../utils/db');
-const { calculateEfficiency } = require('../utils/efficiency');
+const { getDbConnection, getMasterDb } = require('../utils/db');
+const rm = require('../utils/readingModel');
+const sm = require('../utils/statusModel');
+const tm = require('../utils/trafoModel');
+const { buildLimits } = require('../utils/limitsModel');
+const th = require('../utils/trendsHelpers');
 
-const extractDb = (req, res, next) => {
-  const dbName = req.headers['x-db-name'] || req.headers['X-DB-Name'] || req.query.db_name || req.user?.dbName;
-  if (!dbName) {
-    return res.status(400).json({ error: "Missing X-DB-Name header" });
+router.use(async (req, res, next) => {
+  const dbName = req.headers['x-db-name'] || req.query.db_name || req.user?.dbName;
+  if (!dbName) return res.status(400).json({ error: 'Missing X-DB-Name header' });
+  try {
+    req.dbName = dbName;
+    req.db = await getDbConnection(dbName);
+    req.trafoId = parseInt(req.query.trafo_id || req.headers['x-trafo-id'] || 1, 10) || 1;
+    next();
+  } catch (e) {
+    res.status(500).json({ error: 'Database tidak bisa diakses: ' + e.message });
   }
-  req.dbName = dbName;
-  next();
-};
+});
 
-async function checkClosestData(db, table, start, end) {
-  const [before] = await db.execute(`SELECT timestamp FROM ${table} WHERE timestamp < ? ORDER BY timestamp DESC LIMIT 1`, [start]);
-  const [after] = await db.execute(`SELECT timestamp FROM ${table} WHERE timestamp > ? ORDER BY timestamp ASC LIMIT 1`, [end]);
-  
-  let msg = "Tidak ada data pada rentang waktu tersebut.";
-  if (before.length > 0 || after.length > 0) {
-    msg += " Data terdekat ada pada: ";
-    if (before.length > 0) {
-      msg += `sebelumnya (${new Date(before[0].timestamp).toLocaleString('id-ID')})`;
-    }
-    if (after.length > 0) {
-      if (before.length > 0) msg += ' dan ';
-      msg += `sesudahnya (${new Date(after[0].timestamp).toLocaleString('id-ID')})`;
-    }
-  }
-  return msg;
+async function withDerived(req, points) {
+  const td = await tm.getTransformerData(req.db, req.trafoId);
+  return points.map(p => rm.computeDerived(p, td));
 }
 
-router.get("/", extractDb, async (req, res) => {
+async function getSettings(db, trafoId) {
+  const [rows] = await db.execute('SELECT * FROM transformer_settings WHERE trafoId = ? LIMIT 1', [trafoId]);
+  return rows[0] || null;
+}
+
+// Historis dengan rentang (dipakai TrendDataContext.fetchRangeData)
+router.get('/', async (req, res) => {
   const { start, end, interval } = req.query;
   try {
-    const db = await getDbConnection(req.dbName);
-    
-    const isAggregated = interval && parseInt(interval) > 0;
-    const params = [];
-    let query = '';
-    
-    if (isAggregated) {
-      const intv = parseInt(interval);
-      query = `
-        SELECT 
-          FROM_UNIXTIME(UNIX_TIMESTAMP(MIN(timestamp)) DIV ? * ?) AS timestamp,
-          AVG(phase_a_v) as phase_a_v,
-          AVG(phase_b_v) as phase_b_v,
-          AVG(phase_c_v) as phase_c_v,
-          AVG(line_ab_v) as line_ab_v,
-          AVG(line_bc_v) as line_bc_v,
-          AVG(line_ca_v) as line_ca_v,
-          AVG(current_a) as current_a,
-          AVG(current_b) as current_b,
-          AVG(current_c) as current_c,
-          AVG(power_active_total_kw) as power_active_total,
-          AVG(power_reactive_total_kvar) as power_reactive_total,
-          AVG(power_apparent_total_kva) as power_apparent_total,
-          AVG(pf_total) as pf_total,
-          AVG(frequency) as frequency,
-          AVG(energy_active_total) as energy_active_total,
-          AVG(energy_reactive_total) as energy_reactive_total
-        FROM electrical_readings
-      `;
-      params.push(intv, intv);
-    } else {
-      query = `
-        SELECT 
-          *,
-          power_active_total_kw as power_active_total,
-          power_reactive_total_kvar as power_reactive_total,
-          power_apparent_total_kva as power_apparent_total
-        FROM electrical_readings
-      `;
-    }
-    
+    let points;
     if (start && end) {
-      query += ' WHERE timestamp >= ? AND timestamp <= ?';
-      params.push(start, end);
+      points = await rm.getHistory(req.db, req.trafoId, start, end, interval || 0);
+      if (points.length === 0) return res.status(404).json({ error: await th.checkClosestData(req.db, req.trafoId, start, end) });
+    } else {
+      points = await rm.getRealtimeSeries(req.db, req.trafoId, 60);
     }
-    
-    if (isAggregated) {
-      query += ' GROUP BY UNIX_TIMESTAMP(timestamp) DIV ?';
-      params.push(parseInt(interval));
-    }
-    
-    query += ' ORDER BY timestamp ASC LIMIT 5000';
-    
-    const [rows] = await db.execute(query, params);
-    
-    if (rows.length === 0 && start && end) {
-      const msg = await checkClosestData(db, 'electrical_readings', start, end);
-      return res.status(404).json({ error: msg });
-    }
-
-    const rowsWithEfficiency = rows.map(row => ({
-      ...row,
-      efficiency: calculateEfficiency(row.current_a, row.current_b, row.current_c)
-    }));
-    
-    res.status(200).json(rowsWithEfficiency);
+    res.json(await withDerived(req, points));
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
-router.get("/meter", extractDb, async (req, res) => {
+// 60 baris realtime terakhir (dipakai TrendDataContext.fetchLiveInitial)
+router.get('/meter', async (req, res) => {
   const { start, end } = req.query;
   try {
-    const db = await getDbConnection(req.dbName);
-    let rows;
-    
-    if (start && end) {
-      const query = 'SELECT * FROM electrical_readings WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC LIMIT 1000';
-      [rows] = await db.execute(query, [start, end]);
-    } else {
-      const query = 'SELECT * FROM (SELECT * FROM electrical_readings ORDER BY timestamp DESC LIMIT 60) sub ORDER BY timestamp ASC';
-      [rows] = await db.execute(query);
-    }
-    
-    const rowsWithEfficiency = rows.map(row => ({
-      ...row,
-      efficiency: calculateEfficiency(row.current_a, row.current_b, row.current_c)
-    }));
-    
-    res.status(200).json(rowsWithEfficiency);
+    const points = start && end
+      ? await rm.getHistory(req.db, req.trafoId, start, end, 0)
+      : await rm.getRealtimeSeries(req.db, req.trafoId, 60);
+    res.json(await withDerived(req, points));
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
-router.get("/oil", extractDb, async (req, res) => {
+router.get('/oil', async (req, res) => {
   const { start, end } = req.query;
   try {
-    const db = await getDbConnection(req.dbName);
-    let rows;
-    
-    if (start && end) {
-      const query = 'SELECT * FROM oil_readings WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC LIMIT 1000';
-      [rows] = await db.execute(query, [start, end]);
-    } else {
-      const query = 'SELECT * FROM (SELECT * FROM oil_readings ORDER BY timestamp DESC LIMIT 60) sub ORDER BY timestamp ASC';
-      [rows] = await db.execute(query);
-    }
-    
-    res.status(200).json(rows);
+    const [points, status] = await Promise.all([
+      start && end ? rm.getHistory(req.db, req.trafoId, start, end, 0, ['oil_temperature', 'oil_pressure', 'oilLevelRaw'])
+                   : rm.getRealtimeSeries(req.db, req.trafoId, 60),
+      tm.getStatusRow(req.db, req.trafoId),
+    ]);
+    const code = status ? status.OilLevel : 3;
+    res.json(points.map(p => th.oilPoint(p, code)));
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: error.message });
   }
 });
 
-router.get("/export-count", extractDb, async (req, res) => {
+router.get('/export-count', async (req, res) => {
   const { start, end, interval } = req.query;
-  if (!start || !end) {
-    return res.status(400).json({ error: "Missing start or end parameter" });
-  }
-
+  if (!start || !end) return res.status(400).json({ error: 'Missing start or end parameter' });
   try {
-    const db = await getDbConnection(req.dbName);
-    const [countRows] = await db.execute('SELECT COUNT(*) as total FROM electrical_readings WHERE timestamp >= ? AND timestamp <= ?', [start, end]);
-    
-    let estimatedRows = countRows[0].total;
-    const intervalMs = interval && !isNaN(interval) ? parseInt(interval) * 1000 : null;
-    if (intervalMs && intervalMs > 2000) {
-      estimatedRows = Math.floor(estimatedRows / (intervalMs / 2000));
-    }
-    
-    res.status(200).json({ total: estimatedRows });
+    const [[{ total }]] = await req.db.execute('SELECT COUNT(*) AS total FROM reading_data WHERE trafoId = ? AND timestamp >= ? AND timestamp <= ?', [req.trafoId, start, end]);
+    const intv = parseInt(interval, 10) || 0;
+    res.json({ total: intv > 60 ? Math.floor(total / (intv / 60)) : total });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
-router.get("/export", extractDb, async (req, res) => {
+const EXPORT_ELECTRICAL = [
+  ['phaseA', 'Phase A (V)'], ['phaseB', 'Phase B (V)'], ['phaseC', 'Phase C (V)'],
+  ['lineAB', 'Line AB (V)'], ['lineBC', 'Line BC (V)'], ['lineCA', 'Line CA (V)'],
+  ['currentA', 'Current A (A)'], ['currentB', 'Current B (A)'], ['currentC', 'Current C (A)'], ['currentN', 'Current N (A)'],
+  ['powerActiveTotal', 'Power Active Total (kW)'], ['powerReactiveTotal', 'Power Reactive Total (kVAR)'], ['powerApparentTotal', 'Power Apparent Total (kVA)'],
+  ['pfTotal', 'PF Total'], ['frequency', 'Frequency (Hz)'],
+  ['energyActiveTotal', 'Energy Active (kWh)'], ['energyReactiveTotal', 'Energy Reactive (kVARh)'],
+  ['thdVA', 'THD V A (%)'], ['thdVB', 'THD V B (%)'], ['thdVC', 'THD V C (%)'],
+  ['thdIA', 'THD I A (%)'], ['thdIB', 'THD I B (%)'], ['thdIC', 'THD I C (%)'],
+  ['efficiency', 'Efficiency (%)'],
+];
+const EXPORT_OIL = [
+  ['oil_temperature', 'Oil Temperature (°C)'], ['oil_pressure', 'Oil Pressure (Bar)'],
+  ['wtiA', 'WTI A (°C)'], ['wtiB', 'WTI B (°C)'], ['wtiC', 'WTI C (°C)'],
+  ['busTempA', 'Bus Temp A (°C)'], ['busTempB', 'Bus Temp B (°C)'], ['busTempC', 'Bus Temp C (°C)'],
+  ['h2ppm', 'H2 (ppm)'], ['moisturePpm', 'Moisture (ppm)'],
+];
+
+router.get('/export', async (req, res) => {
   const { start, end, interval } = req.query;
-  if (!start || !end) {
-    return res.status(400).json({ error: "Missing start or end parameter" });
-  }
-  
-  const intervalMs = interval && !isNaN(interval) ? parseInt(interval) * 1000 : null;
-
+  if (!start || !end) return res.status(400).json({ error: 'Missing start or end parameter' });
   try {
-    const db = await getDbConnection(req.dbName);
     const ExcelJS = require('exceljs');
-
-    const [countRows] = await db.execute('SELECT COUNT(*) as total FROM electrical_readings WHERE timestamp >= ? AND timestamp <= ?', [start, end]);
-    if (countRows[0].total === 0) {
-      const msg = await checkClosestData(db, 'electrical_readings', start, end);
-      return res.status(404).json({ error: msg });
-    }
-
-    const query = `
-      SELECT 
-        *, 
-        power_active_total_kw as power_active_total,
-        power_reactive_total_kvar as power_reactive_total,
-        power_apparent_total_kva as power_apparent_total
-      FROM electrical_readings
-      WHERE timestamp >= ? AND timestamp <= ?
-      ORDER BY timestamp ASC
-    `;
-    
-    const r2 = (val) => val !== null && val !== undefined ? Math.round((parseFloat(val) || 0) * 100) / 100 : 0;
-
-    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: res,
-      useStyles: true,
-      useSharedStrings: false
-    });
+    const points = await rm.getHistory(req.db, req.trafoId, start, end, parseInt(interval, 10) || 0);
+    if (points.length === 0) return res.status(404).json({ error: await th.checkClosestData(req.db, req.trafoId, start, end) });
+    const rows = await withDerived(req, points);
+    const status = await tm.getStatusRow(req.db, req.trafoId);
+    const flags = sm.oilFlags(status && status.OilLevel);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=Export_${start}_to_${end}.xlsx`);
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ stream: res, useStyles: true, useSharedStrings: false });
+    const r2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
+    const styleHeader = (sheet, argb) => {
+      sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb } };
+      sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+    };
 
     const sheet = workbook.addWorksheet('Trend Data');
-    sheet.columns = [
-      { header: 'Waktu (Time)', key: 'time', width: 25 },
-      { header: 'Phase A (V)', key: 'phaseA', width: 15 },
-      { header: 'Phase B (V)', key: 'phaseB', width: 15 },
-      { header: 'Phase C (V)', key: 'phaseC', width: 15 },
-      { header: 'Line AB (V)', key: 'lineAB', width: 15 },
-      { header: 'Line BC (V)', key: 'lineBC', width: 15 },
-      { header: 'Line CA (V)', key: 'lineCA', width: 15 },
-      { header: 'Current A (A)', key: 'currentA', width: 15 },
-      { header: 'Current B (A)', key: 'currentB', width: 15 },
-      { header: 'Current C (A)', key: 'currentC', width: 15 },
-      { header: 'Power Active Total (kW)', key: 'powerActiveTotal', width: 25 },
-      { header: 'Power Reactive Total (kVAR)', key: 'powerReactiveTotal', width: 28 },
-      { header: 'Power Apparent Total (kVA)', key: 'powerApparentTotal', width: 28 },
-      { header: 'PF Total', key: 'pfTotal', width: 15 },
-      { header: 'Frequency (Hz)', key: 'frequency', width: 18 },
-      { header: 'Energy Active (kWh)', key: 'energyActiveTotal', width: 20 },
-      { header: 'Energy Reactive (kVARh)', key: 'energyReactiveTotal', width: 22 },
-      { header: 'Efficiency (%)', key: 'efficiency', width: 18 }
-    ];
-
-    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0052CC' } };
-    sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
-
-    let elecQuery = '';
-    let elecParams = [];
-
-    if (intervalMs) {
-      const intv = intervalMs / 1000;
-      elecQuery = `
-        SELECT 
-          FROM_UNIXTIME(UNIX_TIMESTAMP(MIN(timestamp)) DIV ? * ?) AS timestamp,
-          AVG(phase_a_v) as phase_a_v,
-          AVG(phase_b_v) as phase_b_v,
-          AVG(phase_c_v) as phase_c_v,
-          AVG(line_ab_v) as line_ab_v,
-          AVG(line_bc_v) as line_bc_v,
-          AVG(line_ca_v) as line_ca_v,
-          AVG(current_a) as current_a,
-          AVG(current_b) as current_b,
-          AVG(current_c) as current_c,
-          AVG(power_active_total_kw) as power_active_total,
-          AVG(power_reactive_total_kvar) as power_reactive_total,
-          AVG(power_apparent_total_kva) as power_apparent_total,
-          AVG(pf_total) as pf_total,
-          AVG(frequency) as frequency,
-          AVG(energy_active_total) as energy_active_total,
-          AVG(energy_reactive_total) as energy_reactive_total
-        FROM electrical_readings
-        WHERE timestamp >= ? AND timestamp <= ?
-        GROUP BY UNIX_TIMESTAMP(timestamp) DIV ?
-        ORDER BY MIN(timestamp) ASC
-      `;
-      elecParams = [intv, intv, start, end, intv];
-    } else {
-      elecQuery = `
-        SELECT 
-          *, 
-          power_active_total_kw as power_active_total,
-          power_reactive_total_kvar as power_reactive_total,
-          power_apparent_total_kva as power_apparent_total
-        FROM electrical_readings
-        WHERE timestamp >= ? AND timestamp <= ?
-        ORDER BY timestamp ASC
-      `;
-      elecParams = [start, end];
-    }
-
-    const [elecRows] = await db.execute(elecQuery, elecParams);
-
-    for (const row of elecRows) {
-      
-      sheet.addRow({
-        time: new Date(row.timestamp).toLocaleString('id-ID'),
-        phaseA: r2(row.phase_a_v),
-        phaseB: r2(row.phase_b_v),
-        phaseC: r2(row.phase_c_v),
-        lineAB: r2(row.line_ab_v),
-        lineBC: r2(row.line_bc_v),
-        lineCA: r2(row.line_ca_v),
-        currentA: r2(row.current_a),
-        currentB: r2(row.current_b),
-        currentC: r2(row.current_c),
-        powerActiveTotal: r2(row.power_active_total),
-        powerReactiveTotal: r2(row.power_reactive_total),
-        powerApparentTotal: r2(row.power_apparent_total),
-        pfTotal: r2(row.pf_total),
-        frequency: r2(row.frequency),
-        energyActiveTotal: r2(row.energy_active_total),
-        energyReactiveTotal: r2(row.energy_reactive_total),
-        efficiency: r2(calculateEfficiency(row.current_a, row.current_b, row.current_c))
-      }).commit();
+    sheet.columns = [{ header: 'Waktu (Time)', key: 'time', width: 25 }, ...EXPORT_ELECTRICAL.map(([key, header]) => ({ header, key, width: 18 }))];
+    styleHeader(sheet, 'FF0052CC');
+    for (const p of rows) {
+      const row = { time: new Date(p.timestamp).toLocaleString('id-ID') };
+      for (const [key] of EXPORT_ELECTRICAL) row[key] = r2(p[key]);
+      sheet.addRow(row).commit();
     }
     sheet.commit();
 
     const oilSheet = workbook.addWorksheet('Oil Data');
-    oilSheet.columns = [
-      { header: 'Waktu (Time)', key: 'time', width: 25 },
-      { header: 'Oil Temperature (°C)', key: 'oilTemp', width: 22 },
-      { header: 'Oil Pressure (Bar)', key: 'oilPressure', width: 20 },
-      { header: 'Oil Level Alarm', key: 'oilAlarm', width: 20 },
-      { header: 'Oil Level Trip', key: 'oilTrip', width: 20 },
-    ];
-
-    oilSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    oilSheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF6600' } };
-    oilSheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
-
-    let oilQuery = '';
-    let oilParams = [];
-
-    if (intervalMs) {
-      const intv = intervalMs / 1000;
-      oilQuery = `
-        SELECT 
-          FROM_UNIXTIME(UNIX_TIMESTAMP(MIN(timestamp)) DIV ? * ?) AS timestamp,
-          AVG(oil_temperature) as oil_temperature,
-          AVG(oil_pressure) as oil_pressure,
-          ROUND(AVG(oil_level_alarm)) as oil_level_alarm,
-          ROUND(AVG(oil_level_trip)) as oil_level_trip
-        FROM oil_readings
-        WHERE timestamp >= ? AND timestamp <= ?
-        GROUP BY UNIX_TIMESTAMP(timestamp) DIV ?
-        ORDER BY MIN(timestamp) ASC
-      `;
-      oilParams = [intv, intv, start, end, intv];
-    } else {
-      oilQuery = `
-        SELECT * FROM oil_readings
-        WHERE timestamp >= ? AND timestamp <= ?
-        ORDER BY timestamp ASC
-      `;
-      oilParams = [start, end];
-    }
-
-    const [oilRows] = await db.execute(oilQuery, oilParams);
-
-    for (const row of oilRows) {
-
-      oilSheet.addRow({
-        time: new Date(row.timestamp).toLocaleString('id-ID'),
-        oilTemp: r2(row.oil_temperature),
-        oilPressure: r2(row.oil_pressure),
-        oilAlarm: (row.oil_level_alarm == 1 || row.oil_level_alarm === true) ? 'Safe' : 'Alarm',
-        oilTrip: (row.oil_level_trip == 1 || row.oil_level_trip === true) ? 'Safe' : 'Trip',
-      }).commit();
+    oilSheet.columns = [{ header: 'Waktu (Time)', key: 'time', width: 25 }, ...EXPORT_OIL.map(([key, header]) => ({ header, key, width: 20 })),
+      { header: 'Oil Level Alarm', key: 'oilAlarm', width: 18 }, { header: 'Oil Level Trip', key: 'oilTrip', width: 18 }];
+    styleHeader(oilSheet, 'FFFF6600');
+    for (const p of rows) {
+      const row = { time: new Date(p.timestamp).toLocaleString('id-ID'), oilAlarm: flags.oil_level_alarm ? 'Safe' : 'Alarm', oilTrip: flags.oil_level_trip ? 'Safe' : 'Trip' };
+      for (const [key] of EXPORT_OIL) row[key] = r2(p[key]);
+      oilSheet.addRow(row).commit();
     }
     oilSheet.commit();
-
     await workbook.commit();
-    
   } catch (error) {
     console.error(error);
-    if (!res.headersSent) {
-      res.status(500).json({ error: "Gagal mengekspor data" });
-    }
+    if (!res.headersSent) res.status(500).json({ error: 'Gagal mengekspor data' });
   }
 });
 
-router.get("/report", extractDb, async (req, res) => {
+// Nama field lama dipertahankan untuk PerformanceReport; baris baru ditambahkan.
+const REPORT_FIELDS = [
+  ['phaseA', 'phase_a'], ['phaseB', 'phase_b'], ['phaseC', 'phase_c'],
+  ['lineAB', 'line_ab'], ['lineBC', 'line_bc'], ['lineCA', 'line_ca'],
+  ['currentA', 'current_a'], ['currentB', 'current_b'], ['currentC', 'current_c'], ['currentN', 'current_n'],
+  ['powerActiveTotal', 'power_active'], ['powerReactiveTotal', 'power_reactive'], ['powerApparentTotal', 'power_apparent'],
+  ['pfTotal', 'pf'], ['frequency', 'frequency'], ['energyActiveTotal', 'energy_active'], ['energyReactiveTotal', 'energy_reactive'],
+  ['thdVA', 'thd_v_a'], ['thdVB', 'thd_v_b'], ['thdVC', 'thd_v_c'], ['thdIA', 'thd_i_a'], ['thdIB', 'thd_i_b'], ['thdIC', 'thd_i_c'],
+  ['h2ppm', 'h2ppm'], ['moisturePpm', 'moisture_ppm'], ['avgCurrent', 'avg_current'],
+];
+const REPORT_OIL_FIELDS = [
+  ['oil_temperature', 'oil_temp'], ['oil_pressure', 'oil_press'],
+  ['wtiA', 'wti_a'], ['wtiB', 'wti_b'], ['wtiC', 'wti_c'], ['busTempA', 'bus_temp_a'], ['busTempB', 'bus_temp_b'], ['busTempC', 'bus_temp_c'],
+];
+
+router.get('/report', async (req, res) => {
   const { start, end } = req.query;
   try {
-    const db = await getDbConnection(req.dbName);
+    const all = [...REPORT_FIELDS, ...REPORT_OIL_FIELDS];
+    const select = all.map(([key]) => {
+      const col = rm.KEY_TO_COLUMN[key];
+      const div = rm.WATT_COLUMNS.has(col) ? '/1000' : '';
+      return `MIN(\`${col}\`)${div} AS min_${key}, MAX(\`${col}\`)${div} AS max_${key}, AVG(\`${col}\`)${div} AS avg_${key}`;
+    }).join(', ');
+    const where = start && end ? 'AND timestamp >= ? AND timestamp <= ?' : '';
+    const params = start && end ? [req.trafoId, start, end] : [req.trafoId];
+    const [[agg]] = await req.db.query(`SELECT ${select} FROM reading_data WHERE trafoId = ? ${where}`, params);
 
-    let elecQuery = `
-      SELECT 
-        MIN(phase_a_v) as min_phase_a, MAX(phase_a_v) as max_phase_a, AVG(phase_a_v) as avg_phase_a,
-        MIN(phase_b_v) as min_phase_b, MAX(phase_b_v) as max_phase_b, AVG(phase_b_v) as avg_phase_b,
-        MIN(phase_c_v) as min_phase_c, MAX(phase_c_v) as max_phase_c, AVG(phase_c_v) as avg_phase_c,
-        MIN(line_ab_v) as min_line_ab, MAX(line_ab_v) as max_line_ab, AVG(line_ab_v) as avg_line_ab,
-        MIN(line_bc_v) as min_line_bc, MAX(line_bc_v) as max_line_bc, AVG(line_bc_v) as avg_line_bc,
-        MIN(line_ca_v) as min_line_ca, MAX(line_ca_v) as max_line_ca, AVG(line_ca_v) as avg_line_ca,
-        MIN(current_a) as min_current_a, MAX(current_a) as max_current_a, AVG(current_a) as avg_current_a,
-        MIN(current_b) as min_current_b, MAX(current_b) as max_current_b, AVG(current_b) as avg_current_b,
-        MIN(current_c) as min_current_c, MAX(current_c) as max_current_c, AVG(current_c) as avg_current_c,
-        MIN(power_active_total_kw) as min_power_active, MAX(power_active_total_kw) as max_power_active, AVG(power_active_total_kw) as avg_power_active,
-        MIN(power_reactive_total_kvar) as min_power_reactive, MAX(power_reactive_total_kvar) as max_power_reactive, AVG(power_reactive_total_kvar) as avg_power_reactive,
-        MIN(power_apparent_total_kva) as min_power_apparent, MAX(power_apparent_total_kva) as max_power_apparent, AVG(power_apparent_total_kva) as avg_power_apparent,
-        MIN(pf_total) as min_pf, MAX(pf_total) as max_pf, AVG(pf_total) as avg_pf,
-        MIN(frequency) as min_frequency, MAX(frequency) as max_frequency, AVG(frequency) as avg_frequency,
-        MIN(energy_active_total) as min_energy_active, MAX(energy_active_total) as max_energy_active, AVG(energy_active_total) as avg_energy_active,
-        MIN(energy_reactive_total) as min_energy_reactive, MAX(energy_reactive_total) as max_energy_reactive, AVG(energy_reactive_total) as avg_energy_reactive
-      FROM electrical_readings
-    `;
-    let elecParams = [];
-
-    let oilQuery = `
-      SELECT 
-        MIN(oil_temperature) as min_oil_temp, MAX(oil_temperature) as max_oil_temp, AVG(oil_temperature) as avg_oil_temp,
-        MIN(oil_pressure) as min_oil_press, MAX(oil_pressure) as max_oil_press, AVG(oil_pressure) as avg_oil_press,
-        SUM(CASE WHEN oil_level_alarm = 0 THEN 1 ELSE 0 END) as alarm_triggers,
-        SUM(CASE WHEN oil_level_trip = 0 THEN 1 ELSE 0 END) as trip_triggers
-      FROM oil_readings
-    `;
-    let oilParams = [];
-
-    if (start && end) {
-      elecQuery += ' WHERE timestamp >= ? AND timestamp <= ?';
-      elecParams.push(start, end);
-
-      oilQuery += ' WHERE timestamp >= ? AND timestamp <= ?';
-      oilParams.push(start, end);
-    }
-
-    const [elecRows] = await db.execute(elecQuery, elecParams);
-    const [oilRows] = await db.execute(oilQuery, oilParams);
-
-    const result = {
-      electrical: elecRows[0] || {},
-      oil: oilRows[0] || {}
+    const pick = (fields) => {
+      const out = {};
+      for (const [key, name] of fields) {
+        for (const k of ['min', 'max', 'avg']) {
+          const v = agg[`${k}_${key}`];
+          out[`${k}_${name}`] = v === null || v === undefined ? null : Math.round(Number(v) * 100) / 100;
+        }
+      }
+      return out;
     };
+    const electrical = pick(REPORT_FIELDS);
+    const oil = pick(REPORT_OIL_FIELDS);
 
-    if (result.electrical.avg_current_a !== undefined && result.electrical.avg_current_a !== null) {
-      result.electrical.avg_efficiency = calculateEfficiency(
-        result.electrical.avg_current_a, 
-        result.electrical.avg_current_b, 
-        result.electrical.avg_current_c
-      );
-    }
+    const td = await tm.getTransformerData(req.db, req.trafoId);
+    electrical.avg_efficiency = rm.computeEfficiency({ avgCurrent: agg.avg_avgCurrent }, td);
 
-    res.status(200).json(result);
+    const [[fl]] = await req.db.query(
+      `SELECT SUM(CASE WHEN failure_type LIKE '%Alarm%' THEN 1 ELSE 0 END) AS alarm_triggers,
+              SUM(CASE WHEN failure_type LIKE '%Trip%' THEN 1 ELSE 0 END) AS trip_triggers
+       FROM failure_log WHERE trafoId = ? ${start && end ? 'AND time_start >= ? AND time_start <= ?' : ''}`, params);
+    oil.alarm_triggers = Number(fl.alarm_triggers || 0);
+    oil.trip_triggers = Number(fl.trip_triggers || 0);
+
+    res.json({ electrical, oil, trafoId: req.trafoId });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Server error generating report" });
+    res.status(500).json({ error: 'Server error generating report' });
   }
 });
 
-router.get("/thi", extractDb, async (req, res) => {
+router.get('/thi', async (req, res) => {
   try {
-    const db = await getDbConnection(req.dbName);
-    const { trafo_id, metrics } = req.query;
-
-    let thresholdQuery = "SELECT * FROM threshold_settings WHERE is_active = 1";
-    const thresholdParams = [];
-    if (trafo_id) {
-      try {
-        const [testCols] = await db.execute("SHOW COLUMNS FROM threshold_settings LIKE 'trafo_id'");
-        if (testCols.length > 0) {
-          thresholdQuery += " AND (trafo_id = ? OR trafo_id IS NULL OR scope = 'global')";
-          thresholdParams.push(trafo_id);
-        }
-      } catch (e) {}
-    }
-    thresholdQuery += " ORDER BY id ASC";
-
-    const [thresholdRows] = await db.execute(thresholdQuery, thresholdParams);
-
-    const dbThresholdsMap = {};
-    thresholdRows.forEach(row => {
-      dbThresholdsMap[row.metric_key] = {
-        id: row.id,
-        metric_key: row.metric_key,
-        min_value: row.min_value !== null ? parseFloat(row.min_value) : null,
-        max_value: row.max_value !== null ? parseFloat(row.max_value) : null,
-        scope: row.scope || 'specific'
-      };
-    });
-
-    const [elecRows] = await db.execute(
-      "SELECT * FROM electrical_readings ORDER BY timestamp DESC LIMIT 1"
-    );
-    let oilRows = [];
-    try {
-      [oilRows] = await db.execute(
-        "SELECT * FROM oil_readings ORDER BY timestamp DESC LIMIT 1"
-      );
-    } catch (e) {}
-
-    const rawElec = elecRows[0] || {};
-    const rawOil = oilRows[0] || {};
-
-    const latestData = {
-      ...rawElec,
-      ...rawOil,
-      phaseA: rawElec.phase_a_v !== undefined ? parseFloat(rawElec.phase_a_v) : null,
-      phaseB: rawElec.phase_b_v !== undefined ? parseFloat(rawElec.phase_b_v) : null,
-      phaseC: rawElec.phase_c_v !== undefined ? parseFloat(rawElec.phase_c_v) : null,
-      lineAB: rawElec.line_ab_v !== undefined ? parseFloat(rawElec.line_ab_v) : null,
-      lineBC: rawElec.line_bc_v !== undefined ? parseFloat(rawElec.line_bc_v) : null,
-      lineCA: rawElec.line_ca_v !== undefined ? parseFloat(rawElec.line_ca_v) : null,
-      currentA: rawElec.current_a !== undefined ? parseFloat(rawElec.current_a) : null,
-      currentB: rawElec.current_b !== undefined ? parseFloat(rawElec.current_b) : null,
-      currentC: rawElec.current_c !== undefined ? parseFloat(rawElec.current_c) : null,
-      currentN: rawElec.current_n !== undefined ? parseFloat(rawElec.current_n) : null,
-      currentUnbalance: rawElec.current_unbalance !== undefined ? parseFloat(rawElec.current_unbalance) : null,
-      powerActiveTotal: (rawElec.power_active_total_kw || rawElec.power_active_total) !== undefined ? parseFloat(rawElec.power_active_total_kw || rawElec.power_active_total) : null,
-      powerReactiveTotal: (rawElec.power_reactive_total_kvar || rawElec.power_reactive_total) !== undefined ? parseFloat(rawElec.power_reactive_total_kvar || rawElec.power_reactive_total) : null,
-      powerApparentTotal: (rawElec.power_apparent_total_kva || rawElec.power_apparent_total) !== undefined ? parseFloat(rawElec.power_apparent_total_kva || rawElec.power_apparent_total) : null,
-      pfTotal: rawElec.pf_total !== undefined ? parseFloat(rawElec.pf_total) : null,
-      frequency: rawElec.frequency !== undefined ? parseFloat(rawElec.frequency) : null,
-      oil_temperature: rawOil.oil_temperature !== undefined ? parseFloat(rawOil.oil_temperature) : null,
-      oil_pressure: rawOil.oil_pressure !== undefined ? parseFloat(rawOil.oil_pressure) : null
-    };
-
-    const FRONTEND_TO_DB_THRESHOLD = {
-      phaseA: 'v_phase', phaseB: 'v_phase', phaseC: 'v_phase',
-      lineAB: 'v_line', lineBC: 'v_line', lineCA: 'v_line',
-      currentA: 'current', currentB: 'current', currentC: 'current',
-      currentN: 'current_n',
-      currentUnbalance: 'current_unbalance',
-      powerActiveTotal: 'power_active_total_kw',
-      powerReactiveTotal: 'power_reactive_total_kvar',
-      powerApparentTotal: 'power_apparent_total_kva',
-      pfTotal: 'pf_total',
-      frequency: 'frequency',
-      oil_temperature: 'oil_temperature',
-      oil_pressure: 'oil_pressure'
-    };
-
-    const metricKeys = metrics 
-      ? metrics.split(',').map(m => m.trim()).filter(Boolean)
+    const [latest, td, settings, status] = await Promise.all([
+      rm.getLatest(req.db, req.trafoId), tm.getTransformerData(req.db, req.trafoId), getSettings(req.db, req.trafoId), tm.getStatusRow(req.db, req.trafoId),
+    ]);
+    const limits = buildLimits(settings, td);
+    const point = latest ? rm.computeDerived(latest, td) : {};
+    const keys = req.query.metrics ? String(req.query.metrics).split(',').map(s => s.trim()).filter(Boolean)
       : ['phaseA', 'phaseB', 'phaseC', 'currentA', 'currentB', 'currentC', 'pfTotal', 'frequency'];
-
-    const evaluatedMetrics = metricKeys.map(key => {
-      const val = latestData[key];
-      const dbKey = FRONTEND_TO_DB_THRESHOLD[key] || key;
-      const t = dbThresholdsMap[dbKey] || dbThresholdsMap[key] || null;
-
-      const tMin = t?.min_value !== undefined ? t.min_value : null;
-      const tMax = t?.max_value !== undefined ? t.max_value : null;
-
-      if (val === null || val === undefined || isNaN(val)) {
-        return {
-          key,
-          dbKey,
-          val: null,
-          displayVal: '-',
-          tMin,
-          tMax,
-          score: 50,
-          status: 'NO DATA',
-          color: '#94a3b8',
-          thresholdLabel: 'Tidak ada data'
-        };
-      }
-
-      let score = 100;
-      let status = 'OPTIMAL';
-      let color = '#10b981';
-      let thresholdLabel = 'Operasi Normal';
-
-      if (key === 'pfTotal' || dbKey === 'pf_total') {
-        const pfMin = tMin !== null ? tMin : 0.85;
-        thresholdLabel = `Min: ${pfMin}`;
-        if (val >= 0.90) {
-          score = 100;
-          status = 'OPTIMAL';
-          color = '#10b981';
-        } else if (val >= pfMin) {
-          score = Math.round(85 + ((val - pfMin) / (0.90 - pfMin)) * 14);
-          status = 'NORMAL';
-          color = '#10b981';
-        } else {
-          const breach = pfMin - val;
-          score = breach <= 0.10 ? 65 : 35;
-          status = breach <= 0.10 ? 'WARNING' : 'CRITICAL';
-          color = breach <= 0.10 ? '#f59e0b' : '#ef4444';
-        }
-      }
-      else if (
-        ['phaseA', 'phaseB', 'phaseC', 'lineAB', 'lineBC', 'lineCA', 'frequency'].includes(key) ||
-        ['v_phase', 'v_line', 'avg_phase_v', 'avg_line_v', 'frequency'].includes(dbKey)
-      ) {
-        if (tMin !== null && tMax !== null) {
-          thresholdLabel = `Limit: ${tMin} - ${tMax}`;
-          const center = (tMin + tMax) / 2;
-          const span = (tMax - tMin) / 2 || 1;
-          const dev = Math.abs(val - center);
-          const ratio = dev / span;
-
-          if (val >= tMin && val <= tMax) {
-            if (ratio <= 0.85) {
-              score = 100;
-              status = 'OPTIMAL';
-              color = '#10b981';
-            } else {
-              const edgeTaper = (ratio - 0.85) / 0.15;
-              score = Math.max(85, Math.round(95 - edgeTaper * 10));
-              status = 'NORMAL';
-              color = '#10b981';
-            }
-          } else {
-            const breach = val < tMin ? tMin - val : val - tMax;
-            const breachPct = (breach / span) * 100;
-            score = breachPct <= 15 ? 65 : 35;
-            status = breachPct <= 15 ? 'WARNING' : 'CRITICAL';
-            color = breachPct <= 15 ? '#f59e0b' : '#ef4444';
-          }
-        }
-      }
-      else if (
-        ['currentA', 'currentB', 'currentC', 'currentN', 'currentUnbalance', 'powerActiveTotal', 'powerReactiveTotal', 'powerApparentTotal', 'oil_temperature'].includes(key) ||
-        ['current', 'avg_current', 'current_n', 'current_unbalance', 'power_active_total_kw', 'power_reactive_total_kvar', 'power_apparent_total_kva', 'oil_temperature'].includes(dbKey)
-      ) {
-        const maxLimit = tMax !== null ? tMax : (key === 'currentUnbalance' ? 15 : (key.includes('power') ? 1500 : 3000));
-        thresholdLabel = `Max: ${maxLimit}`;
-
-        if (val <= maxLimit) {
-          if (val <= maxLimit * 0.85) {
-            score = 100;
-            status = 'OPTIMAL';
-            color = '#10b981';
-          } else {
-            const taper = (val - maxLimit * 0.85) / (maxLimit * 0.15);
-            score = Math.max(85, Math.round(95 - taper * 10));
-            status = 'NORMAL';
-            color = '#10b981';
-          }
-        } else {
-          const breachPct = ((val - maxLimit) / (maxLimit || 1)) * 100;
-          score = breachPct <= 15 ? 65 : 35;
-          status = breachPct <= 15 ? 'WARNING' : 'CRITICAL';
-          color = breachPct <= 15 ? '#f59e0b' : '#ef4444';
-        }
-      }
-      else if (key === 'oil_pressure' || dbKey === 'oil_pressure') {
-        const minP = tMin !== null ? tMin : 0.5;
-        const maxP = tMax !== null ? tMax : 2.5;
-        thresholdLabel = `Limit: ${minP} - ${maxP}`;
-        if (val >= minP && val <= maxP) {
-          score = 100;
-          status = 'OPTIMAL';
-          color = '#10b981';
-        } else {
-          score = 60;
-          status = 'WARNING';
-          color = '#f59e0b';
-        }
-      }
-      else {
-        if (tMin !== null && tMax !== null) {
-          thresholdLabel = `Limit: ${tMin} - ${tMax}`;
-          if (val >= tMin && val <= tMax) {
-            score = 100; status = 'OPTIMAL'; color = '#10b981';
-          } else {
-            score = 65; status = 'WARNING'; color = '#f59e0b';
-          }
-        } else if (tMax !== null) {
-          thresholdLabel = `Max: ${tMax}`;
-          score = val <= tMax ? 100 : 60;
-          status = score === 100 ? 'OPTIMAL' : 'WARNING';
-          color = score === 100 ? '#10b981' : '#f59e0b';
-        } else {
-          thresholdLabel = 'Active';
-          score = 100;
-          status = 'OPTIMAL';
-          color = '#10b981';
-        }
-      }
-
-      let displayVal = Number(val).toFixed(1);
-      if (['pfTotal', 'frequency', 'oil_pressure', 'currentUnbalance'].includes(key)) {
-        displayVal = Number(val).toFixed(2);
-      }
-
-      return {
-        key,
-        dbKey,
-        val,
-        displayVal,
-        tMin,
-        tMax,
-        score,
-        status,
-        color,
-        thresholdLabel
-      };
-    });
-
-    let overallScore = 0;
-    if (evaluatedMetrics.length > 0) {
-      const sum = evaluatedMetrics.reduce((acc, m) => acc + m.score, 0);
-      overallScore = Math.round(sum / evaluatedMetrics.length);
-    }
-
-    let overallStatus = 'EXCELLENT';
-    let overallColor = '#10b981';
-    if (overallScore < 50) {
-      overallStatus = 'CRITICAL';
-      overallColor = '#ef4444';
-    } else if (overallScore < 75) {
-      overallStatus = 'FAIR / WARNING';
-      overallColor = '#f59e0b';
-    } else if (overallScore < 90) {
-      overallStatus = 'GOOD';
-      overallColor = '#3b82f6';
-    }
-
-    res.json({
-      success: true,
-      overallScore,
-      overallStatus,
-      overallColor,
-      evaluatedMetrics,
-      dbThresholds: dbThresholdsMap,
-      timestamp: rawElec.timestamp || new Date().toISOString()
-    });
+    const evaluatedMetrics = keys.map(k => th.evaluateMetric(k, point[k] ?? null, limits[k]));
+    const summary = sm.buildStatusItems(status, []);
+    const overallScore = th.healthScore(summary.counts);
+    const overallStatus = overallScore >= 90 ? 'EXCELLENT' : overallScore >= 75 ? 'GOOD' : overallScore >= 50 ? 'FAIR / WARNING' : 'CRITICAL';
+    const overallColor = overallScore >= 90 ? '#10b981' : overallScore >= 75 ? '#3b82f6' : overallScore >= 50 ? '#f59e0b' : '#ef4444';
+    res.json({ success: true, overallScore, overallStatus, overallColor, counts: summary.counts, evaluatedMetrics, limits, timestamp: latest ? latest.timestamp : new Date().toISOString() });
   } catch (error) {
-    console.error("Error in THI webservice:", error);
-    res.status(500).json({ error: "Failed to compute THI", details: error.message });
+    res.status(500).json({ error: 'Failed to compute THI', details: error.message });
   }
 });
 
-router.get("/events", extractDb, async (req, res) => {
+router.get('/events', async (req, res) => {
   try {
-    const db = await getDbConnection(req.dbName);
-    const trafoId = req.query.trafo_id || 1;
-    const limit = parseInt(req.query.limit) || 50;
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200);
+    const [logs] = await req.db.query('SELECT rowId, failure_id, time_start, duration, failure_type, parameter, parameterValue FROM failure_log WHERE trafoId = ? ORDER BY time_start DESC LIMIT ?', [req.trafoId, limit]);
+    const events = logs.map(th.failureToEvent);
 
-    const [thresholdRows] = await db.execute(
-      "SELECT * FROM threshold_settings WHERE is_active = 1 ORDER BY id ASC"
-    );
-    const thresholds = {};
-    thresholdRows.forEach(t => {
-      thresholds[t.metric_key] = {
-        min: t.min_value !== null ? parseFloat(t.min_value) : null,
-        max: t.max_value !== null ? parseFloat(t.max_value) : null,
-        unit: t.unit || '',
-        name: t.name || t.metric_key
-      };
-    });
-
-    const safeLimit = Math.min(Math.max(1, limit), 50);
-
-    const [electricalRows] = await db.query(
-      `SELECT * FROM electrical_readings 
-       ORDER BY timestamp DESC LIMIT ${safeLimit}`
-    );
-
-    let oilRows = [];
-    try {
-      [oilRows] = await db.query(
-        `SELECT * FROM oil_readings 
-         ORDER BY timestamp DESC LIMIT ${safeLimit}`
-      );
-    } catch (e) {}
-
-    const generatedEvents = [];
-
-    oilRows.forEach(row => {
-      const ts = new Date(row.timestamp);
-      const timeStr = ts.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      const dateStr = ts.toISOString();
-
-      if (row.oil_level_trip === 0) {
-        generatedEvents.push({
-          id: `db-oil-trip-${row.id}`,
-          timestamp: dateStr,
-          time: timeStr,
-          level: 'CRITICAL',
-          source: 'Oil Protection Relay',
-          msg: 'OIL LEVEL TRIP TRIGGERED! Transformer protective trip relay activated.'
-        });
-      }
-
-      if (row.oil_level_alarm === 0) {
-        generatedEvents.push({
-          id: `db-oil-alarm-${row.id}`,
-          timestamp: dateStr,
-          time: timeStr,
-          level: 'ALARM',
-          source: 'Oil Level Sensor',
-          msg: 'OIL LEVEL LOW ALARM! Transformer oil level below safe reserve threshold.'
-        });
-      }
-
-      if (row.oil_temperature !== null && row.oil_temperature !== undefined) {
-        const temp = parseFloat(row.oil_temperature);
-        const tTemp = thresholds['oil_temperature'];
-        if (tTemp?.max !== null && temp > tTemp.max) {
-          generatedEvents.push({
-            id: `db-temp-hi-${row.id}`,
-            timestamp: dateStr,
-            time: timeStr,
-            level: 'CRITICAL',
-            source: 'OTI Sensor',
-            msg: `Oil Temperature High: ${temp.toFixed(1)}°C exceeds database threshold (Max: ${tTemp.max}°C).`
-          });
-        }
-      }
-
-      if (row.oil_pressure !== null && row.oil_pressure !== undefined) {
-        const press = parseFloat(row.oil_pressure);
-        const tPress = thresholds['oil_pressure'];
-        if (tPress?.max !== null && press > tPress.max) {
-          generatedEvents.push({
-            id: `db-press-hi-${row.id}`,
-            timestamp: dateStr,
-            time: timeStr,
-            level: 'WARN',
-            source: 'Pressure Sensor',
-            msg: `Oil Pressure High: ${press.toFixed(2)} Bar exceeds database limit (Max: ${tPress.max} Bar).`
-          });
-        }
-      }
-    });
-
-    electricalRows.forEach(row => {
-      const ts = new Date(row.timestamp);
-      const timeStr = ts.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      const dateStr = ts.toISOString();
-
-      if (row.relay_status === 1) {
-        generatedEvents.push({
-          id: `db-elec-relay-${row.id}`,
-          timestamp: dateStr,
-          time: timeStr,
-          level: 'CRITICAL',
-          source: 'SPM33 Relay',
-          msg: 'ELECTRICAL RELAY ACTIVE! Secondary circuit breaker tripped.'
-        });
-      }
-
-      if (row.alarm_status === 1) {
-        generatedEvents.push({
-          id: `db-elec-alarm-${row.id}`,
-          timestamp: dateStr,
-          time: timeStr,
-          level: 'ALARM',
-          source: 'SPM33 Meter',
-          msg: 'ELECTRICAL ALARM FLAGGED! Meter register indicates warning condition.'
-        });
-      }
-
-      if (row.current_unbalance !== null && row.current_unbalance !== undefined) {
-        const unb = parseFloat(row.current_unbalance);
-        const tUnb = thresholds['current_unbalance'];
-        const maxUnb = tUnb?.max || 5.0;
-        if (unb > maxUnb) {
-          generatedEvents.push({
-            id: `db-unb-${row.id}`,
-            timestamp: dateStr,
-            time: timeStr,
-            level: 'WARN',
-            source: 'Phase Current',
-            msg: `Current Unbalance Warning: ${unb.toFixed(2)}% exceeds limit (${maxUnb}%).`
-          });
-        }
-      }
-
-      if (row.frequency !== null && row.frequency !== undefined) {
-        const freq = parseFloat(row.frequency);
-        const tFreq = thresholds['frequency'];
-        if (tFreq?.min !== null && freq < tFreq.min) {
-          generatedEvents.push({
-            id: `db-freq-lo-${row.id}`,
-            timestamp: dateStr,
-            time: timeStr,
-            level: 'WARN',
-            source: 'Grid Frequency',
-            msg: `Grid Frequency Low: ${freq.toFixed(2)} Hz under minimum threshold (${tFreq.min} Hz).`
-          });
-        } else if (tFreq?.max !== null && freq > tFreq.max) {
-          generatedEvents.push({
-            id: `db-freq-hi-${row.id}`,
-            timestamp: dateStr,
-            time: timeStr,
-            level: 'WARN',
-            source: 'Grid Frequency',
-            msg: `Grid Frequency High: ${freq.toFixed(2)} Hz exceeds maximum threshold (${tFreq.max} Hz).`
-          });
-        }
-      }
-
-      const tLine = thresholds['v_line'];
-      if (tLine) {
-        ['line_ab_v', 'line_bc_v', 'line_ca_v'].forEach(k => {
-          const val = parseFloat(row[k]);
-          if (!isNaN(val) && val > 50) {
-            if (tLine.max !== null && val > tLine.max) {
-              generatedEvents.push({
-                id: `db-${k}-hi-${row.id}`,
-                timestamp: dateStr,
-                time: timeStr,
-                level: 'WARN',
-                source: 'Line Voltage',
-                msg: `${k.toUpperCase().replace('_', ' ')}: ${val.toFixed(1)}V overvoltage (Max: ${tLine.max}V).`
-              });
-            } else if (tLine.min !== null && val < tLine.min) {
-              generatedEvents.push({
-                id: `db-${k}-lo-${row.id}`,
-                timestamp: dateStr,
-                time: timeStr,
-                level: 'WARN',
-                source: 'Line Voltage',
-                msg: `${k.toUpperCase().replace('_', ' ')}: ${val.toFixed(1)}V undervoltage (Min: ${tLine.min}V).`
-              });
-            }
-          }
-        });
-      }
-    });
-
-    if (generatedEvents.length === 0) {
-      const latestElec = electricalRows[0];
-      const latestOil = oilRows[0];
-      const now = new Date();
-
-      if (latestElec) {
-        generatedEvents.push({
-          id: `db-status-elec-${latestElec.id}`,
-          timestamp: new Date(latestElec.timestamp).toISOString(),
-          time: new Date(latestElec.timestamp).toLocaleTimeString('en-US'),
-          level: 'OK',
-          source: 'SPM33 Meter',
-          msg: `Electrical telemetry verified from database (Vavg: ${Number(latestElec.avg_line_v || latestElec.line_ab_v || 380).toFixed(0)}V, Freq: ${Number(latestElec.frequency || 50).toFixed(1)}Hz).`
-        });
-      }
-
-      if (latestOil) {
-        generatedEvents.push({
-          id: `db-status-oil-${latestOil.id}`,
-          timestamp: new Date(latestOil.timestamp).toISOString(),
-          time: new Date(latestOil.timestamp).toLocaleTimeString('en-US'),
-          level: 'OK',
-          source: 'Oil Telemetry',
-          msg: `Oil parameters normal in database (Temp: ${Number(latestOil.oil_temperature || 45).toFixed(1)}°C, Pressure: ${Number(latestOil.oil_pressure || 1.2).toFixed(2)} Bar).`
-        });
-      }
-
-      generatedEvents.push({
-        id: 'db-status-sys',
-        timestamp: now.toISOString(),
-        time: now.toLocaleTimeString('en-US'),
-        level: 'INFO',
-        source: 'TMU Database Service',
-        msg: `Connected to tenant database [${req.dbName}]. Live event stream active.`
-      });
+    const status = await tm.getStatusRow(req.db, req.trafoId);
+    const now = new Date();
+    for (const item of sm.buildStatusItems(status, []).items) {
+      if (item.level === 'normal') continue;
+      events.push({ id: `st-${item.parameter}`, timestamp: now.toISOString(), time: now.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta' }),
+        level: item.level === 'trip' ? 'CRITICAL' : 'ALARM', source: item.parameter, msg: `${item.parameter} sedang ${item.label}` });
     }
-
-    generatedEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-    res.json({
-      success: true,
-      total: generatedEvents.length,
-      events: generatedEvents.slice(0, limit),
-      source: 'database',
-      db: req.dbName
-    });
+    if (events.length === 0) {
+      const latest = await rm.getLatest(req.db, req.trafoId);
+      events.push({ id: 'ok-latest', timestamp: latest ? latest.timestamp : now.toISOString(), time: latest ? latest.time : now.toLocaleTimeString('id-ID'),
+        level: 'OK', source: 'TMU', msg: latest ? `Semua parameter normal (Vab ${latest.lineAB} V, ${latest.frequency} Hz)` : 'Belum ada data dari Raspi' });
+    }
+    events.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    res.json({ success: true, total: events.length, events: events.slice(0, limit), source: 'database', db: req.dbName });
   } catch (error) {
-    console.error("Error in Event Stream webservice:", error);
-    res.status(500).json({ error: "Failed to fetch event stream", details: error.message });
+    res.status(500).json({ error: 'Failed to fetch event stream', details: error.message });
   }
 });
 
-router.get("/news", extractDb, async (req, res) => {
+router.get('/news', async (req, res) => {
   try {
-    const db = await getDbConnection(req.dbName);
-    const trafoId = req.query.trafo_id || 1;
-
-    const [trafoRows] = await db.query(
-      "SELECT * FROM trafo WHERE id = ? LIMIT 1",
-      [trafoId]
-    );
-    const trafo = trafoRows[0] || {};
-    const trafoName = trafo.nama || `Unit #${trafoId}`;
-    const deviceSerial = trafo.device_serial || 'N/A';
-
-    const [elecAggRows] = await db.query(
-      `SELECT 
-        COUNT(*) as total_records,
-        MAX(energy_active_total) as total_energy_kwh,
-        MAX(power_active_total_kw) as max_kw,
-        AVG(pf_total) as avg_pf,
-        MAX(timestamp) as latest_ts
-       FROM electrical_readings`
-    );
-    const elecAgg = elecAggRows[0] || {};
-
-    const [oilAggRows] = await db.query(
-      `SELECT 
-        MAX(oil_temperature) as max_temp,
-        AVG(oil_temperature) as avg_temp,
-        AVG(oil_pressure) as avg_press,
-        MAX(timestamp) as latest_ts
-       FROM oil_readings`
-    );
-    const oilAgg = oilAggRows[0] || {};
-
-    const [threshCountRows] = await db.query(
-      "SELECT COUNT(*) as count FROM threshold_settings WHERE is_active = 1"
-    );
-    const thresholdCount = threshCountRows[0]?.count || 0;
-
-    const bulletins = [];
-
-    bulletins.push({
-      id: 'news-asset',
-      tag: 'Asset',
-      color: 'text-blue-500',
-      title: `Transformer ${trafoName} Online under ${req.dbName}`,
-      summary: `Asset ${trafoName} (Serial: ${deviceSerial}) active with telemetry streaming. Database partition verified.`,
-      date: trafo.created_at ? new Date(trafo.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Commissioned',
-      timestamp: trafo.created_at || new Date().toISOString()
-    });
-
-    if (elecAgg.total_energy_kwh) {
-      const energyMWh = (parseFloat(elecAgg.total_energy_kwh) / 1000).toFixed(2);
-      const totalRecs = Number(elecAgg.total_records || 0).toLocaleString();
-      bulletins.push({
-        id: 'news-energy',
-        tag: 'Telemetry',
-        color: 'text-emerald-500',
-        title: `Energy Milestone: ${energyMWh} MWh Cumulative Load`,
-        summary: `${totalRecs} telemetry points logged from SPM33 meter. Average system power factor recorded at ${Number(elecAgg.avg_pf || 0.95).toFixed(2)}.`,
-        date: elecAgg.latest_ts ? new Date(elecAgg.latest_ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Live',
-        timestamp: elecAgg.latest_ts || new Date().toISOString()
-      });
+    const td = await tm.getTransformerData(req.db, req.trafoId);
+    const latest = await rm.getLatest(req.db, req.trafoId);
+    const [[agg]] = await req.db.execute(
+      'SELECT COUNT(*) AS n, AVG(`OilTemp`) AS avg_temp, MAX(`OilTemp`) AS max_temp, AVG(`PFsig`) AS avg_pf, MAX(timestamp) AS latest_ts FROM reading_data WHERE trafoId = ? AND timestamp >= DATE_SUB(NOW(), INTERVAL 1 DAY)', [req.trafoId]);
+    const status = sm.buildStatusItems(await tm.getStatusRow(req.db, req.trafoId), []);
+    const fmtTime = (t) => (t ? new Date(t).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }) : 'Live');
+    const bulletins = [
+      { id: 'news-asset', tag: 'Asset', color: 'text-blue-500',
+        title: `Trafo ${td ? td.trafoSerialNo : req.trafoId} (${td ? td.ratedPower : '-'} kVA) di ${req.dbName}`,
+        summary: `Raspi ${td ? td.raspiSerialNo : '-'}, ${td ? td.ratedHighVoltage : '-'}/${td ? td.ratedLowVoltage : '-'} kV, vector group ${td ? td.vectorGroup : '-'}.`,
+        date: 'Nameplate', timestamp: new Date().toISOString() },
+    ];
+    if (latest) {
+      bulletins.push({ id: 'news-energy', tag: 'Telemetry', color: 'text-emerald-500',
+        title: `Energi kumulatif ${(latest.energyActiveTotal / 1000).toFixed(2)} MWh`,
+        summary: `${Number(agg.n || 0).toLocaleString('id-ID')} titik data 24 jam terakhir. PF rata-rata ${Number(agg.avg_pf || 0).toFixed(2)}.`,
+        date: fmtTime(agg.latest_ts), timestamp: agg.latest_ts || latest.timestamp });
     }
-
-    if (oilAgg.avg_temp) {
-      const avgTemp = parseFloat(oilAgg.avg_temp).toFixed(1);
-      const avgPress = parseFloat(oilAgg.avg_press || 0).toFixed(2);
-      bulletins.push({
-        id: 'news-thermal',
-        tag: 'Diagnostics',
-        color: 'text-amber-500',
-        title: `Thermal Stability: ${avgTemp}°C Avg Operating Temperature`,
-        summary: `OTI sensor indicates stable thermal dissipation across operating cycles. Average oil pressure registered at ${avgPress} Bar.`,
-        date: oilAgg.latest_ts ? new Date(oilAgg.latest_ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Live',
-        timestamp: oilAgg.latest_ts || new Date().toISOString()
-      });
+    if (agg.avg_temp) {
+      bulletins.push({ id: 'news-thermal', tag: 'Diagnostics', color: 'text-amber-500',
+        title: `Suhu oli rata-rata ${Number(agg.avg_temp).toFixed(1)}°C (maks ${Number(agg.max_temp).toFixed(1)}°C)`,
+        summary: `Tekanan tangki terakhir ${latest ? latest.oil_pressure : '-'} Bar, H2 ${latest ? latest.h2ppm : '-'} ppm.`,
+        date: fmtTime(agg.latest_ts), timestamp: agg.latest_ts || new Date().toISOString() });
     }
-
-    bulletins.push({
-      id: 'news-safety',
-      tag: 'Policy',
-      color: 'text-indigo-500',
-      title: `${thresholdCount} Protection Thresholds Enforced in Database`,
-      summary: `Active database threshold limits continuously monitor overvoltage, undervoltage, current limits, phase unbalance, and physical trip relays.`,
-      date: 'Active Policy',
-      timestamp: new Date().toISOString()
-    });
-
-    res.json({
-      success: true,
-      total: bulletins.length,
-      bulletins,
-      source: 'database',
-      db: req.dbName
-    });
+    bulletins.push({ id: 'news-status', tag: 'Policy', color: status.allSafe ? 'text-indigo-500' : 'text-red-500',
+      title: status.allSafe ? 'Semua 29 parameter status Normal' : `${status.counts.alarm} alarm, ${status.counts.trip} trip aktif`,
+      summary: status.allSafe ? 'Threshold dari transformer_settings dipantau oleh Raspi dan server.' : status.items.filter(i => i.level !== 'normal').map(i => `${i.parameter}: ${i.label}`).join(', '),
+      date: 'Status', timestamp: new Date().toISOString() });
+    res.json({ success: true, total: bulletins.length, bulletins, source: 'database', db: req.dbName });
   } catch (error) {
-    console.error("Error in News webservice:", error);
-    res.status(500).json({ error: "Failed to generate operational news", details: error.message });
+    res.status(500).json({ error: 'Failed to generate operational news', details: error.message });
   }
 });
 
 module.exports = router;
-
