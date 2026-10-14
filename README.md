@@ -232,6 +232,10 @@ Endpoint login adalah `POST /api/login` (bukan `/api/auth/login`).
   yang dikirim perangkat, mengikuti protokol klien yang sudah terpasang. Siapa pun yang memegang
   `company_key` bisa mengirim data atas nama perusahaan itu; serial yang sedang aktif untuk
   perusahaan lain ditolak, dan dorongan setting dari web dicek ke perusahaan pemilik serial.
+- **Heartbeat Raspi.** Server mengirim ping tiap 30 detik; tanpa pong koneksi diputus, dan koneksi
+  tanpa `createConnection` dalam 30 detik ditutup. Registrasi yang gagal (DB perusahaan tidak ada)
+  menutup socket supaya klien reconnect. Pesan `updateSync*FromClient` (perubahan dari UI lokal
+  Raspi) ditulis ke DB server.
 - **Timestamp dari Raspi.** String ISO ber-`Z` dipakai apa adanya; string polos `YYYY-MM-DD HH:mm:ss`
   (dari view `shrink_data_temp` di Raspi) dianggap waktu lokal Raspi dengan `RASPI_TZ_OFFSET`
   (default `+07:00`). Nama kolom dicocokkan tanpa peduli huruf besar-kecil (`TIMESTAMP`, `deRatingB`).
