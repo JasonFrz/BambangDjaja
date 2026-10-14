@@ -19,8 +19,11 @@ const TD = { ratedLowVoltage: 400, ratedCurrentLowVoltage: 144, frequency: 50 };
 
 test("buildLimits menghasilkan min/max/tripMin/tripMax per metric", () => {
   const L = lm.buildLimits(S, TD);
-  assert.deepEqual(L.phaseA, { min: 380, max: 420, tripMin: 360, tripMax: 440 });
-  assert.deepEqual(L.lineAB, L.phaseA);
+  assert.deepEqual(L.lineAB, { min: 380, max: 420, tripMin: 360, tripMax: 440 });
+  assert.deepEqual(L.lineBC, L.lineAB);
+  // tegangan fasa = tegangan line / sqrt(3): 380/1.732 = 219.39, dst.
+  assert.deepEqual(L.phaseA, { min: 219.39, max: 242.49, tripMin: 207.85, tripMax: 254.03 });
+  assert.deepEqual(L.phaseC, L.phaseA);
   assert.deepEqual(L.frequency, { min: 49, max: 51, tripMin: 47.5, tripMax: 52.5 });
   assert.deepEqual(L.currentA, { min: null, max: 144, tripMin: null, tripMax: 172.8 });
   assert.deepEqual(L.currentN, { min: null, max: 28.8, tripMin: null, tripMax: 43.2 });
@@ -40,7 +43,8 @@ test("buildLimits kosong kalau settings tidak ada, tanpa crash", () => {
   assert.deepEqual(lm.buildLimits(null, TD), {});
   // nameplate kosong: arus dan frekuensi tidak bisa dihitung, tegangan tetap ada
   const L = lm.buildLimits(S, null);
-  assert.deepEqual(L.phaseA, { min: 380, max: 420, tripMin: 360, tripMax: 440 });
+  assert.deepEqual(L.lineAB, { min: 380, max: 420, tripMin: 360, tripMax: 440 });
+  assert.deepEqual(L.phaseA, { min: 219.39, max: 242.49, tripMin: 207.85, tripMax: 254.03 });
   assert.equal(L.currentA, undefined);
   assert.equal(L.frequency, undefined);
 });

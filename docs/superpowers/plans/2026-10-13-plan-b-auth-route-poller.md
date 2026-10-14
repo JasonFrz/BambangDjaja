@@ -1892,7 +1892,7 @@ git commit -m "feat(backend): settings dari transformer_settings/trip_settings, 
 - Consumes: `readingModel` semua fungsi, `trafoModel.getTransformerData/getStatusRow`, `statusModel.buildStatusItems/oilFlags`, `limitsModel.buildLimits`.
 - Produces: respons `/api/trends*` dalam key frontend; `/api/trends/report` dengan nama field lama plus baris baru; `trendsHelpers.{ checkClosestData, oilPoint, evaluateMetric, healthScore, failureToEvent }`.
 
-- [ ] **Step 1: Tulis test `backend/tests/trendsHelpers.test.js`**
+- [x] **Step 1: Tulis test `backend/tests/trendsHelpers.test.js`**
 
 ```js
 const test = require('node:test');
@@ -1940,9 +1940,9 @@ test('failureToEvent memetakan failure_log ke event panel', () => {
 });
 ```
 
-- [ ] **Step 2: `npm test`, pastikan gagal karena modul belum ada**
+- [x] **Step 2: `npm test`, pastikan gagal karena modul belum ada**
 
-- [ ] **Step 3: Tulis `backend/utils/trendsHelpers.js`**
+- [x] **Step 3: Tulis `backend/utils/trendsHelpers.js`**
 
 ```js
 const { oilFlags } = require('./statusModel');
@@ -2015,7 +2015,7 @@ function failureToEvent(row) {
 module.exports = { checkClosestData, oilPoint, evaluateMetric, healthScore, failureToEvent };
 ```
 
-- [ ] **Step 4: Tulis ulang `backend/routes/trends.js`**
+- [x] **Step 4: Tulis ulang `backend/routes/trends.js`**
 
 ```js
 const express = require('express');
@@ -2317,7 +2317,7 @@ router.get('/news', async (req, res) => {
 module.exports = router;
 ```
 
-- [ ] **Step 5: Tulis ulang `backend/routes/analytics.js`** (katalog memakai key frontend)
+- [x] **Step 5: Tulis ulang `backend/routes/analytics.js`** (katalog memakai key frontend)
 
 ```js
 const express = require('express');
@@ -2364,7 +2364,7 @@ router.get('/query', async (req, res) => {
 module.exports = router;
 ```
 
-- [ ] **Step 6: `npm test` lulus, restart server, uji manual**
+- [x] **Step 6: `npm test` lulus, restart server, uji manual**
 
 ```powershell
 (Invoke-RestMethod -Uri "http://localhost:5000/api/trends/meter?trafo_id=1" -Headers $h).Count
@@ -2380,7 +2380,7 @@ Invoke-WebRequest -Uri "http://localhost:5000/api/trends/export?trafo_id=1&start
 
 Expected: meter 60 baris, baris terakhir punya `phaseA`, `efficiency`, `derating`; trends 2 jam @5 menit = 24 baris; report `electrical.avg_phase_a ~230`, `avg_efficiency ~99.5`, `oil.alarm_triggers 1`, `trip_triggers 0`; thi `overallScore 100`; events 2 dari failure_log; news 4 buletin; file xlsx > 10 KB.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/utils/trendsHelpers.js backend/tests/trendsHelpers.test.js backend/routes/trends.js backend/routes/analytics.js

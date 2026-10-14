@@ -76,8 +76,13 @@ function buildLimits(settings, td) {
     num(s.voltageHighTripValue),
   );
 
-  for (const k of ["phaseA", "phaseB", "phaseC", "lineAB", "lineBC", "lineCA"])
-    L[k] = v;
+  // Threshold tegangan di transformer_settings adalah tegangan line (Vab/Vbc/Vca).
+  // Tegangan fasa (Van) = line / sqrt(3), jadi batasnya ikut dibagi sqrt(3).
+  for (const k of ["lineAB", "lineBC", "lineCA"]) L[k] = v;
+  const SQRT3 = Math.sqrt(3);
+  const div = (x) => (x === null ? null : x / SQRT3);
+  const vp = lim(div(v.min), div(v.max), div(v.tripMin), div(v.tripMax));
+  for (const k of ["phaseA", "phaseB", "phaseC"]) L[k] = vp;
 
   const fn = num(t.frequency);
   if (fn) {
