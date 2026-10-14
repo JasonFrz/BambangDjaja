@@ -2,124 +2,55 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import axios from 'axios';
 import { useApi } from './ApiContext';
 
-export const FRONTEND_TO_DB_METRIC = {
-  phaseA: 'v_phase',
-  phaseB: 'v_phase',
-  phaseC: 'v_phase',
-  lineAB: 'v_line',
-  lineBC: 'v_line',
-  lineCA: 'v_line',
-  currentA: 'current',
-  currentB: 'current',
-  currentC: 'current',
-  currentN: 'current_n',
-  currentUnbalance: 'current_unbalance',
-  powerActiveTotal: 'power_active_total_kw',
-  powerReactiveTotal: 'power_reactive_total_kvar',
-  powerApparentTotal: 'power_apparent_total_kva',
-  pfTotal: 'pf_total',
-  frequency: 'frequency',
-  oil_temperature: 'oil_temperature',
-  oil_pressure: 'oil_pressure',
-};
+// Batas per metric dari /api/settings/limits: { key: { min, max, tripMin, tripMax } }.
+const EMPTY = { min: null, max: null, tripMin: null, tripMax: null, is_active: false };
 
 const ThresholdContext = createContext({
-  thresholds: [],
-  thresholdsMap: {},
+  limits: {},
   isLoading: false,
-  getThreshold: () => ({ min: null, max: null, is_active: false }),
+  getThreshold: () => EMPTY,
   refreshThresholds: async () => {},
 });
 
 export const ThresholdProvider = ({ children }) => {
   const { apiUrl } = useApi();
-  const [thresholds, setThresholds] = useState([]);
-  const [thresholdsMap, setThresholdsMap] = useState({});
+  const [limits, setLimits] = useState({});
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchThresholds = useCallback(async () => {
+  const fetchLimits = useCallback(async () => {
+    const dbName = sessionStorage.getItem('db_name');
+    const trafoId = sessionStorage.getItem('selectedTrafoId') || '1';
+    if (!dbName) { setIsLoading(false); return; }
     try {
-      const dbName = sessionStorage.getItem('db_name') || sessionStorage.getItem('tenant_db');
-      const trafoId = sessionStorage.getItem('selectedTrafoId') || sessionStorage.getItem('selected_trafo_id') || '1';
-
-      if (!dbName) {
-        setIsLoading(false);
-        return;
-      }
-
-      const res = await axios.get(`${apiUrl}/api/settings/thresholds?trafo_id=${trafoId}`, {
-        headers: { 'X-DB-Name': dbName }
-      });
-
-      if (res.data?.success && Array.isArray(res.data.data)) {
-        const rawList = res.data.data;
-        setThresholds(rawList);
-
-        const map = {};
-        rawList.forEach(t => {
-          map[t.metric_key] = {
-            id: t.id,
-            metric_key: t.metric_key,
-            min: t.min_value !== null && t.min_value !== undefined ? parseFloat(t.min_value) : null,
-            max: t.max_value !== null && t.max_value !== undefined ? parseFloat(t.max_value) : null,
-            is_active: t.is_active === 1 || t.is_active === true,
-            raw: t
-          };
-        });
-        setThresholdsMap(map);
-      }
+      const res = await axios.get(`${apiUrl}/api/settings/limits`, { params: { trafo_id: trafoId } });
+      setLimits(res.data && res.data.limits ? res.data.limits : {});
     } catch (err) {
-      console.warn('Failed to load dynamic thresholds from database:', err.message);
+      console.warn('Gagal memuat limits:', err.message);
+      setLimits({});
     } finally {
       setIsLoading(false);
     }
   }, [apiUrl]);
 
   useEffect(() => {
-    fetchThresholds();
-
-    const handleThresholdUpdate = () => {
-      fetchThresholds();
-    };
-
-    window.addEventListener('thresholdsUpdated', handleThresholdUpdate);
-    window.addEventListener('storage', handleThresholdUpdate);
-
+    fetchLimits();
+    window.addEventListener('thresholdsUpdated', fetchLimits);
+    window.addEventListener('trafoChanged', fetchLimits);
     return () => {
-      window.removeEventListener('thresholdsUpdated', handleThresholdUpdate);
-      window.removeEventListener('storage', handleThresholdUpdate);
+      window.removeEventListener('thresholdsUpdated', fetchLimits);
+      window.removeEventListener('trafoChanged', fetchLimits);
     };
-  }, [fetchThresholds]);
+  }, [fetchLimits]);
 
   const getThreshold = useCallback((metricKey) => {
-    if (!metricKey) return { min: null, max: null, is_active: false };
-    const dbKey = FRONTEND_TO_DB_METRIC[metricKey] || metricKey;
-    const entry = thresholdsMap[dbKey] || thresholdsMap[metricKey];
-
-    if (!entry) {
-      return { min: null, max: null, is_active: false };
-    }
-
-    return {
-      min: entry.min,
-      max: entry.max,
-      is_active: entry.is_active,
-      id: entry.id,
-      metric_key: entry.metric_key,
-      raw: entry.raw
-    };
-  }, [thresholdsMap]);
+    const L = metricKey ? limits[metricKey] : null;
+    if (!L) return EMPTY;
+    const has = (v) => v !== null && v !== undefined;
+    return { min: has(L.min) ? L.min : null, max: has(L.max) ? L.max : null, tripMin: has(L.tripMin) ? L.tripMin : null, tripMax: has(L.tripMax) ? L.tripMax : null, is_active: has(L.min) || has(L.max) };
+  }, [limits]);
 
   return (
-    <ThresholdContext.Provider
-      value={{
-        thresholds,
-        thresholdsMap,
-        isLoading,
-        getThreshold,
-        refreshThresholds: fetchThresholds
-      }}
-    >
+    <ThresholdContext.Provider value={{ limits, isLoading, getThreshold, refreshThresholds: fetchLimits }}>
       {children}
     </ThresholdContext.Provider>
   );

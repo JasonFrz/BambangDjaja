@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { io } from "socket.io-client";
 import { useApi } from './ApiContext';
@@ -47,7 +47,7 @@ export const TemperatureDataProvider = ({ children }) => {
   const lastDataRef = useRef(null);
   const socketRef = useRef(null);
 
-  useEffect(() => {
+  const loadHistory = useCallback(() => {
     const dbName = sessionStorage.getItem('db_name');
     if (!dbName) return;
 
@@ -88,6 +88,13 @@ export const TemperatureDataProvider = ({ children }) => {
     })
     .catch(err => console.error("Failed to load historical temperature data", err));
   }, [apiUrl]);
+
+  useEffect(() => {
+    loadHistory();
+    const onTrafoChange = () => { lastDataRef.current = null; setLiveData([]); loadHistory(); };
+    window.addEventListener('trafoChanged', onTrafoChange);
+    return () => window.removeEventListener('trafoChanged', onTrafoChange);
+  }, [loadHistory]);
 
   useEffect(() => {
     const socket = io(apiUrl, {
