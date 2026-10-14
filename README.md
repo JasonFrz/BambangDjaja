@@ -145,7 +145,7 @@ Status saat serah terima: **46 lulus, 0 gagal**. Test tidak boleh butuh MySQL.
 ### Rencana A — fondasi backend: **selesai** (13 Okt 2026)
 `db.js` + `MASTER_DB`, `import_sql.js`, `schemaPatch.js`, `readingModel.js` + test, seed demo.
 
-### Rencana B — auth, route, poller: **Task 1–4 selesai, Task 5 setengah jalan**
+### Rencana B — auth, route, poller: **Task 1–5 selesai, sisa Task 6–7**
 
 | Task | Isi | Status | Commit |
 |---|---|---|---|
@@ -153,7 +153,7 @@ Status saat serah terima: **46 lulus, 0 gagal**. Test tidak boleh butuh MySQL.
 | 2 | Route master: users, superuser_users, profile, admin, companies, layouts | selesai, diuji live | `4fa0884`, `4fa81c0` |
 | 3 | Route trafo: daftar, nameplate, status, physical, harmonics, oil-quality (`trafoModel`, `statusModel`) | selesai, diuji live | `3a7195f`, `4fa81c0` |
 | 4 | Settings: thresholds, trip, `/limits` untuk gauge, dorong ke Raspi (`limitsModel`) | selesai, diuji live 14 Okt | `4fa81c0`, `38fad9f` |
-| 5 | Trends, analytics, export, report, THI, events, news | **Step 1–3 selesai** (test + `trendsHelpers.js`, 46 test lulus). **Sisa Step 4–7**: tulis ulang `routes/trends.js`, `routes/analytics.js`, uji manual, commit | belum |
+| 5 | Trends, analytics, export, report, THI, events, news (`trendsHelpers`) | selesai, diuji live 14 Okt | `d76f1e3`, `88afa1e`, `ba1ad96` |
 | 6 | Poller Socket.IO baca `temp_reading_data_realtime`, `alertSender.js`, hapus `efficiency.js` | belum | |
 | 7 | `scripts/smoke_api.js`, bersihkan referensi skema lama | belum | |
 
@@ -172,18 +172,17 @@ data kosong. Itu normal, bukan bug.
 
 ---
 
-## 6. Cara melanjutkan (Rencana B Task 5 Step 4)
+## 6. Cara melanjutkan (Rencana B Task 6)
 
 1. Nyalakan MySQL, `cd backend`, `npm test` harus 46 lulus.
-2. Buka `docs/superpowers/plans/2026-10-13-plan-b-auth-route-poller.md`, cari
-   `### Task 5`, lanjut dari **Step 4: Tulis ulang `backend/routes/trends.js`**. Kode ada di plan;
-   ia memakai `readingModel`, `trafoModel`, `statusModel`, `limitsModel.buildLimits`, dan
-   `trendsHelpers` (`checkClosestData`, `oilPoint`, `evaluateMetric`, `healthScore`, `failureToEvent`).
-3. Step 5: tulis ulang `routes/analytics.js` (katalog metric memakai key frontend).
-4. Step 6: `npm test`, restart server, uji manual dengan snippet PowerShell di plan.
-5. Step 7: commit dengan pesan yang tertulis di plan. Cek `git status` dulu; `git add` banyak file
-   kadang hanya men-stage sebagian.
-6. Lanjut Task 6 dan 7 dengan pola yang sama: test dulu (merah), implementasi (hijau), uji live, commit.
+2. Buka `docs/superpowers/plans/2026-10-13-plan-b-auth-route-poller.md`, cari `### Task 6`
+   (poller Socket.IO membaca `temp_reading_data_realtime` lewat `readingModel`, `alertSender.js`
+   dipindah dari poller, `efficiency.js` dihapus). Ikuti Step 1–7: test dulu (merah),
+   implementasi (hijau), uji Socket.IO dengan script kecil, commit.
+3. Lanjut Task 7: `scripts/smoke_api.js` lalu bersihkan sisa referensi skema lama
+   (`electrical_readings`, `oil_readings`, `threshold_settings`, `tmu_master`, `users`, `companies`).
+4. Sebelum tiap commit cek `git status`; `git add` banyak file kadang hanya men-stage sebagian.
+5. Setelah Rencana B selesai, buat plan untuk Rencana C (ingest Raspi) dan D (frontend) dari spec.
 
 ### Snippet uji manual (PowerShell)
 
@@ -210,6 +209,15 @@ Endpoint login adalah `POST /api/login` (bukan `/api/auth/login`).
 - Trafo tanpa baris `transformer_settings`/`transformer_status` harus menghasilkan
   `/limits` = `{}` dan status semua Normal, bukan 500.
 - Unit test tidak boleh menyentuh MySQL. Pakai `tests/helpers/fakeDb.js`.
+- **Zona waktu.** Driver mysql2 memakai `timezone: "Z"` dan tiap koneksi pool menjalankan
+  `SET time_zone = '+00:00'` (`utils/db.js`, juga `seed_demo.js`). Jadi `NOW()` di SQL dan
+  `new Date()` di JS sama-sama UTC. Script baru yang membuka koneksi sendiri harus ikut
+  men-set itu. Rencana C harus mengonversi timestamp kiriman Raspi (kemungkinan WIB) ke UTC.
+- **Batas tegangan fasa.** Threshold di `transformer_settings` adalah tegangan line (400 V).
+  `buildLimits` membagi √3 untuk `phaseA/B/C` (230 V). Spec 6.2 menulis keduanya sama; itu
+  sudah diputuskan diubah pada 14 Okt karena THI menilai trafo sehat sebagai CRITICAL.
+- Data seed lama di `failure_log` tidak ikut diperbarui saat `seed_demo.js` dijalankan ulang
+  (`ON DUPLICATE KEY`), jadi event demo bisa bertanggal lama. DB baru tidak terdampak.
 - Jangan tambah dependency npm baru tanpa alasan kuat.
 
 ---
