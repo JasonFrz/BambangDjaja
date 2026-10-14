@@ -1,259 +1,166 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useApi } from '../contexts/ApiContext';
 import { useThresholds } from '../contexts/ThresholdContext';
-import { Edit, Check, Activity } from 'lucide-react';
+import { Edit, Check, X, ShieldAlert } from 'lucide-react';
 import EnergyLoader from '../components/EnergyLoader';
 
-const METRIC_LABELS = {
-  v_phase: { label: 'Phase voltage', tab: 'Voltage', unit: 'V' },
-  avg_phase_v: { label: 'Average phase voltage', tab: 'Voltage', unit: 'V' },
-  v_line: { label: 'Line voltage', tab: 'Voltage', unit: 'V' },
-  avg_line_v: { label: 'Average line voltage', tab: 'Voltage', unit: 'V' },
-  
-  current: { label: 'Phase current', tab: 'Current', unit: 'A' },
-  avg_current: { label: 'Average phase current', tab: 'Current', unit: 'A' },
-  current_n: { label: 'Neutral current', tab: 'Current', unit: 'A' },
-  current_unbalance: { label: 'Current unbalance', tab: 'Current', unit: '%' },
-  
-  power_active_phase: { label: 'Active power per phase', tab: 'Power', unit: 'kW' },
-  power_active_total_kw: { label: 'Total active power', tab: 'Power', unit: 'kW' },
-  power_reactive_total_kvar: { label: 'Total reactive power', tab: 'Power', unit: 'kVAR' },
-  power_apparent_total_kva: { label: 'Total apparent power', tab: 'Power', unit: 'kVA' },
-  pf_total: { label: 'Total power factor', tab: 'Power', unit: '' },
-  
-  frequency: { label: 'Frequency', tab: 'Frequency', unit: 'Hz' },
-  
-  oil_temperature: { label: 'Oil temperature', tab: 'Oil', unit: '°C' },
-  oil_pressure: { label: 'Oil pressure', tab: 'Oil', unit: 'Bar' },
-};
+// Kolom transformer_settings per grup (nama kolom persis seperti DB; satuan persen = % dari rated).
+const GROUPS = [
+  { key: 'voltage', title: 'Line Voltage', unit: '% dari rated LV', trip: 'voltage',
+    fields: [['voltageLowAlarmTreshold', 'Low Alarm'], ['voltageLowTripTreshold', 'Low Trip'], ['voltageHighAlarmTreshold', 'High Alarm'], ['voltageHighTripTreshold', 'High Trip']],
+    computed: [['voltageLowAlarmValue', 'Low Alarm'], ['voltageLowTripValue', 'Low Trip'], ['voltageHighAlarmValue', 'High Alarm'], ['voltageHighTripValue', 'High Trip']] },
+  { key: 'unbalance', title: 'Voltage Unbalance', unit: '%', trip: 'voltageUnbalance', fields: [['voltageUnbalanceHighAlarmTreshold', 'Alarm'], ['voltageUnbalanceHighTripTreshold', 'Trip']] },
+  { key: 'frequency', title: 'Frequency', unit: '% dari nominal', trip: 'frequency', fields: [['frequencyLowAlarmTreshold', 'Low Alarm'], ['frequencyLowTripTreshold', 'Low Trip'], ['frequencyHighAlarmTreshold', 'High Alarm'], ['frequencyHighTripTreshold', 'High Trip']] },
+  { key: 'current', title: 'Current', unit: '% dari rated In', trip: 'current', fields: [['currentHighAlarmTreshold', 'High Alarm'], ['currentHighTripTreshold', 'High Trip']] },
+  { key: 'ineutral', title: 'Neutral Current', unit: '% dari rated In', trip: 'Ineutral', fields: [['IneutralHighAlarmTreshold', 'High Alarm'], ['IneutralHighTripTreshold', 'High Trip']] },
+  { key: 'pf', title: 'Power Factor', unit: '', trip: 'powerFactor', fields: [['powerFactorLowAlarmTreshold', 'Low Alarm'], ['powerFactorLowTripTreshold', 'Low Trip']] },
+  { key: 'topoil', title: 'Top Oil Temperature', unit: '°C', trip: 'topOilTemp', fields: [['topOilHighAlarmTreshold', 'High Alarm'], ['topOilHighTripTreshold', 'High Trip']] },
+  { key: 'wti', title: 'Winding Temperature', unit: '°C', trip: 'WTITemp', fields: [['windTempHighAlarmTreshold', 'High Alarm'], ['windTempHighTripTreshold', 'High Trip']] },
+  { key: 'bus', title: 'Busbar Temperature', unit: '°C', trip: 'busTemp', fields: [['busTempHighAlarmTreshold', 'High Alarm'], ['busTempHighTripTreshold', 'High Trip']] },
+  { key: 'thdv', title: 'THD Voltage', unit: '%', trip: 'THDVoltage', fields: [['thdVoltageAlarmTreshold', 'Alarm'], ['thdVoltageTripTreshold', 'Trip']] },
+  { key: 'thdi', title: 'THD Current', unit: '%', trip: 'THDCurrent', fields: [['thdCurrentAlarmTreshold', 'Alarm'], ['thdCurrentTripTreshold', 'Trip']] },
+  { key: 'pressure', title: 'Tank Pressure', unit: 'Bar', trip: 'pressure', fields: [['tankPressureHighAlarmTreshold', 'High Alarm'], ['tankPressureHighTripTreshold', 'High Trip']] },
+  { key: 'oillevel', title: 'Oil Level', unit: '', trip: 'oilLevel', fields: [] },
+  { key: 'h2', title: 'Hydrogen (H2)', unit: 'ppm', trip: 'H2ppm', fields: [['H2ppmHighAlarmTreshold', 'High Alarm'], ['H2ppmHighTripTreshold', 'High Trip']] },
+  { key: 'moisture', title: 'Moisture', unit: 'ppm', trip: 'Moistureppm', fields: [['MoistureppmHighAlarmTreshold', 'High Alarm'], ['MoistureppmHighTripTreshold', 'High Trip']] },
+];
 
-const TABS = ['Voltage', 'Current', 'Power', 'Frequency', 'Oil'];
+const show = (v, unit) => (v === null || v === undefined ? '-' : `${v}${unit ? ` ${unit.split(' ')[0]}` : ''}`);
 
 const Settings = () => {
   const { apiUrl } = useApi();
   const { refreshThresholds } = useThresholds();
-  const dbName = sessionStorage.getItem('db_name') || sessionStorage.getItem('tenant_db');
-  const selectedTrafoId = sessionStorage.getItem('selectedTrafoId') || sessionStorage.getItem('selected_trafo_id') || '1';
-  
-  const [thresholds, setThresholds] = useState([]);
-  const [activeTab, setActiveTab] = useState('Voltage');
+  const role = (sessionStorage.getItem('role') || '').toLowerCase();
+  const canEdit = role === 'admin' || role === 'superuser';
+  const trafoId = sessionStorage.getItem('selectedTrafoId') || '1';
+
+  const [settings, setSettings] = useState(null);
+  const [trip, setTrip] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  const [editingId, setEditingId] = useState(null);
-  const [editValues, setEditValues] = useState({ min_value: '', max_value: '', is_active: 1 });
+  const [error, setError] = useState('');
+  const [editing, setEditing] = useState(null);      // key grup
+  const [draft, setDraft] = useState({});            // { kolom: string }
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState('');
 
-  useEffect(() => {
-    if (selectedTrafoId && dbName) {
-      fetchThresholds();
-    }
-  }, [selectedTrafoId, dbName]);
-
-  const fetchThresholds = async () => {
+  const load = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await axios.get(`${apiUrl}/api/settings/thresholds?trafo_id=${selectedTrafoId}`, {
-        headers: { 'X-DB-Name': dbName }
-      });
-      if (res.data.success) {
-        const formattedData = res.data.data.map(t => ({
-          ...t,
-          min_value: t.min_value !== null ? Number(parseFloat(t.min_value).toFixed(4)) : null,
-          max_value: t.max_value !== null ? Number(parseFloat(t.max_value).toFixed(4)) : null,
-        }));
-        setThresholds(formattedData);
-      }
+      const res = await axios.get(`${apiUrl}/api/settings/thresholds`, { params: { trafo_id: trafoId } });
+      setSettings(res.data.settings);
+      setTrip(res.data.trip);
+      setError(res.data.settings ? '' : 'Trafo ini belum punya transformer_settings (menunggu Raspi mendaftar).');
     } catch (err) {
-      console.error('Failed to fetch thresholds:', err);
+      setError(err.response?.data?.error || err.message);
     } finally {
       setIsLoading(false);
     }
+  }, [apiUrl, trafoId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const startEdit = (g) => {
+    const d = {};
+    for (const [col] of g.fields) d[col] = settings[col] === null || settings[col] === undefined ? '' : String(settings[col]);
+    setDraft(d); setEditing(g.key); setNotice('');
   };
 
-  const handleEditClick = (threshold) => {
-    setEditingId(threshold.id);
-    setEditValues({
-      min_value: threshold.min_value !== null ? threshold.min_value : '',
-      max_value: threshold.max_value !== null ? threshold.max_value : '',
-      is_active: threshold.is_active
-    });
-  };
-
-  const handleSaveClick = async (id) => {
+  const save = async (g) => {
+    const body = {};
+    for (const [col] of g.fields) {
+      const raw = String(draft[col] ?? '').trim();
+      const before = settings[col] === null || settings[col] === undefined ? '' : String(settings[col]);
+      if (raw === before) continue;
+      if (raw === '') { body[col] = null; continue; }
+      const n = Number(raw);
+      if (!Number.isFinite(n)) { setNotice(`Nilai ${col} bukan angka`); return; }
+      body[col] = n;
+    }
+    if (Object.keys(body).length === 0) { setEditing(null); return; }
     try {
-      await axios.put(`${apiUrl}/api/settings/thresholds/${id}`, {
-        min_value: editValues.min_value === '' ? null : editValues.min_value,
-        max_value: editValues.max_value === '' ? null : editValues.max_value,
-        is_active: editValues.is_active ? 1 : 0
-      }, {
-        headers: { 'X-DB-Name': dbName }
-      });
-      
-      setThresholds(prev => prev.map(t => 
-        t.id === id ? { 
-          ...t, 
-          min_value: editValues.min_value === '' ? null : parseFloat(editValues.min_value),
-          max_value: editValues.max_value === '' ? null : parseFloat(editValues.max_value),
-          is_active: editValues.is_active ? 1 : 0
-        } : t
-      ));
-      setEditingId(null);
+      setSaving(true);
+      const res = await axios.put(`${apiUrl}/api/settings/thresholds/${trafoId}`, body);
+      setSettings(res.data.settings);
+      setNotice(res.data.message || 'Tersimpan');
+      setEditing(null);
       await refreshThresholds();
       window.dispatchEvent(new Event('thresholdsUpdated'));
     } catch (err) {
-      console.error('Failed to update threshold:', err);
-      alert('Failed to update setting');
+      setNotice(err.response?.data?.error || 'Gagal menyimpan');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const filteredThresholds = thresholds.filter(t => {
-    const meta = METRIC_LABELS[t.metric_key];
-    return meta && meta.tab === activeTab;
-  });
+  const toggleTrip = async (col) => {
+    if (!canEdit || !trip) return;
+    const next = !(Number(trip[col]) === 1);
+    try {
+      const res = await axios.put(`${apiUrl}/api/settings/trip/${trafoId}`, { [col]: next });
+      setTrip(res.data.trip);
+      setNotice(res.data.pushed ? 'Trip enable tersimpan dan dikirim ke Raspi' : 'Trip enable tersimpan (Raspi offline, akan sinkron saat terhubung)');
+    } catch (err) {
+      setNotice(err.response?.data?.error || 'Gagal mengubah trip enable');
+    }
+  };
+
+  if (isLoading) return <div className="flex flex-col items-center justify-center min-h-[40vh]"><EnergyLoader text="Loading Settings..." /></div>;
 
   return (
-    <div className="flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out] w-full pb-10">
-      <div className="mb-2">
-        <h2 className="text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1 transition-colors">
-          Threshold settings
-        </h2>
-        <p className="text-[#5e6c84] dark:text-[#94a3b8] text-[0.95rem] transition-colors mt-1 mb-4">
-          Set safety limits per metric for Safe, Warning, and Trip status.
-        </p>
+    <div className="flex flex-col gap-5 animate-[fadeIn_0.5s_ease-out] w-full pb-10">
+      <div>
+        <h2 className="text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1">Threshold settings</h2>
+        <p className="text-[#5e6c84] dark:text-[#94a3b8] text-[0.95rem]">Batas alarm dan trip per parameter untuk trafo {trafoId}. Nilai tegangan absolut dihitung server dari rated LV.{!canEdit && ' Anda hanya dapat melihat.'}</p>
       </div>
-
-      <div className="flex overflow-x-auto custom-scrollbar gap-2 pb-2">
-        {TABS.map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${
-              activeTab === tab
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                : 'bg-white dark:bg-[#1a1a24] border border-[#dfe1e6] dark:border-white/10 text-[#5e6c84] dark:text-[#94a3b8] hover:bg-gray-50 dark:hover:bg-white/5 hover:text-blue-500'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center min-h-[40vh] animate-[fadeIn_0.3s_ease-out]">
-          <EnergyLoader text="Loading Settings..." />
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {filteredThresholds.map((t) => {
-            const meta = METRIC_LABELS[t.metric_key];
-            const isEditing = editingId === t.id;
-
+      {error && <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 px-4 py-3 text-sm flex items-center gap-2"><ShieldAlert size={16} /> {error}</div>}
+      {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-500/10 text-blue-800 dark:text-blue-300 px-4 py-2 text-sm">{notice}</div>}
+      {settings && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {GROUPS.map((g) => {
+            const isEditing = editing === g.key;
+            const tripOn = trip ? Number(trip[g.trip]) === 1 : false;
             return (
-              <div 
-                key={t.id} 
-                className={`flex flex-col md:flex-row md:items-center justify-between p-4 md:p-5 rounded-2xl border transition-all ${
-                  isEditing 
-                    ? 'bg-white dark:bg-[#181824] border-blue-400 ring-2 ring-blue-500/20 shadow-lg' 
-                    : 'bg-white dark:bg-[#151521] border-[#dfe1e6] dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 shadow-sm'
-                }`}
-              >
-                <div className="flex flex-col mb-4 md:mb-0 md:w-1/3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-[#172b4d] dark:text-white text-base md:text-lg">
-                      {meta.label}
-                    </span>
-                    <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md ${
-                      t.scope === 'global' 
-                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' 
-                        : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400'
-                    }`}>
-                      {t.scope}
-                    </span>
+              <div key={g.key} className={`rounded-2xl border p-4 bg-white dark:bg-[#151521] ${isEditing ? 'border-blue-400 ring-2 ring-blue-500/20' : 'border-[#dfe1e6] dark:border-white/10'}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="font-bold text-[#172b4d] dark:text-white">{g.title}</div>
+                    {g.unit && <div className="text-[11px] text-gray-500">satuan: {g.unit}</div>}
                   </div>
-                  <span className="text-xs font-mono text-[#5e6c84] dark:text-gray-500">
-                    {t.metric_key}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <label className={`flex items-center gap-2 text-xs font-bold ${canEdit ? 'cursor-pointer' : 'opacity-70'}`} title="Trip enable: Raspi boleh memutus saat trip">
+                      <span className="text-gray-500">Trip</span>
+                      <button type="button" disabled={!canEdit || !trip} onClick={() => toggleTrip(g.trip)} className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors ${tripOn ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                        <div className={`w-4 h-4 bg-white rounded-full shadow transform transition-transform ${tripOn ? 'translate-x-4' : ''}`} />
+                      </button>
+                    </label>
+                    {canEdit && g.fields.length > 0 && (isEditing
+                      ? <div className="flex gap-1">
+                          <button disabled={saving} onClick={() => save(g)} className="px-2.5 py-1.5 rounded-lg bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400 font-bold text-xs flex items-center gap-1"><Check size={14} /> Save</button>
+                          <button onClick={() => setEditing(null)} className="px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 text-xs"><X size={14} /></button>
+                        </div>
+                      : <button onClick={() => startEdit(g)} className="px-2.5 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 font-bold text-xs flex items-center gap-1"><Edit size={14} /> Edit</button>)}
+                  </div>
                 </div>
-
-                <div className="flex items-end md:items-center gap-4 md:gap-8 flex-1 justify-start md:justify-center">
-                  <div className="flex flex-col gap-1 w-24">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase">Min</label>
-                    {isEditing ? (
-                      <input 
-                        type="number" 
-                        value={editValues.min_value}
-                        onChange={(e) => setEditValues({...editValues, min_value: e.target.value})}
-                        placeholder="null"
-                        className="w-full bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-lg px-2 py-1.5 text-sm font-bold text-[#172b4d] dark:text-white outline-none focus:border-blue-500"
-                      />
-                    ) : (
-                      <div className="font-bold text-sm md:text-base text-[#172b4d] dark:text-white">
-                        {t.min_value !== null ? `${t.min_value} ${meta.unit}` : '-'}
+                {g.fields.length === 0 ? <div className="text-xs text-gray-500">Tidak ada nilai ambang; hanya trip enable.</div> : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {g.fields.map(([col, label]) => (
+                      <div key={col} className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold uppercase text-gray-500">{label}</span>
+                        {isEditing
+                          ? <input type="number" step="any" value={draft[col] ?? ''} onChange={(e) => setDraft({ ...draft, [col]: e.target.value })} placeholder="kosong = tidak ada" className="w-full bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-lg px-2 py-1.5 text-sm font-bold text-[#172b4d] dark:text-white outline-none focus:border-blue-500" />
+                          : <span className="font-bold text-sm text-[#172b4d] dark:text-white">{show(settings[col], g.unit)}</span>}
                       </div>
-                    )}
+                    ))}
                   </div>
-                  <div className="flex flex-col gap-1 w-24">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase">Max</label>
-                    {isEditing ? (
-                      <input 
-                        type="number" 
-                        value={editValues.max_value}
-                        onChange={(e) => setEditValues({...editValues, max_value: e.target.value})}
-                        placeholder="null"
-                        className="w-full bg-gray-50 dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-lg px-2 py-1.5 text-sm font-bold text-[#172b4d] dark:text-white outline-none focus:border-blue-500"
-                      />
-                    ) : (
-                      <div className="font-bold text-sm md:text-base text-[#172b4d] dark:text-white">
-                        {t.max_value !== null ? `${t.max_value} ${meta.unit}` : '-'}
-                      </div>
-                    )}
+                )}
+                {g.computed && (
+                  <div className="mt-3 pt-3 border-t border-dashed border-gray-200 dark:border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {g.computed.map(([col, label]) => (
+                      <div key={col} className="flex flex-col"><span className="text-[10px] uppercase text-gray-400">{label} (V)</span><span className="text-sm font-mono text-[#172b4d] dark:text-gray-200">{show(settings[col], '')}</span></div>
+                    ))}
                   </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-4 mt-4 md:mt-0 md:w-1/4">
-                 
-                  <button 
-                    onClick={async () => {
-                      if (isEditing) {
-                        setEditValues({...editValues, is_active: !editValues.is_active});
-                      } else {
-                        try {
-                          await axios.put(`${apiUrl}/api/settings/thresholds/${t.id}`, { is_active: !t.is_active ? 1 : 0 }, { headers: { 'X-DB-Name': dbName } });
-                          setThresholds(prev => prev.map(x => x.id === t.id ? { ...x, is_active: !t.is_active ? 1 : 0 } : x));
-                          await refreshThresholds();
-                          window.dispatchEvent(new Event('thresholdsUpdated'));
-                        } catch (err) {
-                          console.error('Failed to toggle threshold:', err);
-                        }
-                      }
-                    }}
-                    className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors ${
-                      (isEditing ? editValues.is_active : t.is_active) 
-                        ? 'bg-green-500' 
-                        : 'bg-gray-300 dark:bg-gray-700'
-                    }`}
-                  >
-                    <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform ${
-                      (isEditing ? editValues.is_active : t.is_active) ? 'translate-x-4' : 'translate-x-0'
-                    }`} />
-                  </button>
-
-                  {isEditing ? (
-                    <button 
-                      onClick={() => handleSaveClick(t.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400 font-bold rounded-lg hover:bg-green-200 dark:hover:bg-green-500/30 transition-colors"
-                    >
-                      <Check size={16} /> <span className="text-sm">Save</span>
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => handleEditClick(t)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-gray-300 font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
-                    >
-                      <Edit size={16} /> <span className="text-sm md:hidden">Edit</span>
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
             );
           })}
