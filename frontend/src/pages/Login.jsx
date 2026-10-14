@@ -43,6 +43,7 @@ const Login = () => {
         sessionStorage.setItem('phone', data.phone || '');
         sessionStorage.setItem('company_name', data.nama_perusahaan || data.company_name || '');
         sessionStorage.setItem('db_name', data.db_name || '');
+        sessionStorage.setItem('tmu_version', String(data.tmu_version || 2));
 
         if (data.role === 'admin') {
           sessionStorage.setItem('admin', 'true');
