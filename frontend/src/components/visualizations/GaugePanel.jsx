@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { GripVertical, Gauge } from "lucide-react";
 import { METRICS } from "../../config/metrics";
+import { defaultRange } from "../../config/gaugeRanges";
 import { useThresholds } from "../../contexts/ThresholdContext";
 
 const SvgGauge = ({ percent, value, unit, isDanger, color }) => {
@@ -85,15 +86,7 @@ export const GaugePanel = memo(({ panel, latestData, isEditing }) => {
   const tMin = (threshold.is_active && threshold.min !== null) ? threshold.min : undefined;
   const tMax = (threshold.is_active && threshold.max !== null) ? threshold.max : undefined;
 
-  let min = 0;
-  let max = 100;
-  if (metrics[0] === 'frequency') { min = 45; max = 55; }
-  else if (metrics[0] === 'pfTotal') { min = 0; max = 1; }
-  else if (meta?.group?.includes('Voltage')) { min = 0; max = 500; }
-  else if (meta?.group === 'Current') { min = 0; max = 100; }
-  else if (meta?.group === 'Power') { min = 0; max = 1000; }
-  else if (metrics[0] === 'oil_temperature') { min = 0; max = 150; }
-  else if (metrics[0] === 'oil_pressure') { min = 0; max = 10; }
+  let { min, max } = defaultRange(metrics[0]);
 
   if (tMax !== undefined && tMax > max) max = Math.ceil(tMax * 1.2);
   if (val > max) max = Math.ceil(val * 1.2);

@@ -11,7 +11,8 @@ const LEVEL_CLASS = {
 export const TransformerStatusPanel = memo(({ panel, isEditing }) => {
   const { data, isLoading, error } = useTrafoApi('status', 60000);
   const [open, setOpen] = useState(null);
-  const items = (data && data.items) || [];
+  const noStatus = !!data && data.hasStatus === false;
+  const items = (noStatus ? [] : (data && data.items)) || [];
   const abnormal = items.filter((i) => i.level !== 'normal');
   const selected = items.find((i) => i.parameter === open);
 
@@ -19,13 +20,14 @@ export const TransformerStatusPanel = memo(({ panel, isEditing }) => {
     <div className="h-full w-full flex flex-col">
       <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
         <h3 className="font-medium text-[#172b4d] dark:text-white text-sm font-heading tracking-tight truncate flex-1">{panel.title}</h3>
-        {data && (data.allSafe
+        {data && !noStatus && (data.allSafe
           ? <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600"><ShieldCheck size={12} /> Semua Normal</span>
           : <span className="flex items-center gap-1 text-[10px] font-bold text-red-500"><AlertTriangle size={12} /> {data.counts.alarm} alarm · {data.counts.trip} trip</span>)}
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
       {isLoading ? <div className="flex-1 flex items-center justify-center text-xs text-gray-400">Memuat...</div>
       : error ? <div className="flex-1 flex items-center justify-center text-xs text-red-400">{error}</div>
+      : noStatus ? <div className="flex-1 flex items-center justify-center text-xs text-gray-400">Belum ada data status dari Raspi</div>
       : (
         <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1">
           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-1.5">

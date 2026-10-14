@@ -13,7 +13,7 @@ import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
 import { METRICS, METRIC_GROUPS } from "../config/metrics";
-import { PRESETS, isPresetId } from "../config/presets";
+import { PRESETS, isPresetId, canPersist, DB_DEFAULT_LAYOUT_NAME } from "../config/presets";
 import {
   TimeSeriesPanel, StatPanel, GaugePanel, StatusPanel,
   BarChartPanel, BarGaugePanel, TablePanel, PieChartPanel,
@@ -298,6 +298,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     }
 
     onSave({
+      ...(editingPanel || {}),
       id: editingPanel?.id || uid(),
       title: title.trim() || derivedTitle,
       type: panelType,
@@ -880,6 +881,8 @@ const Dashboard = () => {
   }, [isLoadingTrend, panels, showLoadingScreen]);
 
   const saveLayoutToApi = async (layoutId, layoutName, layoutData, isActive) => {
+    // Baris default di DB selalu bernama 'Main Dashboard' walau tampil sebagai preset Electrical.
+    if (layoutId === 'default') layoutName = DB_DEFAULT_LAYOUT_NAME;
     try {
       const token = sessionStorage.getItem('token');
       const username = sessionStorage.getItem('username');
@@ -1042,7 +1045,8 @@ const Dashboard = () => {
         };
       });
       
-      saveLayoutToApi(activeId, currentProf.name, { panels, layouts: gridLayouts }, true);
+      // Preset hanya hidup di memori; jangan pernah ditulis ke DB.
+      if (canPersist(currentProf)) saveLayoutToApi(activeId, currentProf.name, { panels, layouts: gridLayouts }, true);
     }, 2000);
   }, [panels, gridLayouts, profilesState]);
 
@@ -1080,6 +1084,8 @@ const Dashboard = () => {
   const [inlineRenameValue, setInlineRenameValue] = useState("");
 
   const handleRenameProfile = () => {
+    const prof = profilesState.profiles[profilesState.activeProfileId];
+    if (!prof || !prof.isEditable) return; // preset dan default tidak bisa diganti nama
     setInlineRename(true);
     setInlineRenameValue(profilesState.profiles[profilesState.activeProfileId]?.name || '');
   };
@@ -1667,7 +1673,7 @@ const Dashboard = () => {
         };
       });
 
-      if (currentProf) {
+      if (currentProf && canPersist(currentProf)) {
         saveLayoutToApi(activeId, currentProf.name, defaultLayoutData, true).catch(err => {
           console.error("Failed to auto-save reset layout to DB:", err);
         });
@@ -1949,6 +1955,7 @@ const Dashboard = () => {
                           setProfilesState(prev => ({ ...prev, activeProfileId: p.id }));
                           if (isPresetId(p.id) || p.id === 'default') {
                             localStorage.setItem('tmu_active_preset', p.id);
+                            setActiveLayoutInApi('default'); // lepaskan profil kustom yang aktif di DB
                           } else {
                             localStorage.removeItem('tmu_active_preset');
                             setActiveLayoutInApi(p.id);

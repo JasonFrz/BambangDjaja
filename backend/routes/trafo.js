@@ -182,7 +182,8 @@ router.get("/:id/status", async (req, res) => {
       tm.getRecommendations(await getMasterDb()),
     ]);
     const tripActive = trip ? sm.STATUS_COLUMNS.filter((c) => Number(trip[c]) === 1) : [];
-    res.json({ success: true, ...sm.buildStatusItems(row, recs), tripActive });
+    // hasStatus=false: Raspi belum pernah mengirim transformer_status; frontend menampilkan 'belum ada data'.
+    res.json({ success: true, hasStatus: !!row, ...sm.buildStatusItems(row, recs), tripActive });
   } catch (error) {
     res.status(500).json({ error: "Server error", details: error.message });
   }
