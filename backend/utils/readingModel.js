@@ -108,11 +108,12 @@ function mapRow(row) {
   return point;
 }
 
-function buildSelect(keys, { aggregate = false } = {}) {
+function buildSelect(keys, { aggregate = false, prefix = "" } = {}) {
   const cols = keys.map((k) => KEY_TO_COLUMN[k]).filter(Boolean);
   if (cols.length === 0) throw new Error("Tidak ada metric valid");
+  const p = prefix ? `${prefix}.` : "";
   return cols
-    .map((c) => (aggregate ? `ROUND(AVG(\`${c}\`),2) AS \`${c}\`` : `\`${c}\``))
+    .map((c) => (aggregate ? `ROUND(AVG(${p}\`${c}\`),2) AS \`${c}\`` : `${p}\`${c}\``))
     .join(", ");
 }
 
@@ -144,9 +145,11 @@ async function getHistory(
   const intv = parseInt(intervalSec, 10) || 0;
   let sql;
   if (intv > 0) {
-    sql = `SELECT FROM_UNIXTIME(UNIX_TIMESTAMP(MIN(timestamp)) DIV ${intv} * ${intv}) AS timestamp, ${buildSelect(keys, { aggregate: true })} FROM reading_data WHERE trafoId = ? AND timestamp >= ? AND timestamp <= ? GROUP BY UNIX_TIMESTAMP(timestamp) DIV ${intv} ORDER BY timestamp ASC LIMIT 5000`;
+    // Deferred Join / Subquery ID Sampling:
+    // Super fast index scan in MySQL 5.x / 8.x, 100% immune to ONLY_FULL_GROUP_BY error 1055
+    sql = `SELECT t.timestamp, ${buildSelect(keys, { prefix: "t" })} FROM reading_data t INNER JOIN (SELECT MIN(data_id) AS picked_id FROM reading_data WHERE trafoId = ? AND timestamp >= ? AND timestamp <= ? GROUP BY (UNIX_TIMESTAMP(timestamp) DIV ${intv})) AS sampler ON t.data_id = sampler.picked_id ORDER BY t.timestamp ASC LIMIT 100000`;
   } else {
-    sql = `SELECT timestamp, ${buildSelect(keys)} FROM reading_data WHERE trafoId = ? AND timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC LIMIT 5000`;
+    sql = `SELECT timestamp, ${buildSelect(keys)} FROM reading_data WHERE trafoId = ? AND timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC LIMIT 100000`;
   }
   const [rows] = await db.query(sql, [trafoId, start, end]);
   return rows.map(mapRow);

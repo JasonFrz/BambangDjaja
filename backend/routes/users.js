@@ -48,14 +48,48 @@ router.post("/", async (req, res) => {
       [username, hashPassword(password, salt), status, salt, req.company.company_id, status, email, nomor_telpon],
     );
     logActivity(req.masterDb, {
-      userId: req.user.id, companyId: req.company.company_id, username: req.user.username,
-      type: "USER_CREATE", description: `Membuat user ${username}`, module: "users",
-      newValue: { username, role: status === 9 ? "superuser" : "user" },
+      userId: req.user.id, 
+      companyId: req.company.company_id, 
+      username: req.user.username,
+      type: "USER_CREATE", 
+      description: `Created user ${username}`, 
+      module: "Users",
+      newValue: { username, role: status === 9 ? "superuser" : "user", email, phone: nomor_telpon },
+      ip: req.ip || req.headers["x-forwarded-for"],
+      userAgent: req.headers["user-agent"],
     });
     res.status(201).json({ message: "user berhasil dibuat!" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.get("/activity-logs", async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    let query = `
+      SELECT log_id, user_id, company_id, username, activity_type, activity_description, 
+             module, trafo_id, trafo_serial_no, old_value, new_value, ip_address, user_agent, created_at 
+      FROM user_activity_log 
+      WHERE (company_id = ? OR company_id = 0 OR company_id IS NULL)
+    `;
+    const params = [req.company?.company_id || req.user?.companyId || 1];
+    if (startDate) {
+      query += ` AND created_at >= ?`;
+      params.push(`${startDate} 00:00:00`);
+    }
+    if (endDate) {
+      query += ` AND created_at <= ?`;
+      params.push(`${endDate} 23:59:59`);
+    }
+    query += ` ORDER BY log_id DESC LIMIT 1000`;
+
+    const [rows] = await req.masterDb.execute(query, params);
+    res.json({ success: true, logs: rows });
+  } catch (error) {
+    console.error("Failed to fetch activity logs:", error);
+    res.status(500).json({ error: "Server error: " + error.message });
   }
 });
 
@@ -78,6 +112,19 @@ router.put("/:username/password", async (req, res) => {
       [hashPassword(password, salt), salt, req.params.username, req.company.company_id],
     );
     if (r.affectedRows === 0) return res.status(404).json({ error: "User not found in your company" });
+
+    logActivity(req.masterDb, {
+      userId: req.user.id,
+      companyId: req.company.company_id,
+      username: req.user.username,
+      type: "USER_UPDATE",
+      description: `Updated password for user ${req.params.username}`,
+      module: "Users",
+      newValue: { username: req.params.username, passwordChanged: true },
+      ip: req.ip || req.headers["x-forwarded-for"],
+      userAgent: req.headers["user-agent"],
+    });
+
     res.json({ message: "Password updated successfully" });
   } catch (error) {
     console.error(error);
@@ -111,6 +158,19 @@ router.put("/:username", async (req, res) => {
       params,
     );
     if (r.affectedRows === 0) return res.status(404).json({ error: "User not found in your company" });
+
+    logActivity(req.masterDb, {
+      userId: req.user.id,
+      companyId: req.company.company_id,
+      username: req.user.username,
+      type: "USER_UPDATE",
+      description: `Updated user ${req.params.username}`,
+      module: "Users",
+      newValue: { username: req.params.username, role, email, phone: nomor_telpon },
+      ip: req.ip || req.headers["x-forwarded-for"],
+      userAgent: req.headers["user-agent"],
+    });
+
     res.json({ message: "User updated successfully" });
   } catch (error) {
     console.error(error);
@@ -126,8 +186,14 @@ router.delete("/:username", async (req, res) => {
     );
     if (r.affectedRows === 0) return res.status(404).json({ error: "User not found in your company" });
     logActivity(req.masterDb, {
-      userId: req.user.id, companyId: req.company.company_id, username: req.user.username,
-      type: "USER_DELETE", description: `Menghapus user ${req.params.username}`, module: "users",
+      userId: req.user.id,
+      companyId: req.company.company_id,
+      username: req.user.username,
+      type: "USER_DELETE",
+      description: `Deleted user ${req.params.username}`,
+      module: "Users",
+      ip: req.ip || req.headers["x-forwarded-for"],
+      userAgent: req.headers["user-agent"],
     });
     res.json({ message: "User deleted successfully" });
   } catch (error) {

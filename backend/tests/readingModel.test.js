@@ -153,19 +153,19 @@ test("getHistory tanpa interval membaca reading_data mentah", async () => {
   await rm.getHistory(db, 1, "2026-10-01", "2026-10-02", 0, ["phaseA"]);
   assert.match(
     db.calls[0].sql,
-    /SELECT timestamp, `Van` FROM reading_data WHERE trafoId = \? AND timestamp >= \? AND timestamp <= \? ORDER BY timestamp ASC LIMIT 5000/,
+    /SELECT timestamp, `Van` FROM reading_data WHERE trafoId = \? AND timestamp >= \? AND timestamp <= \? ORDER BY timestamp ASC LIMIT 100000/,
   );
   assert.deepEqual(db.calls[0].params, [1, "2026-10-01", "2026-10-02"]);
 });
 
-test("getHistory dengan interval melakukan GROUP BY per interval", async () => {
+test("getHistory dengan interval melakukan Deferred Join per interval", async () => {
   const db = makeFakeDb(() => []);
   await rm.getHistory(db, 1, "2026-10-01", "2026-10-02", 300, ["phaseA"]);
   assert.match(
     db.calls[0].sql,
-    /FROM_UNIXTIME\(UNIX_TIMESTAMP\(MIN\(timestamp\)\) DIV 300 \* 300\) AS timestamp, ROUND\(AVG\(`Van`\),2\) AS `Van`/,
+    /SELECT t\.timestamp, t\.`Van` FROM reading_data t INNER JOIN/,
   );
-  assert.match(db.calls[0].sql, /GROUP BY UNIX_TIMESTAMP\(timestamp\) DIV 300/);
+  assert.match(db.calls[0].sql, /GROUP BY \(UNIX_TIMESTAMP\(timestamp\) DIV 300\)/);
 });
 
 test("computeDerived menggabungkan semuanya", () => {

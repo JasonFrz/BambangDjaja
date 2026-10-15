@@ -6,7 +6,7 @@ import { deviceState } from '../config/panelHelpers';
 
 // Tampilan state Offline / No Data dari dashboard-documentation 3.5 dan 8.5.
 export const DeviceStateNotice = ({ state, onRefresh }) => {
-  if (!state) return null;
+  if (!state || state === 'offline') return null;
   const offline = state === 'offline';
   const Icon = offline ? WifiOff : CalendarX;
   return (

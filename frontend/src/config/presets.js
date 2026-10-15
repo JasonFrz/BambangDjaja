@@ -93,7 +93,7 @@ export const PRESETS = {
 export const PRESET_IDS = Object.values(PRESETS).map((p) => p.id);
 export const isPresetId = (id) => typeof id === 'string' && id.startsWith('preset_');
 
-// Hanya profil ini yang boleh ditulis ke DB (auto-save, reset, rename). Preset tidak pernah.
-export const canPersist = (profile) => !!profile && (profile.isEditable === true || profile.id === 'default');
+// Semua profil terkonfigurasi dengan user_layouts di DB dan dapat disimpan
+export const canPersist = (profile) => !!profile && profile.isEditable !== false;
 // Nama baris default di tabel user_layouts (backend mencocokkan nama ini).
 export const DB_DEFAULT_LAYOUT_NAME = 'Main Dashboard';

@@ -34,13 +34,22 @@ async function getTrip(db, trafoId) {
   return rows[0] || null;
 }
 
-async function writeLog(req, trafoId, type, description, oldValue, newValue) {
+async function writeLog(req, trafoId, type, description, oldValue, newValue, moduleName = "Settings", trafoSerialNo = null) {
   const master = await getMasterDb();
   const company = await getCompanyByDb(master, req.dbName);
   logActivity(master, {
-    userId: req.user.id, companyId: company?.company_id, username: req.user.username,
-    type, description, module: "settings", trafoId, oldValue, newValue,
-    ip: req.ip, userAgent: req.headers["user-agent"],
+    userId: req.user.id,
+    companyId: company?.company_id,
+    username: req.user.username,
+    type,
+    description,
+    module: moduleName,
+    trafoId,
+    trafoSerialNo,
+    oldValue,
+    newValue,
+    ip: req.ip || req.headers["x-forwarded-for"],
+    userAgent: req.headers["user-agent"],
   });
 }
 
@@ -91,7 +100,18 @@ router.put("/thresholds/:trafoId", requireRole("admin", "superuser"), async (req
     );
     const after = await getSettings(req.db, trafoId);
     const pushed = sendToRaspi(td && td.raspiSerialNo, { type: "updateSyncTransformerSettingsFromServer", data: after }, req.dbName);
-    await writeLog(req, trafoId, "THRESHOLD_UPDATE", `Ubah threshold trafo ${trafoId}`, pick(before, cols), pick(after, cols));
+    
+    const tag = req.body?.dataTag || (keys.length > 0 ? (keys[0].includes("tankPressure") ? "tankPressure" : keys[0].includes("topOil") ? "topOil" : keys[0].includes("windTemp") ? "windTemp" : keys[0]) : "settings");
+    await writeLog(
+      req,
+      trafoId,
+      "UPDATE_TRANSFORMER_SETTINGS",
+      `Updated transformer settings: ${tag}`,
+      pick(before, cols),
+      req.body?.dataTag ? req.body : pick(after, cols),
+      "Settings",
+      td?.trafoSerialNo || null
+    );
     res.json({
       success: true, settings: after, pushed,
       message: pushed ? "Setting updated and pushed to Raspi" : "Setting updated (Raspi offline, akan sinkron saat terhubung)",
@@ -117,7 +137,16 @@ router.put("/trip/:trafoId", requireRole("admin", "superuser"), async (req, res)
     const after = await getTrip(req.db, trafoId);
     const td = await getTransformerData(req.db, trafoId);
     const pushed = sendToRaspi(td && td.raspiSerialNo, { type: "updateSyncTripSettingsFromServer", data: after }, req.dbName);
-    await writeLog(req, trafoId, "TRIP_SETTING_UPDATE", `Ubah trip enable trafo ${trafoId}`, pick(before, keys), pick(after, keys));
+    await writeLog(
+      req,
+      trafoId,
+      "UPDATE_TRIP_SETTINGS",
+      "Updated trip settings for transformer",
+      pick(before, keys),
+      pick(after, keys),
+      "Trip Settings",
+      td?.trafoSerialNo || null
+    );
     res.json({ success: true, trip: after, pushed });
   } catch (error) {
     res.status(500).json({ error: "Failed to update trip settings", details: error.message });

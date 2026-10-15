@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../contexts/ApiContext';
 import { useDialog } from '../contexts/DialogContext';
-import { Users, UserPlus, Key, ShieldAlert, X, CheckCircle2, Edit, Trash2, Phone, Search, Loader2, Mail, Eye, EyeOff } from 'lucide-react';
+import { Users, UserPlus, Key, ShieldAlert, X, CheckCircle2, Edit, Trash2, Phone, Search, Loader2, Mail, Eye, EyeOff, History } from 'lucide-react';
 import EnergyLoader from '../components/EnergyLoader';
+import UserActivityLog from '../components/UserActivityLog';
 
 const ManageUsersSuperuser = () => {
   const { confirm } = useDialog();
+  const [activeMainTab, setActiveMainTab] = useState('users'); // 'users' | 'activity'
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
 
@@ -172,45 +174,109 @@ const ManageUsersSuperuser = () => {
 
   if (currentRole !== 'superuser') return null;
 
-  const filteredUsers = Array.isArray(users) ? users.filter(u => String(u.username || '').toLowerCase().includes(searchTerm.toLowerCase())) : [];
+  const filteredUsers = Array.isArray(users) ? users.filter(u => {
+    if (!searchTerm.trim()) return true;
+    const q = searchTerm.toLowerCase().trim();
+    return String(u.username || '').toLowerCase().includes(q) ||
+           String(u.email || '').toLowerCase().includes(q) ||
+           String(u.nomor_telpon || u.phone || '').toLowerCase().includes(q) ||
+           String(u.role || '').toLowerCase().includes(q);
+  }) : [];
 
   return (
-    <div className="flex flex-col gap-6 animate-[fadeIn_0.5s_ease-out] w-full pb-10">
+    <div className="flex flex-col gap-4 sm:gap-5 animate-[fadeIn_0.3s_ease-out] w-full pb-10">
       
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#172b4d] dark:text-white flex items-center gap-2">
-            <Users size={24} className="text-indigo-600 dark:text-indigo-400" />
-            Manage Users
-          </h1>
-          <p className="text-[#5e6c84] dark:text-[#94a3b8] text-sm mt-1">
-            Create and manage users for client access.
-          </p>
+      {/* ========================================================= */}
+      {/* 1. HERO HEADER BANNER (Matching Performance / Instantaneous Report) */}
+      {/* ========================================================= */}
+      <div className="relative rounded-xl sm:rounded-2xl md:rounded-3xl bg-gradient-to-br from-white via-white to-indigo-50/40 dark:from-[#151521] dark:via-[#151521] dark:to-[#1a1b2e] border border-[#dfe1e6]/80 dark:border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_8px_25px_rgba(0,0,0,0.2)] p-3 sm:p-4 md:p-5 shrink-0 z-20">
+        
+        {/* Glow aksen latar belakang terisolasi */}
+        <div className="absolute inset-0 overflow-hidden rounded-xl sm:rounded-2xl md:rounded-3xl pointer-events-none">
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 sm:w-64 h-48 sm:h-64 bg-indigo-500/10 dark:bg-indigo-500/15 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-1/3 -mb-20 w-60 sm:w-80 h-32 sm:h-40 bg-blue-500/10 dark:blue-500/15 rounded-full blur-3xl" />
         </div>
-        {!showCreateForm && (
-          <button 
-            onClick={() => setShowCreateForm(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-md hover:shadow-lg w-full sm:w-auto justify-center"
-          >
-            <UserPlus size={18} />
-            Create User
-          </button>
-        )}
+
+        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+          
+          {/* Judul: Manage Users */}
+          <div className="flex flex-col min-w-0">
+            <h1 className="text-base sm:text-lg md:text-2xl font-black text-[#172b4d] dark:text-white font-heading tracking-tight truncate">
+              Manage Users
+            </h1>
+            <p className="text-[11px] sm:text-xs md:text-sm text-[#5e6c84] dark:text-[#94a3b8] mt-0.5">
+              Create, manage user accounts, and track all system activity logs.
+            </p>
+          </div>
+
+          {/* Actions: Create User & Tab Switcher Pills */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto shrink-0">
+            {!showCreateForm && (
+              <button 
+                onClick={() => {
+                  setActiveMainTab('users');
+                  setShowCreateForm(true);
+                }}
+                className="flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-xs hover:shadow-md active:scale-95 w-full sm:w-auto"
+              >
+                <UserPlus size={16} />
+                <span>Create User</span>
+              </button>
+            )}
+
+            {/* Tab Switcher Pills */}
+            <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-white/5 rounded-xl border border-gray-200/80 dark:border-white/10 w-full sm:w-auto">
+              <button
+                onClick={() => setActiveMainTab('users')}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  activeMainTab === 'users'
+                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-sm sm:shadow-md shadow-indigo-500/25'
+                    : 'text-[#5e6c84] dark:text-[#94a3b8] hover:text-[#172b4d] dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/5'
+                }`}
+              >
+                <Users size={15} />
+                <span>User Accounts</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeMainTab === 'users' 
+                    ? 'bg-white/20 text-white' 
+                    : 'bg-gray-200 dark:bg-white/10 text-gray-600 dark:text-gray-400'
+                }`}>
+                  {users.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveMainTab('activity')}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  activeMainTab === 'activity'
+                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-sm sm:shadow-md shadow-indigo-500/25'
+                    : 'text-[#5e6c84] dark:text-[#94a3b8] hover:text-[#172b4d] dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/5'
+                }`}
+              >
+                <History size={15} />
+                <span>Activity Log</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
       </div>
 
-      {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 rounded-xl text-red-600 dark:text-red-400 text-sm flex items-center gap-2 animate-slide-up-fade">
-          <ShieldAlert size={18} />
-          {error}
-        </div>
-      )}
-      
-      {success && (
-        <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 rounded-xl text-emerald-600 dark:text-emerald-400 text-sm flex items-center gap-2 animate-slide-up-fade">
-          <CheckCircle2 size={18} />
-          {success}
-        </div>
-      )}
+      {activeMainTab === 'users' ? (
+        <>
+          {error && (
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 rounded-xl text-red-600 dark:text-red-400 text-sm flex items-center gap-2 animate-slide-up-fade">
+              <ShieldAlert size={18} />
+              {error}
+            </div>
+          )}
+          
+          {success && (
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 rounded-xl text-emerald-600 dark:text-emerald-400 text-sm flex items-center gap-2 animate-slide-up-fade">
+              <CheckCircle2 size={18} />
+              {success}
+            </div>
+          )}
 
       {showCreateForm && (
         <div className="bg-white dark:bg-[#151521] rounded-2xl shadow-lg border border-[#dfe1e6] dark:border-white/10 overflow-hidden mb-6 animate-slide-up-fade">
@@ -324,16 +390,25 @@ const ManageUsersSuperuser = () => {
       )}
 
       <div className="bg-white dark:bg-[#151521] rounded-2xl shadow-sm border border-[#dfe1e6] dark:border-white/10 overflow-hidden flex flex-col">
-        <div className="p-4 border-b border-[#dfe1e6] dark:border-white/10 flex items-center gap-3 bg-gray-50/50 dark:bg-white/[0.02]">
-          <div className="relative flex-1 max-w-md">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <div className="p-3 sm:p-4 border-b border-[#dfe1e6] dark:border-white/10 flex items-center bg-gray-50/50 dark:bg-white/[0.02]">
+          <div className="relative w-full">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input 
               type="text" 
-              placeholder="Search users..." 
+              placeholder="Search users by username, email, phone, or role..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-white dark:bg-black/20 border border-[#dfe1e6] dark:border-white/10 rounded-lg text-sm text-[#172b4d] dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
+              className="w-full pl-10 pr-9 py-2 bg-gray-50/70 dark:bg-white/5 border border-[#dfe1e6] dark:border-white/10 rounded-xl text-xs sm:text-sm text-[#172b4d] dark:text-white placeholder-gray-400 outline-none focus:border-indigo-500 transition-colors h-[38px]"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
         <div className="overflow-auto max-h-[600px] custom-scrollbar">
@@ -415,8 +490,12 @@ const ManageUsersSuperuser = () => {
               )}
             </tbody>
           </table>
+          </div>
         </div>
-      </div>
+      </>
+    ) : (
+      <UserActivityLog />
+    )}
       
     </div>
   );

@@ -1,4 +1,14 @@
 // Menulis ke master.user_activity_log. Tidak pernah melempar: log gagal tidak boleh menggagalkan request.
+const stringifyValue = (val) => {
+  if (val === null || val === undefined) return null;
+  if (typeof val === "string") return val;
+  try {
+    return JSON.stringify(val);
+  } catch {
+    return String(val);
+  }
+};
+
 async function logActivity(masterDb, info = {}) {
   const {
     userId,
@@ -29,8 +39,8 @@ async function logActivity(masterDb, info = {}) {
         module || null,
         trafoId != null ? String(trafoId) : null,
         trafoSerialNo || null,
-        oldValue ? JSON.stringify(oldValue) : null,
-        newValue ? JSON.stringify(newValue) : null,
+        stringifyValue(oldValue),
+        stringifyValue(newValue),
         ip || null,
         userAgent ? String(userAgent).slice(0, 500) : null,
       ],

@@ -49,24 +49,26 @@ async function getOnlineMap(masterDb, serials) {
   return result;
 }
 
-// Daftar trafo untuk TransformerSelection: { id, nama, image_url, device_serial, status, ... }.
+// Daftar trafo untuk TransformerSelection: { id, nama, imageFileName, device_serial, status, ... }.
 async function listTrafos(db) {
   const [rows] = await db.query(
     `SELECT td.trafoId AS id, td.raspiSerialNo, td.trafoSerialNo, td.ratedPower, td.ratedLowVoltage, td.version,
-            t.nama, t.image_url, t.created_at
-     FROM transformer_data td LEFT JOIN trafo t ON t.id = td.trafoId ORDER BY td.trafoId ASC`,
+            td.imageFileName, td.lastSyncTimestamp
+     FROM transformer_data td ORDER BY td.trafoId ASC`,
   );
   const online = await getOnlineMap(await getMasterDb(), rows.map((r) => r.raspiSerialNo));
   return rows.map((r) => ({
     id: r.id,
-    nama: r.nama || r.trafoSerialNo || `Trafo ${r.id}`,
-    image_url: r.image_url || null,
+    nama: r.trafoSerialNo || `Trafo ${r.id}`,
+    name: r.trafoSerialNo || `Trafo ${r.id}`,
+    imageFileName: r.imageFileName || null,
+    image_url: r.imageFileName || null,
     device_serial: r.raspiSerialNo || null,
     serial_no: r.trafoSerialNo || null,
     rated_power: r.ratedPower,
     rated_low_voltage: r.ratedLowVoltage,
     tmu_version: r.version,
-    created_at: r.created_at || null,
+    created_at: r.lastSyncTimestamp || null,
     status: online[r.raspiSerialNo] ? "Online" : "Offline",
   }));
 }

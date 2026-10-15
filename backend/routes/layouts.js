@@ -530,6 +530,172 @@ router.get('/export/:id', async (req, res) => {
   }
 });
 
+// =========================================================
+// ANALYSIS REPORT LAYOUT ENDPOINTS (Stored in user_layouts)
+// =========================================================
+
+router.get('/analysis', async (req, res) => {
+  try {
+    const dbName = req.headers['x-db-name'];
+    const trafoId = req.headers['x-trafo-id'];
+    
+    if (!dbName) return res.status(400).json({ error: 'Company name is missing' });
+    
+    const masterDb = await getMasterDb();
+    const userId = await getUserId(req, masterDb);
+    if (!userId) return res.status(403).json({ error: 'User ID missing or unauthorized' });
+    
+    let query = "SELECT id, layout_name, layout_data FROM user_layouts WHERE user_id = ? AND layout_name = 'Analysis Report'";
+    let params = [userId];
+    
+    if (trafoId) {
+      query += ' AND (trafo_id = ? OR trafo_id = "" OR trafo_id IS NULL) ORDER BY (CASE WHEN trafo_id = ? THEN 1 ELSE 2 END) LIMIT 1';
+      params.push(trafoId, trafoId);
+    } else {
+      query += ' LIMIT 1';
+    }
+    
+    const [rows] = await masterDb.execute(query, params);
+    
+    if (rows.length === 0) {
+      // Default: no custom layout saved in user_layouts yet
+      return res.json({ found: false, layout_data: null });
+    }
+    
+    let data = rows[0].layout_data;
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data);
+      } catch (e) {}
+    }
+    
+    res.json({ found: true, id: rows[0].id, layout_data: data });
+  } catch (error) {
+    console.error('Error fetching analysis layout:', error);
+    res.status(500).json({ error: 'Server error fetching analysis layout' });
+  }
+});
+
+router.post('/analysis', async (req, res) => {
+  try {
+    const { layout_data } = req.body;
+    if (!layout_data) {
+      return res.status(400).json({ error: 'Missing layout_data' });
+    }
+    
+    const dbName = req.headers['x-db-name'];
+    const trafoId = req.headers['x-trafo-id'];
+    if (!dbName) return res.status(400).json({ error: 'Company name is missing' });
+    
+    const masterDb = await getMasterDb();
+    const userId = await getUserId(req, masterDb);
+    if (!userId) return res.status(403).json({ error: 'User ID missing or unauthorized' });
+    
+    const finalTrafoId = trafoId || '';
+    const finalData = typeof layout_data === 'string' ? layout_data : JSON.stringify(layout_data);
+    
+    // Check if analysis layout already exists for this user and trafo
+    let checkQuery = "SELECT id FROM user_layouts WHERE user_id = ? AND layout_name = 'Analysis Report'";
+    let checkParams = [userId];
+    if (finalTrafoId) {
+      checkQuery += ' AND trafo_id = ?';
+      checkParams.push(finalTrafoId);
+    } else {
+      checkQuery += ' AND (trafo_id IS NULL OR trafo_id = "")';
+    }
+    
+    const [existing] = await masterDb.execute(checkQuery, checkParams);
+    
+    let actualId = '';
+    if (existing.length > 0) {
+      actualId = existing[0].id;
+      await masterDb.execute(
+        'UPDATE user_layouts SET layout_data = ? WHERE id = ? AND user_id = ?',
+        [finalData, actualId, userId]
+      );
+    } else {
+      actualId = await generateRandomLayoutId(masterDb);
+      await masterDb.execute(
+        'INSERT INTO user_layouts (id, user_id, trafo_id, layout_name, layout_data, is_active) VALUES (?, ?, ?, ?, ?, ?)',
+        [actualId, userId, finalTrafoId, 'Analysis Report', finalData, 1]
+      );
+    }
+    
+    res.json({ success: true, message: 'Analysis layout saved to master database', id: actualId });
+  } catch (error) {
+    console.error('Error saving analysis layout:', error);
+    res.status(500).json({ error: 'Server error saving analysis layout' });
+  }
+});
+
+router.delete('/analysis', async (req, res) => {
+  try {
+    const dbName = req.headers['x-db-name'];
+    const trafoId = req.headers['x-trafo-id'];
+    if (!dbName) return res.status(400).json({ error: 'Company name is missing' });
+    
+    const masterDb = await getMasterDb();
+    const userId = await getUserId(req, masterDb);
+    if (!userId) return res.status(403).json({ error: 'User ID missing or unauthorized' });
+    
+    let deleteQuery = "DELETE FROM user_layouts WHERE user_id = ? AND layout_name = 'Analysis Report'";
+    let deleteParams = [userId];
+    if (trafoId) {
+      deleteQuery += ' AND trafo_id = ?';
+      deleteParams.push(trafoId);
+    }
+    
+    await masterDb.execute(deleteQuery, deleteParams);
+    res.json({ success: true, message: 'Analysis layout reset to default' });
+  } catch (error) {
+    console.error('Error deleting analysis layout:', error);
+    res.status(500).json({ error: 'Server error deleting analysis layout' });
+  }
+});
+
+const { DEFAULT_DASHBOARD_TEMPLATES } = require('../config/defaultDashboardPresets');
+
+async function ensureDefaultDashboards(masterDb, userId, trafoId) {
+  try {
+    const finalTrafoId = trafoId || '';
+    let checkQuery = 'SELECT id, layout_name FROM user_layouts WHERE user_id = ?';
+    let checkParams = [userId];
+    if (trafoId) {
+      checkQuery += ' AND trafo_id = ?';
+      checkParams.push(trafoId);
+    } else {
+      checkQuery += ' AND (trafo_id IS NULL OR trafo_id = "")';
+    }
+    const [existing] = await masterDb.execute(checkQuery, checkParams);
+    const existingNames = new Set(existing.map(r => r.layout_name));
+
+    // Check if any layout is already active
+    const [activeRows] = await masterDb.execute(
+      checkQuery + ' AND is_active = 1',
+      checkParams
+    );
+    let hasActive = activeRows.length > 0;
+
+    for (const tpl of DEFAULT_DASHBOARD_TEMPLATES) {
+      if (!existingNames.has(tpl.layout_name)) {
+        const newId = await generateRandomLayoutId(masterDb);
+        const shouldBeActive = !hasActive && tpl.layout_name === 'Main Dashboard' ? 1 : 0;
+        if (shouldBeActive) hasActive = true;
+        const layoutDataStr = JSON.stringify({
+          panels: tpl.panels,
+          layouts: tpl.layouts
+        });
+        await masterDb.execute(
+          'INSERT INTO user_layouts (id, user_id, trafo_id, layout_name, layout_data, is_active) VALUES (?, ?, ?, ?, ?, ?)',
+          [newId, userId, finalTrafoId, tpl.layout_name, layoutDataStr, shouldBeActive]
+        );
+      }
+    }
+  } catch (err) {
+    console.error('Error ensuring default dashboards in user_layouts:', err);
+  }
+}
+
 router.get('/', async (req, res) => {
   try {
     const dbName = req.headers['x-db-name'];
@@ -542,7 +708,10 @@ router.get('/', async (req, res) => {
     const userId = await getUserId(req, masterDb);
     if (!userId) return res.status(403).json({ error: 'User ID missing or unauthorized' });
     
-    let query = 'SELECT id, layout_name, layout_data, is_active FROM user_layouts WHERE user_id = ?';
+    // Auto-seed default dashboards into user_layouts table if not yet present
+    await ensureDefaultDashboards(masterDb, userId, trafoId);
+
+    let query = "SELECT id, layout_name, layout_data, is_active FROM user_layouts WHERE user_id = ? AND (layout_name != 'Analysis Report' OR layout_name IS NULL)";
     let params = [userId];
     
     if (trafoId) {
@@ -551,6 +720,7 @@ router.get('/', async (req, res) => {
     } else {
       query += ' AND (trafo_id IS NULL OR trafo_id = "")';
     }
+    query += ' ORDER BY FIELD(layout_name, "Main Dashboard", "Physical", "Status", "Oil Quality"), id ASC';
     
     const [layouts] = await masterDb.execute(query, params);
     

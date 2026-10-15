@@ -1,6 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Moon, Sun, LogOut, LayoutDashboard, TrendingUp, Users, ChevronLeft, ChevronRight, Settings, Key, ShieldCheck, Activity, ClipboardList, User, Server, Database } from 'lucide-react';
+import { 
+  Moon, Sun, LogOut, LayoutDashboard, TrendingUp, Users, ChevronLeft, ChevronRight, 
+  Settings, Key, ShieldCheck, Activity, ClipboardList, User, Server, Database,
+  ChevronDown, ChevronUp, BarChart2, AlertTriangle, LineChart, Zap, X
+} from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 const MainLayout = () => {
@@ -13,12 +17,50 @@ const MainLayout = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isReportMenuOpen, setIsReportMenuOpen] = useState(true);
+  const [isMobileReportDrawerOpen, setIsMobileReportDrawerOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const isTransformerDashboard = ['/dashboard', '/transformer-data', '/performance-report', '/manage-users', '/settings'].includes(location.pathname);
+  const reportPaths = ['/performance-report', '/failure-report', '/analysis', '/instantaneous-report'];
+  const isReportActive = reportPaths.includes(location.pathname);
+  const isTransformerDashboard = ['/dashboard', '/transformer-data', '/manage-users', '/settings', ...reportPaths].includes(location.pathname);
   const isAdminDashboard = role === 'admin' && (location.pathname === '/users' || location.pathname === '/provisioning' || location.pathname === '/manage-transformers');
   const isSuperuserDashboard = role === 'superuser' && (location.pathname === '/manage-users');
   const showSidebar = isTransformerDashboard || isAdminDashboard || isSuperuserDashboard;
+
+  const reportMenuItems = [
+    {
+      name: 'Performance',
+      path: '/performance-report',
+      desc: 'Transformer performance & loading health summary',
+      icon: TrendingUp,
+    },
+    {
+      name: 'Failure',
+      path: '/failure-report',
+      desc: 'Fault anomalies, trip events & diagnostic records',
+      icon: AlertTriangle,
+    },
+    {
+      name: 'Analysis',
+      path: '/analysis',
+      desc: 'Comparative trends, predictive analytics & DGA',
+      icon: LineChart,
+    },
+    {
+      name: 'Instantaneous',
+      path: '/instantaneous-report',
+      desc: 'Real-time telemetry snapshots (PQ, Electrical, Physical)',
+      icon: Zap,
+    },
+  ];
+
+  // Auto-buka accordion report jika pengguna mengakses salah satu halaman report
+  useEffect(() => {
+    if (isReportActive) {
+      setIsReportMenuOpen(true);
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -210,18 +252,71 @@ const MainLayout = () => {
                     <Database size={20} className="shrink-0" />
                     {!isSidebarCollapsed && <span className="truncate">Transformer Data</span>}
                   </Link>
-                  <Link 
-                    to="/performance-report"
-                    title={isSidebarCollapsed ? "Performance Report" : undefined}
-                    className={`flex items-center py-3 rounded-xl font-medium transition-all ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} ${
-                      location.pathname === '/performance-report' 
-                        ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
-                        : 'text-[#5e6c84] dark:text-[#94a3b8] hover:bg-[#f4f5f7] dark:hover:bg-white/5 hover:text-[#172b4d] dark:hover:text-white'
-                    }`}
-                  >
-                    <ClipboardList size={20} className="shrink-0" />
-                    {!isSidebarCollapsed && <span className="truncate">Performance Report</span>}
-                  </Link>
+                  {/* Expandable Report Accordion */}
+                  {!isSidebarCollapsed ? (
+                    <div className="flex flex-col">
+                      <button 
+                        type="button"
+                        onClick={() => setIsReportMenuOpen(!isReportMenuOpen)}
+                        className={`w-full flex items-center justify-between py-3 px-4 rounded-xl font-medium transition-all ${
+                          isReportActive 
+                            ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
+                            : 'text-[#5e6c84] dark:text-[#94a3b8] hover:bg-[#f4f5f7] dark:hover:bg-white/5 hover:text-[#172b4d] dark:hover:text-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <BarChart2 size={20} className="shrink-0" />
+                          <span className="truncate">Report</span>
+                        </div>
+                        {isReportMenuOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      </button>
+
+                      {isReportMenuOpen && (
+                        <div className="mt-1.5 ml-2 mr-1 py-1 px-1 flex flex-col gap-1 rounded-2xl bg-[#f8fafd] dark:bg-white/[0.03] border border-[#e2e8f0]/80 dark:border-white/5 shadow-inner">
+                          {reportMenuItems.map((item) => {
+                            const isCurrent = location.pathname === item.path;
+                            return (
+                              <Link
+                                key={item.path}
+                                to={item.path}
+                                className={`relative flex items-center justify-between py-2 px-3 rounded-xl text-sm transition-all ${
+                                  isCurrent
+                                    ? 'bg-[#0052cc]/10 dark:bg-[#4c9aff]/15 text-[#0052cc] dark:text-[#4c9aff] font-bold shadow-xs'
+                                    : 'text-[#5e6c84] dark:text-[#94a3b8] hover:text-[#172b4d] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 font-medium'
+                                }`}
+                              >
+                                {isCurrent && (
+                                  <span className="absolute left-0 top-1.5 bottom-1.5 w-1.5 bg-[#0052cc] dark:bg-[#4c9aff] rounded-r-md" />
+                                )}
+                                <span className="truncate pl-1">{item.name}</span>
+                                {item.badge && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-600 text-white shadow-xs">
+                                    {item.badge}
+                                  </span>
+                                )}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSidebarCollapsed(false);
+                        setIsReportMenuOpen(true);
+                      }}
+                      title="Report Menu"
+                      className={`flex items-center justify-center py-3 rounded-xl font-medium transition-all ${
+                        isReportActive 
+                          ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
+                          : 'text-[#5e6c84] dark:text-[#94a3b8] hover:bg-[#f4f5f7] dark:hover:bg-white/5 hover:text-[#172b4d] dark:hover:text-white'
+                      }`}
+                    >
+                      <BarChart2 size={20} className="shrink-0" />
+                    </button>
+                  )}
                   {role === 'superuser' && (
                     <>
                       <Link 
@@ -255,7 +350,13 @@ const MainLayout = () => {
               )}
             </nav>
             
-            <div className="p-4 border-t border-[#dfe1e6] dark:border-white/10 shrink-0 flex justify-center">
+            <div className="p-3 border-t border-[#dfe1e6] dark:border-white/10 shrink-0 flex flex-col gap-2.5">
+              {!isSidebarCollapsed && (
+                <div className="text-[11px] text-[#5e6c84] dark:text-[#94a3b8] text-center leading-tight select-none px-1">
+                  <p>&copy; {new Date().getFullYear()} PT. Bambang Djaja.</p>
+                  <p className="text-[10px] opacity-75 mt-0.5">All rights reserved.</p>
+                </div>
+              )}
               <button 
                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                 className="p-2 rounded-xl bg-[#f4f5f7] dark:bg-white/5 text-[#5e6c84] dark:text-[#94a3b8] hover:text-[#172b4d] dark:hover:text-white hover:bg-[#ebecf0] dark:hover:bg-white/10 transition-all flex items-center justify-center w-full"
@@ -271,13 +372,6 @@ const MainLayout = () => {
           <main className="flex-1 flex flex-col p-2">
             <Outlet />
           </main>
-    
-          {!isFullscreen && (
-            <footer className="relative z-10 py-4 md:py-6 px-4 md:px-8 flex flex-col sm:flex-row justify-between items-center text-[#5e6c84] dark:text-[#94a3b8] text-xs sm:text-sm shrink-0 mt-auto gap-2 sm:gap-0 text-center sm:text-left">
-              <p>&copy; {new Date().getFullYear()} PT. Bambang Djaja. All rights reserved.</p>
-              <p>Transformer Monitoring Unit V1.0</p>
-            </footer>
-          )}
         </div>
       </div>
 
@@ -292,7 +386,7 @@ const MainLayout = () => {
             }`}
           >
             <LayoutDashboard size={20} />
-            <span className="text-[10px] font-medium">Electrical</span>
+            <span className="text-[10px] font-medium">Dashboard</span>
           </Link>
           <Link 
             to="/transformer-data"
@@ -306,17 +400,23 @@ const MainLayout = () => {
             <span className="text-[10px] font-medium">Data</span>
           </Link>
 
-          <Link 
-            to="/performance-report"
-            className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-              location.pathname === '/performance-report' 
+          <button 
+            type="button"
+            onClick={() => setIsMobileReportDrawerOpen(true)}
+            className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors relative ${
+              isReportActive 
                 ? 'text-[#0052cc] dark:text-[#4c9aff]' 
                 : 'text-[#5e6c84] dark:text-[#94a3b8] hover:text-[#172b4d] dark:hover:text-white'
             }`}
           >
-            <ClipboardList size={20} />
+            <div className="relative">
+              <BarChart2 size={20} />
+              {isReportActive && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#0052cc] dark:bg-[#4c9aff] animate-pulse" />
+              )}
+            </div>
             <span className="text-[10px] font-medium">Report</span>
-          </Link>
+          </button>
           {role === 'superuser' && (
             <Link 
               to="/manage-users"
@@ -380,6 +480,91 @@ const MainLayout = () => {
             <span className="text-[10px] font-medium">Trafo</span>
           </Link>
         </nav>
+      )}
+
+      {/* Mobile Report Drawer / Bottom Sheet */}
+      {isMobileReportDrawerOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-[fadeIn_0.2s_ease-out]"
+            onClick={() => setIsMobileReportDrawerOpen(false)}
+          />
+
+          {/* Drawer Container */}
+          <div className="relative z-10 bg-white dark:bg-[#151521] border-t border-[#dfe1e6] dark:border-white/10 rounded-t-3xl p-5 shadow-2xl animate-[slideUp_0.3s_cubic-bezier(0.16,1,0.3,1)] max-h-[85vh] overflow-y-auto pb-8">
+            {/* Grab Handle */}
+            <div className="w-12 h-1.5 bg-gray-300 dark:bg-white/20 rounded-full mx-auto mb-4" />
+
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#dfe1e6]/60 dark:border-white/10">
+              <div>
+                <h3 className="text-base font-bold text-[#172b4d] dark:text-white font-heading">
+                  Transformer Reports
+                </h3>
+                <p className="text-xs text-[#5e6c84] dark:text-[#94a3b8]">
+                  Pilih modul report telemetri & analisis trafo
+                </p>
+              </div>
+              <button 
+                onClick={() => setIsMobileReportDrawerOpen(false)}
+                className="p-2 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 bg-gray-100 dark:bg-white/5"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2.5">
+              {reportMenuItems.map((item) => {
+                const Icon = item.icon;
+                const isCurrent = location.pathname === item.path;
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => {
+                      setIsMobileReportDrawerOpen(false);
+                      navigate(item.path);
+                    }}
+                    className={`w-full flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all active:scale-[0.98] ${
+                      isCurrent
+                        ? 'border-[#0052cc] bg-[#0052cc]/5 dark:bg-[#4c9aff]/10 dark:border-[#4c9aff]'
+                        : 'border-[#dfe1e6]/80 dark:border-white/10 bg-gray-50/60 dark:bg-white/[0.02] hover:bg-gray-100 dark:hover:bg-white/5'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                        isCurrent
+                          ? 'bg-[#0052cc] text-white shadow-md shadow-[#0052cc]/30'
+                          : 'bg-white dark:bg-white/10 text-[#5e6c84] dark:text-[#94a3b8] shadow-xs'
+                      }`}>
+                        <Icon size={20} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-bold ${
+                            isCurrent ? 'text-[#0052cc] dark:text-[#4c9aff]' : 'text-[#172b4d] dark:text-white'
+                          }`}>
+                            {item.name}
+                          </span>
+                          {item.badge && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-600 text-white">
+                              {item.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-[#5e6c84] dark:text-[#94a3b8] line-clamp-1 mt-0.5">
+                          {item.desc}
+                        </p>
+                      </div>
+                    </div>
+                    {isCurrent && (
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#0052cc] dark:bg-[#4c9aff] shrink-0" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

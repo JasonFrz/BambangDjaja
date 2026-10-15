@@ -49,16 +49,18 @@ router.post("/login", loginLimiter, async (req, res) => {
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: "24h",
     });
+
     logActivity(masterDb, {
       userId: user.user_id,
-      companyId: user.company_id,
+      companyId: user.company_id || 0,
       username: user.username,
       type: "LOGIN",
-      description: "Login berhasil",
-      module: "auth",
-      ip: req.ip,
+      description: `User ${user.username} login berhasil`,
+      module: "Auth",
+      ip: req.ip || req.headers["x-forwarded-for"],
       userAgent: req.headers["user-agent"],
     });
+
     res.json({
       success: true,
       token,

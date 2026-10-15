@@ -77,9 +77,12 @@ const withPresets = (profiles) => {
   const out = { ...profiles };
   for (const key of ['physical', 'status', 'oilquality']) {
     const pr = PRESETS[key];
-    out[pr.id] = { id: pr.id, name: pr.name, panels: [...pr.panels], layouts: ensureResponsiveLayouts(pr.layouts), isEditable: false };
+    const exists = Object.values(out).some(p => p.name === pr.name || p.id === pr.id);
+    if (!exists) {
+      out[pr.id] = { id: pr.id, dbId: pr.id, name: pr.name, panels: [...pr.panels], layouts: ensureResponsiveLayouts(pr.layouts), isEditable: true };
+    }
   }
-  if (out['default']) out['default'] = { ...out['default'], name: DEFAULT_PROFILE_NAME };
+  if (out['default']) out['default'] = { ...out['default'], name: DEFAULT_PROFILE_NAME, isEditable: true };
   return out;
 };
 
@@ -635,6 +638,8 @@ const Dashboard = () => {
               const parsedPanels = layoutData.panels || [];
               const parsedLayouts = ensureResponsiveLayouts(layoutData.layouts || {});
 
+              if (layout.layout_name === 'Analysis Report') return;
+
               if (layout.layout_name === 'Main Dashboard') {
                 newProfiles['default'] = {
                   id: 'default',
@@ -642,12 +647,13 @@ const Dashboard = () => {
                   name: 'Main Dashboard',
                   panels: parsedPanels,
                   layouts: parsedLayouts,
-                  isEditable: false
+                  isEditable: true
                 };
                 if (layout.is_active) activeId = 'default';
               } else {
                 newProfiles[layout.id] = {
                   id: layout.id,
+                  dbId: layout.id,
                   name: layout.layout_name,
                   panels: parsedPanels,
                   layouts: parsedLayouts,
@@ -658,12 +664,9 @@ const Dashboard = () => {
             });
             
             if (!newProfiles['default']) {
-              newProfiles['default'] = { id: 'default', name: DEFAULT_PROFILE_NAME, panels: [...DEFAULT_PANELS], layouts: DEFAULT_GRID_LAYOUTS, isEditable: false };
+              newProfiles['default'] = { id: 'default', name: DEFAULT_PROFILE_NAME, panels: [...DEFAULT_PANELS], layouts: DEFAULT_GRID_LAYOUTS, isEditable: true };
             }
             const profilesWithPresets = withPresets(newProfiles);
-            // Preset tidak disimpan di DB; pilihan terakhir diingat di browser.
-            const savedPreset = localStorage.getItem('tmu_active_preset');
-            if (activeId === 'default' && savedPreset && profilesWithPresets[savedPreset]) activeId = savedPreset;
 
             setProfilesState({
               activeProfileId: activeId,
@@ -1049,8 +1052,10 @@ const Dashboard = () => {
         };
       });
       
-      // Preset hanya hidup di memori; jangan pernah ditulis ke DB.
-      if (canPersist(currentProf)) saveLayoutToApi(activeId, currentProf.name, { panels, layouts: gridLayouts }, true);
+      // Auto-save changes to user_layouts in database
+      if (canPersist(currentProf)) {
+        saveLayoutToApi(currentProf.dbId || activeId, currentProf.name, { panels, layouts: gridLayouts }, true);
+      }
     }, 2000);
   }, [panels, gridLayouts, profilesState]);
 
@@ -1957,13 +1962,7 @@ const Dashboard = () => {
                         key={p.id}
                         onClick={() => {
                           setProfilesState(prev => ({ ...prev, activeProfileId: p.id }));
-                          if (isPresetId(p.id) || p.id === 'default') {
-                            localStorage.setItem('tmu_active_preset', p.id);
-                            setActiveLayoutInApi('default'); // lepaskan profil kustom yang aktif di DB
-                          } else {
-                            localStorage.removeItem('tmu_active_preset');
-                            setActiveLayoutInApi(p.id);
-                          }
+                          setActiveLayoutInApi(p.dbId || p.id);
                           setIsProfileDropdownOpen(false);
                         }}
                         className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between group transition-colors ${isActive ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300' : 'text-[#172b4d] dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'}`}

@@ -88,16 +88,34 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ---------- nama kustom dan foto (tabel trafo) ----------
+// ---------- nama kustom dan foto (tabel transformer_data) ----------
 
 router.put("/:id/name", requireRole("admin", "superuser"), async (req, res) => {
   const name = String(req.body?.name || "").trim();
   if (!name) return res.status(400).json({ error: "Name is required" });
   try {
+    const trafoId = trafoIdParam(req);
+    const before = await tm.getTransformerData(req.db, trafoId);
     await req.db.execute(
-      "INSERT INTO trafo (id, nama) VALUES (?, ?) ON DUPLICATE KEY UPDATE nama = VALUES(nama)",
-      [trafoIdParam(req), name],
+      "UPDATE transformer_data SET trafoSerialNo = ? WHERE trafoId = ?",
+      [name, trafoId],
     );
+    const master = await getMasterDb();
+    const company = await getCompanyByDb(master, req.dbName);
+    logActivity(master, {
+      userId: req.user.id,
+      companyId: company?.company_id,
+      username: req.user.username,
+      type: "UPDATE_TRANSFORMER_DATA",
+      description: `Updated transformer name for ${name}`,
+      module: "Transformer Data",
+      trafoId,
+      trafoSerialNo: name,
+      oldValue: before ? { trafoSerialNo: before.trafoSerialNo } : null,
+      newValue: { trafoSerialNo: name },
+      ip: req.ip || req.headers["x-forwarded-for"],
+      userAgent: req.headers["user-agent"],
+    });
     res.json({ success: true, message: "Name updated successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -109,10 +127,10 @@ router.post("/:id/image", requireRole("admin", "superuser"), upload.single("imag
   try {
     const imageUrl = await uploadToCloudinary(req.file);
     await req.db.execute(
-      "INSERT INTO trafo (id, image_url) VALUES (?, ?) ON DUPLICATE KEY UPDATE image_url = VALUES(image_url)",
-      [trafoIdParam(req), imageUrl],
+      "UPDATE transformer_data SET imageFileName = ? WHERE trafoId = ?",
+      [imageUrl, trafoIdParam(req)],
     );
-    res.json({ success: true, imageUrl, message: "Image uploaded to Cloudinary successfully" });
+    res.json({ success: true, imageFileName: imageUrl, imageUrl, message: "Image uploaded to Cloudinary successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -120,10 +138,143 @@ router.post("/:id/image", requireRole("admin", "superuser"), upload.single("imag
 
 router.delete("/:id/image", requireRole("admin", "superuser"), async (req, res) => {
   try {
-    await req.db.execute("UPDATE trafo SET image_url = NULL WHERE id = ?", [trafoIdParam(req)]);
+    await req.db.execute("UPDATE transformer_data SET imageFileName = NULL WHERE trafoId = ?", [trafoIdParam(req)]);
     res.json({ success: true, message: "Image reset successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ---------- instantaneous report ----------
+
+router.get("/:id/instantaneous", async (req, res) => {
+  const trafoId = trafoIdParam(req);
+  try {
+    const [td, statusRow, tripRow] = await Promise.all([
+      tm.getTransformerData(req.db, trafoId),
+      tm.getStatusRow(req.db, trafoId),
+      tm.getTripStatusRow(req.db, trafoId),
+    ]);
+    if (!td) return res.status(404).json({ error: "Transformer not found" });
+
+    let [readings] = await req.db.query(
+      "SELECT * FROM temp_reading_data_realtime WHERE trafoId = ? ORDER BY timestamp DESC, data_id DESC LIMIT 1",
+      [trafoId]
+    );
+    if (!readings || readings.length === 0) {
+      [readings] = await req.db.query(
+        "SELECT * FROM reading_data WHERE trafoId = ? ORDER BY timestamp DESC, data_id DESC LIMIT 1",
+        [trafoId]
+      );
+    }
+    if (!readings || readings.length === 0) {
+      [readings] = await req.db.query(
+        "SELECT * FROM temp_instantaneous_report_data ORDER BY timestamp DESC LIMIT 1"
+      );
+    }
+
+    const r = readings && readings[0] ? readings[0] : {};
+
+    let overallStatus = "SAFE";
+    if (statusRow) {
+      const vals = Object.values(statusRow);
+      if (vals.some((v) => v === 1 || v === 2)) {
+        overallStatus = "ALARM";
+      }
+    }
+    if (tripRow) {
+      const vals = Object.values(tripRow);
+      if (vals.some((v) => v === 1)) {
+        overallStatus = "TRIP";
+      }
+    }
+
+    const powerQuality = [
+      { param: "THDV1", label: "THD Voltage Phase 1", value: r.THDV1 ?? null, unit: "%" },
+      { param: "THDV2", label: "THD Voltage Phase 2", value: r.THDV2 ?? null, unit: "%" },
+      { param: "THDV3", label: "THD Voltage Phase 3", value: r.THDV3 ?? null, unit: "%" },
+      { param: "THDI1", label: "THD Current Phase 1", value: r.THDI1 ?? null, unit: "%" },
+      { param: "THDI2", label: "THD Current Phase 2", value: r.THDI2 ?? null, unit: "%" },
+      { param: "THDI3", label: "THD Current Phase 3", value: r.THDI3 ?? null, unit: "%" },
+      { param: "Pa", label: "Active Power Phase A", value: r.Pa ?? null, unit: "W" },
+      { param: "Pb", label: "Active Power Phase B", value: r.Pb ?? null, unit: "W" },
+      { param: "Pc", label: "Active Power Phase C", value: r.Pc ?? null, unit: "W" },
+      { param: "Psig", label: "Total Active Power (Σ)", value: r.Psig ?? null, unit: "W" },
+      { param: "Qa", label: "Reactive Power Phase A", value: r.Qa ?? null, unit: "VAR" },
+      { param: "Qb", label: "Reactive Power Phase B", value: r.Qb ?? null, unit: "VAR" },
+      { param: "Qc", label: "Reactive Power Phase C", value: r.Qc ?? null, unit: "VAR" },
+      { param: "Qsig", label: "Total Reactive Power (Σ)", value: r.Qsig ?? null, unit: "VAR" },
+      { param: "Sa", label: "Apparent Power Phase A", value: r.Sa ?? null, unit: "VA" },
+      { param: "Sb", label: "Apparent Power Phase B", value: r.Sb ?? null, unit: "VA" },
+      { param: "Sc", label: "Apparent Power Phase C", value: r.Sc ?? null, unit: "VA" },
+      { param: "Ssig", label: "Total Apparent Power (Σ)", value: r.Ssig ?? null, unit: "VA" },
+      { param: "PFa", label: "Power Factor Phase A", value: r.PFa ?? null, unit: "" },
+      { param: "PFb", label: "Power Factor Phase B", value: r.PFb ?? null, unit: "" },
+      { param: "PFc", label: "Power Factor Phase C", value: r.PFc ?? null, unit: "" },
+      { param: "PFsig", label: "Total Power Factor", value: r.PFsig ?? null, unit: "" },
+      { param: "KRateda", label: "K-Factor Phase A", value: r.KRateda ?? null, unit: "" },
+      { param: "KRatedb", label: "K-Factor Phase B", value: r.KRatedb ?? null, unit: "" },
+      { param: "KRatedc", label: "K-Factor Phase C", value: r.KRatedc ?? null, unit: "" },
+      { param: "deRatinga", label: "De-Rating Phase A", value: r.deRatinga ?? null, unit: "%" },
+      { param: "deRatingb", label: "De-Rating Phase B", value: r.deRatingb ?? null, unit: "%" },
+      { param: "deRatingc", label: "De-Rating Phase C", value: r.deRatingc ?? null, unit: "%" },
+    ];
+
+    const electrical = [
+      { param: "Van", label: "Voltage Phase-Neutral A-N", value: r.Van ?? null, unit: "V" },
+      { param: "Vbn", label: "Voltage Phase-Neutral B-N", value: r.Vbn ?? null, unit: "V" },
+      { param: "Vcn", label: "Voltage Phase-Neutral C-N", value: r.Vcn ?? null, unit: "V" },
+      { param: "Vab", label: "Voltage Phase-Phase A-B", value: r.Vab ?? null, unit: "V" },
+      { param: "Vbc", label: "Voltage Phase-Phase B-C", value: r.Vbc ?? null, unit: "V" },
+      { param: "Vca", label: "Voltage Phase-Phase C-A", value: r.Vca ?? null, unit: "V" },
+      { param: "Ia", label: "Current Phase A", value: r.Ia ?? null, unit: "A" },
+      { param: "Ib", label: "Current Phase B", value: r.Ib ?? null, unit: "A" },
+      { param: "Ic", label: "Current Phase C", value: r.Ic ?? null, unit: "A" },
+      { param: "Iavg", label: "Average Current", value: r.Iavg ?? null, unit: "A" },
+      { param: "Ineutral", label: "Neutral Current", value: r.Ineutral ?? null, unit: "A" },
+      { param: "THDV1", label: "THD Voltage Phase 1", value: r.THDV1 ?? null, unit: "%" },
+      { param: "THDV2", label: "THD Voltage Phase 2", value: r.THDV2 ?? null, unit: "%" },
+      { param: "THDV3", label: "THD Voltage Phase 3", value: r.THDV3 ?? null, unit: "%" },
+      { param: "THDI1", label: "THD Current Phase 1", value: r.THDI1 ?? null, unit: "%" },
+      { param: "THDI2", label: "THD Current Phase 2", value: r.THDI2 ?? null, unit: "%" },
+      { param: "THDI3", label: "THD Current Phase 3", value: r.THDI3 ?? null, unit: "%" },
+      { param: "kWhInp", label: "Active Energy In", value: r.kWhInp ?? 0, unit: "kWh" },
+      { param: "kWhOut", label: "Active Energy Out", value: r.kWhOut ?? r.kWh ?? null, unit: "kWh" },
+      { param: "kVARhInp", label: "Reactive Energy In", value: r.kVARhInp ?? 0, unit: "kVARh" },
+      { param: "kVARhOut", label: "Reactive Energy Out", value: r.kVARhOut ?? r.kVARh ?? null, unit: "kVARh" },
+    ];
+
+    const physical = [
+      { param: "BusTemp1", label: "Busbar Temp Phase 1", value: r.BusTemp1 ?? null, unit: "°C" },
+      { param: "BusTemp2", label: "Busbar Temp Phase 2", value: r.BusTemp2 ?? null, unit: "°C" },
+      { param: "BusTemp3", label: "Busbar Temp Phase 3", value: r.BusTemp3 ?? null, unit: "°C" },
+      { param: "OilTemp", label: "Top Oil Temperature", value: r.OilTemp ?? null, unit: "°C" },
+      { param: "WTITemp1", label: "WTI Temp Phase 1", value: r.WTITemp1 ?? null, unit: "°C" },
+      { param: "WTITemp2", label: "WTI Temp Phase 2", value: r.WTITemp2 ?? null, unit: "°C" },
+      { param: "WTITemp3", label: "WTI Temp Phase 3", value: r.WTITemp3 ?? null, unit: "°C" },
+      { param: "Pressure", label: "Tank Pressure", value: r.Press ?? r.Pressure ?? null, unit: "Bar" },
+    ];
+
+    res.json({
+      success: true,
+      trafo: {
+        id: td.trafoId,
+        serial_no: td.trafoSerialNo,
+        name: td.trafoSerialNo,
+        device_serial: td.raspiSerialNo,
+        lastSync: r.timestamp || td.lastSyncTimestamp,
+        overallStatus,
+      },
+      categories: {
+        powerQuality,
+        electrical,
+        physical,
+      },
+      raw: r,
+    });
+  } catch (error) {
+    console.error("Instantaneous report error:", error);
+    res.status(500).json({ error: "Server error generating instantaneous report" });
   }
 });
 
@@ -158,12 +309,18 @@ router.put("/:id/data", requireRole("admin", "superuser"), async (req, res) => {
     const master = await getMasterDb();
     const company = await getCompanyByDb(master, req.dbName);
     logActivity(master, {
-      userId: req.user.id, companyId: company?.company_id, username: req.user.username,
-      type: "TRANSFORMER_DATA_UPDATE", description: `Ubah nameplate trafo ${trafoId}`, module: "transformer-data",
-      trafoId, trafoSerialNo: after.trafoSerialNo,
-      oldValue: Object.fromEntries(keys.map((k) => [k, before[k]])),
-      newValue: Object.fromEntries(keys.map((k) => [k, after[k]])),
-      ip: req.ip, userAgent: req.headers["user-agent"],
+      userId: req.user.id,
+      companyId: company?.company_id,
+      username: req.user.username,
+      type: "UPDATE_TRANSFORMER_DATA",
+      description: `Updated transformer data for ${after.trafoSerialNo || trafoId}`,
+      module: "Transformer Data",
+      trafoId,
+      trafoSerialNo: after.trafoSerialNo,
+      oldValue: before,
+      newValue: after,
+      ip: req.ip || req.headers["x-forwarded-for"],
+      userAgent: req.headers["user-agent"],
     });
     res.json({ success: true, data: after, pushed });
   } catch (error) {

@@ -4,6 +4,7 @@ const { getMasterDb } = require("../utils/db");
 const { requireRole } = require("../utils/authMiddleware");
 const { makeSalt, hashPassword } = require("../utils/userAuth");
 const { listUsersByCompany } = require("../utils/masterModel");
+const { logActivity } = require("../utils/activityLog");
 const formatPhoneNumber = require("../utils/phoneFormatter");
 
 router.use(requireRole("superuser"), async (req, res, next) => {
@@ -27,6 +28,34 @@ async function assertUnique(masterDb, field, value, exceptId = null) {
   return rows.length > 0 ? `${FIELD_LABEL[field]} is already used by another user` : null;
 }
 
+router.get("/activity-logs", async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    let query = `
+      SELECT log_id, user_id, company_id, username, activity_type, activity_description, 
+             module, trafo_id, trafo_serial_no, old_value, new_value, ip_address, user_agent, created_at 
+      FROM user_activity_log 
+      WHERE (company_id = ? OR company_id = 0 OR company_id IS NULL)
+    `;
+    const params = [req.user.companyId || 1];
+    if (startDate) {
+      query += ` AND created_at >= ?`;
+      params.push(`${startDate} 00:00:00`);
+    }
+    if (endDate) {
+      query += ` AND created_at <= ?`;
+      params.push(`${endDate} 23:59:59`);
+    }
+    query += ` ORDER BY log_id DESC LIMIT 1000`;
+
+    const [rows] = await req.masterDb.execute(query, params);
+    res.json({ success: true, logs: rows });
+  } catch (error) {
+    console.error("Failed to fetch activity logs:", error);
+    res.status(500).json({ error: "Server error: " + error.message });
+  }
+});
+
 router.post("/", async (req, res) => {
   try {
     let { username, password, nomor_telpon, email, role } = req.body || {};
@@ -44,6 +73,19 @@ router.post("/", async (req, res) => {
       "INSERT INTO user (username, password, role, salt, company_id, status, email, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       [username, hashPassword(password, salt), status, salt, req.user.companyId, status, email, nomor_telpon],
     );
+
+    logActivity(req.masterDb, {
+      userId: req.user.id,
+      companyId: req.user.companyId,
+      username: req.user.username,
+      type: "USER_CREATE",
+      description: `Created user ${username}`,
+      module: "Users",
+      newValue: { username, role: status === 9 ? "superuser" : "user", email, phone: nomor_telpon },
+      ip: req.ip || req.headers["x-forwarded-for"],
+      userAgent: req.headers["user-agent"],
+    });
+
     res.status(201).json({ message: "User created successfully!" });
   } catch (error) {
     console.error(error);
@@ -68,7 +110,7 @@ router.put("/:id", async (req, res) => {
 
   try {
     const [existing] = await req.masterDb.execute(
-      "SELECT user_id FROM user WHERE user_id = ? AND status != 1 AND company_id = ? LIMIT 1",
+      "SELECT user_id, username FROM user WHERE user_id = ? AND status != 1 AND company_id = ? LIMIT 1",
       [id, req.user.companyId],
     );
     if (existing.length === 0) return res.status(404).json({ error: "User not found in your company" });
@@ -99,6 +141,19 @@ router.put("/:id", async (req, res) => {
       `UPDATE user SET ${updates.join(", ")} WHERE user_id = ? AND company_id = ?`,
       params,
     );
+
+    logActivity(req.masterDb, {
+      userId: req.user.id,
+      companyId: req.user.companyId,
+      username: req.user.username,
+      type: "USER_UPDATE",
+      description: `Updated user ${username || existing[0]?.username || id}`,
+      module: "Users",
+      newValue: { id, username: username || existing[0]?.username, role, email, phone: nomor_telpon, passwordChanged: !!password },
+      ip: req.ip || req.headers["x-forwarded-for"],
+      userAgent: req.headers["user-agent"],
+    });
+
     res.json({ message: "User updated successfully" });
   } catch (error) {
     console.error(error);
@@ -109,11 +164,28 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);
   try {
+    const [existing] = await req.masterDb.execute(
+      "SELECT user_id, username FROM user WHERE user_id = ? AND status != 1 AND company_id = ? LIMIT 1",
+      [id, req.user.companyId],
+    );
+
     const [r] = await req.masterDb.execute(
       "DELETE FROM user WHERE user_id = ? AND status != 1 AND company_id = ?",
       [id, req.user.companyId],
     );
     if (r.affectedRows === 0) return res.status(404).json({ error: "User not found in your company" });
+
+    logActivity(req.masterDb, {
+      userId: req.user.id,
+      companyId: req.user.companyId,
+      username: req.user.username,
+      type: "USER_DELETE",
+      description: `Deleted user ${existing[0]?.username || id}`,
+      module: "Users",
+      ip: req.ip || req.headers["x-forwarded-for"],
+      userAgent: req.headers["user-agent"],
+    });
+
     res.json({ message: "User deleted successfully" });
   } catch (error) {
     console.error(error);

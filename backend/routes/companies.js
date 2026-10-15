@@ -43,8 +43,8 @@ router.get("/", async (req, res) => {
         try {
           const db = await getDbConnection(c.nama_db);
           const [trafos] = await db.query(
-            `SELECT td.trafoId AS id, COALESCE(t.nama, td.trafoSerialNo, CONCAT('Trafo ', td.trafoId)) AS nama
-             FROM transformer_data td LEFT JOIN trafo t ON t.id = td.trafoId ORDER BY td.trafoId`,
+            `SELECT td.trafoId AS id, COALESCE(td.trafoSerialNo, CONCAT('Trafo ', td.trafoId)) AS nama, td.imageFileName
+             FROM transformer_data td ORDER BY td.trafoId`,
           );
           c.trafos = trafos;
         } catch (e) {

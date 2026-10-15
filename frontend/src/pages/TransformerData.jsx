@@ -93,8 +93,8 @@ const TransformerData = () => {
       })
       .then(res => res.json())
       .then(data => {
-        if (data && data.image_url) {
-          setTrafoImage(data.image_url);
+        if (data && (data.imageFileName || data.image_url)) {
+          setTrafoImage(data.imageFileName || data.image_url);
         }
         if (data && data.nama) {
           setTrafoName(data.nama);

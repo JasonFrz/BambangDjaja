@@ -206,7 +206,16 @@ router.get('/report', async (req, res) => {
     oil.alarm_triggers = Number(fl.alarm_triggers || 0);
     oil.trip_triggers = Number(fl.trip_triggers || 0);
 
-    res.json({ electrical, oil, trafoId: req.trafoId });
+    res.json({ 
+      electrical, 
+      oil, 
+      trafoId: req.trafoId,
+      trafo: {
+        id: req.trafoId,
+        name: td?.trafoSerialNo,
+        serialNo: td?.trafoSerialNo
+      }
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error generating report' });

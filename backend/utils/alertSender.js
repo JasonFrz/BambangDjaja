@@ -12,7 +12,7 @@ const _deps = {
 async function getTrafoName(db, trafoId) {
   try {
     const [rows] = await db.execute(
-      'SELECT COALESCE(t.nama, td.trafoSerialNo) AS nama FROM transformer_data td LEFT JOIN trafo t ON t.id = td.trafoId WHERE td.trafoId = ? LIMIT 1', [trafoId]);
+      'SELECT td.trafoSerialNo AS nama FROM transformer_data td WHERE td.trafoId = ? LIMIT 1', [trafoId]);
     if (rows.length > 0 && rows[0].nama) return String(rows[0].nama).trim();
   } catch (e) { /* abaikan, pakai default */ }
   return `Trafo ${trafoId}`;

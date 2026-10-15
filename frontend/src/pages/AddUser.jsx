@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useApi } from '../contexts/ApiContext';
 import { useDialog } from '../contexts/DialogContext';
 import EnergyLoader from '../components/EnergyLoader';
-import { Users, UserPlus, Key, ShieldAlert, X, CheckCircle2, Edit, Trash2, Phone } from 'lucide-react';
+import UserActivityLog from '../components/UserActivityLog';
+import { Users, UserPlus, Key, ShieldAlert, X, CheckCircle2, Edit, Trash2, Phone, History } from 'lucide-react';
 
 const AddUser = () => {
   const { confirm } = useDialog();
+  const [activeMainTab, setActiveMainTab] = useState('users'); // 'users' | 'activity'
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
 
@@ -179,28 +181,86 @@ const AddUser = () => {
   if (currentRole !== 'admin') return null;
 
   return (
-    <div className="max-w-6xl mx-auto w-full mt-4 md:mt-8 space-y-6">
+    <div className="max-w-6xl mx-auto w-full mt-2 sm:mt-4 space-y-4 sm:space-y-6 animate-[fadeIn_0.3s_ease-out]">
       
-      <div className="flex justify-between items-end">
-        <div>
-          <h1 className="text-2xl font-bold text-[#172b4d] dark:text-white flex items-center gap-2">
-            <Users size={24} className="text-[#0052cc] dark:text-[#4c9aff]" />
-            Manage Users
-          </h1>
-          <p className="text-[#5e6c84] dark:text-[#94a3b8] text-sm mt-1">
-            View users, mapped company data, and manage credentials.
-          </p>
+      {/* ========================================================= */}
+      {/* 1. HERO HEADER BANNER (Matching Performance / Instantaneous Report) */}
+      {/* ========================================================= */}
+      <div className="relative rounded-xl sm:rounded-2xl md:rounded-3xl bg-gradient-to-br from-white via-white to-indigo-50/40 dark:from-[#151521] dark:via-[#151521] dark:to-[#1a1b2e] border border-[#dfe1e6]/80 dark:border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_8px_25px_rgba(0,0,0,0.2)] p-3 sm:p-4 md:p-5 shrink-0 z-20">
+        
+        {/* Glow aksen latar belakang terisolasi */}
+        <div className="absolute inset-0 overflow-hidden rounded-xl sm:rounded-2xl md:rounded-3xl pointer-events-none">
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 sm:w-64 h-48 sm:h-64 bg-indigo-500/10 dark:bg-indigo-500/15 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-1/3 -mb-20 w-60 sm:w-80 h-32 sm:h-40 bg-blue-500/10 dark:blue-500/15 rounded-full blur-3xl" />
         </div>
-        {!showCreateForm && !changingPasswordUser && (
-          <button 
-            onClick={() => setShowCreateForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#0052cc] hover:bg-[#0047b3] text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
-          >
-            <UserPlus size={16} />
-            Create User
-          </button>
-        )}
+
+        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+          
+          {/* Judul: Manage Users */}
+          <div className="flex flex-col min-w-0">
+            <h1 className="text-base sm:text-lg md:text-2xl font-black text-[#172b4d] dark:text-white font-heading tracking-tight truncate">
+              Manage Users
+            </h1>
+            <p className="text-[11px] sm:text-xs md:text-sm text-[#5e6c84] dark:text-[#94a3b8] mt-0.5">
+              View users, mapped company data, manage credentials, and track activity logs.
+            </p>
+          </div>
+
+          {/* Actions: Create User & Tab Switcher Pills */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto shrink-0">
+            {!showCreateForm && !changingPasswordUser && (
+              <button 
+                onClick={() => {
+                  setActiveMainTab('users');
+                  setShowCreateForm(true);
+                }}
+                className="flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-xs hover:shadow-md active:scale-95 w-full sm:w-auto"
+              >
+                <UserPlus size={16} />
+                <span>Create User</span>
+              </button>
+            )}
+
+            {/* Tab Switcher Pills */}
+            <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-white/5 rounded-xl border border-gray-200/80 dark:border-white/10 w-full sm:w-auto">
+              <button
+                onClick={() => setActiveMainTab('users')}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  activeMainTab === 'users'
+                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-sm sm:shadow-md shadow-indigo-500/25'
+                    : 'text-[#5e6c84] dark:text-[#94a3b8] hover:text-[#172b4d] dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/5'
+                }`}
+              >
+                <Users size={15} />
+                <span>User Accounts</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeMainTab === 'users' 
+                    ? 'bg-white/20 text-white' 
+                    : 'bg-gray-200 dark:bg-white/10 text-gray-600 dark:text-gray-400'
+                }`}>
+                  {users.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveMainTab('activity')}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  activeMainTab === 'activity'
+                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-sm sm:shadow-md shadow-indigo-500/25'
+                    : 'text-[#5e6c84] dark:text-[#94a3b8] hover:text-[#172b4d] dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/5'
+                }`}
+              >
+                <History size={15} />
+                <span>Activity Log</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
       </div>
+
+      {activeMainTab === 'users' ? (
+        <>
 
       {error && (
         <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 rounded-xl text-red-600 dark:text-red-400 text-sm flex items-center gap-2">
@@ -470,6 +530,10 @@ const AddUser = () => {
           </table>
         </div>
       </div>
+    </>
+  ) : (
+    <UserActivityLog />
+  )}
       
     </div>
   );

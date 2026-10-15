@@ -9,6 +9,9 @@ import ManageUsersSuperuser from './pages/ManageUsersSuperuser';
 import Profile from './pages/Profile';
 import TransformerData from './pages/TransformerData';
 import PerformanceReport from './pages/PerformanceReport';
+import InstantaneousReport from './pages/InstantaneousReport';
+import FailureReport from './pages/FailureReport';
+import AnalysisReport from './pages/AnalysisReport';
 import Settings from './pages/Settings';
 import TransformerSelection from './pages/TransformerSelection';
 
@@ -71,6 +74,9 @@ function App() {
                 <Route path="manage-users" element={<ManageUsersSuperuser />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="performance-report" element={<PerformanceReport />} />
+                <Route path="instantaneous-report" element={<InstantaneousReport />} />
+                <Route path="failure-report" element={<FailureReport />} />
+                <Route path="analysis" element={<AnalysisReport />} />
                 <Route path="settings" element={<Settings />} />
 
               </Route>

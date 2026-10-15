@@ -47,9 +47,9 @@ async function resolveCompanyKey() {
   const mysql = require('mysql2/promise');
   const { getDbConfig, getMasterDbName } = require('../utils/db');
   const c = await mysql.createConnection(getDbConfig(getMasterDbName()));
-  const [rows] = await c.query("SELECT company_key FROM company WHERE database_name = 'db_demo' LIMIT 1");
+  const [rows] = await c.query("SELECT company_key FROM company WHERE database_name IN ('base_tmu_company_table_v2', 'db_demo') OR status = 1 ORDER BY (database_name = 'base_tmu_company_table_v2') DESC LIMIT 1");
   await c.end();
-  if (!rows[0]) throw new Error('company db_demo tidak ditemukan; jalankan seed_demo.js');
+  if (!rows[0]) throw new Error('company tidak ditemukan di master DB; pastikan tabel company sudah diisi');
   return rows[0].company_key;
 }
 
