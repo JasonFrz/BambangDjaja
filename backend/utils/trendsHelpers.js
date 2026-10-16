@@ -121,10 +121,32 @@ function failureToEvent(row) {
   };
 }
 
+function failureLevel(failureType) {
+  const t = String(failureType || "")
+    .trim()
+    .toLowerCase();
+  if (t.startsWith("extreme") || t.includes("trip")) return "trip";
+  if (t === "low" || t === "high" || t.includes("alarm")) return "alarm";
+  return "other";
+}
+
+async function getFailures(db, trafoId, start, end) {
+  const [rows] = await db.query(
+    `SELECT rowId, failure_id, time_start, duration, failure_type, parameter, parameterValue
+         FROM failure_log
+        WHERE trafoId = ? AND time_start >= ? AND time_start <= ?
+        ORDER BY time_start DESC`,
+    [trafoId, start, end],
+  );
+  return rows.map((r) => ({ ...r, level: failureLevel(r.failure_type) }));
+}
+
 module.exports = {
   checkClosestData,
   oilPoint,
   evaluateMetric,
   healthScore,
   failureToEvent,
+  failureLevel,
+  getFailures,
 };

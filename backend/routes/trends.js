@@ -222,6 +222,33 @@ router.get('/report', async (req, res) => {
   }
 });
 
+// Failure Report: start/end berupa waktu ISO (frontend sudah mengubah WIB ke UTC).
+router.get('/failures', async (req, res) => {
+  const start = new Date(req.query.start);
+  const end = new Date(req.query.end);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return res.status(400).json({ error: 'Parameter start dan end wajib berupa tanggal yang valid' });
+  }
+  if (start > end) {
+    return res.status(400).json({ error: 'Start Date tidak boleh lebih besar dari End Date.' });
+  }
+  try {
+    const [failures, td] = await Promise.all([
+      th.getFailures(req.db, req.trafoId, start, end),
+      tm.getTransformerData(req.db, req.trafoId),
+    ]);
+    res.json({
+      success: true,
+      trafoId: req.trafoId,
+      trafo: { id: req.trafoId, name: td?.trafoSerialNo, serialNo: td?.trafoSerialNo },
+      failures,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Gagal memuat failure report' });
+  }
+});
+
 router.get('/thi', async (req, res) => {
   try {
     const [latest, td, settings, status] = await Promise.all([

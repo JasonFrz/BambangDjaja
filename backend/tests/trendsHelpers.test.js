@@ -41,3 +41,59 @@ test('failureToEvent memetakan failure_log ke event panel', () => {
   assert.match(e.msg, /High Alarm.*72\.5/);
   assert.equal(th.failureToEvent({ rowId: 6, failure_type: 'High Trip', parameter: 'Vab' }).level, 'CRITICAL');
 });
+
+// --- Failure Report ---
+// Raspi (tmu-v2-standard/data_handler.py:197): status Low/High = alarm, Extreme Low/High = trip.
+
+test('failureLevel: Low dan High dari Raspi = alarm', () => {
+  assert.equal(th.failureLevel('Low'), 'alarm');
+  assert.equal(th.failureLevel('High'), 'alarm');
+});
+
+test('failureLevel: Extreme Low dan Extreme High dari Raspi = trip', () => {
+  assert.equal(th.failureLevel('Extreme Low'), 'trip');
+  assert.equal(th.failureLevel('Extreme High'), 'trip');
+});
+
+test('failureLevel: label yang menyebut Alarm/Trip (data demo) tetap dikenali', () => {
+  assert.equal(th.failureLevel('High Alarm'), 'alarm');
+  assert.equal(th.failureLevel('Low Trip'), 'trip');
+});
+
+test('failureLevel: tidak peka huruf besar/kecil dan spasi di tepi', () => {
+  assert.equal(th.failureLevel(' extreme high '), 'trip');
+  assert.equal(th.failureLevel('HIGH'), 'alarm');
+});
+
+test('failureLevel: jenis lain (Gas Fault, Sudden Pressure, kosong) = other', () => {
+  assert.equal(th.failureLevel('Gas Fault'), 'other');
+  assert.equal(th.failureLevel('Sudden Pressure'), 'other');
+  assert.equal(th.failureLevel(''), 'other');
+  assert.equal(th.failureLevel(null), 'other');
+});
+
+test('getFailures: ambil failure_log satu trafo dalam rentang, terbaru dulu', async () => {
+  const db = makeFakeDb(() => []);
+  const start = new Date('2026-10-15T17:00:00Z');
+  const end = new Date('2026-10-16T16:59:59Z');
+  await th.getFailures(db, 2, start, end);
+  assert.equal(db.calls.length, 1);
+  const { sql, params } = db.calls[0];
+  assert.match(sql, /FROM failure_log/);
+  assert.match(sql, /trafoId = \?/);
+  assert.match(sql, /time_start >= \?/);
+  assert.match(sql, /time_start <= \?/);
+  assert.match(sql, /ORDER BY time_start DESC/);
+  assert.deepEqual(params, [2, start, end]);
+});
+
+test('getFailures: setiap baris diberi level dari failureLevel', async () => {
+  const db = makeFakeDb(() => [
+    { rowId: 1, failure_type: 'Extreme High', parameter: 'OilTemp' },
+    { rowId: 2, failure_type: 'Low', parameter: 'Vab' },
+    { rowId: 3, failure_type: 'Gas Fault', parameter: 'OilLevel' },
+  ]);
+  const rows = await th.getFailures(db, 1, new Date(), new Date());
+  assert.deepEqual(rows.map((r) => r.level), ['trip', 'alarm', 'other']);
+  assert.equal(rows[0].parameter, 'OilTemp');
+});

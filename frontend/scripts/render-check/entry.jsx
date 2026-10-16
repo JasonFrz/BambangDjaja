@@ -7,6 +7,7 @@ import { PhysicalStatusPanel } from 'SRC/components/visualizations/PhysicalStatu
 import { OilQualityPanel } from 'SRC/components/visualizations/OilQualityPanel.jsx';
 import { ElectricalStatusPanel } from 'SRC/components/visualizations/ElectricalStatusPanel.jsx';
 import { DeviceStateNotice } from 'SRC/components/DeviceStateBanner.jsx';
+import FailureReport from 'SRC/pages/FailureReport.jsx';
 import { PRESETS } from 'SRC/config/presets.js';
 import { METRICS } from 'SRC/config/metrics.js';
 import { canPersist } from 'SRC/config/presets.js';
@@ -20,6 +21,9 @@ const ALL_SAFE = { status: { success: true, hasStatus: true, allSafe: true, coun
 const OLTC = { physical: { ...FIX.physical, tap: { type: 'OLTC', display: 5, plus: 8, minus: 8 } } };
 const OIL_POOR = { 'oil-quality': { success: true, available: true, waterActivity: 0.2, oilBDV: 55, oilCondition: 'Poor' } };
 const NO_STATUS = { status: { success: true, hasStatus: false, allSafe: true, counts: { alarm: 0, trip: 0 }, items: [], tripActive: [] } };
+
+// Halaman report membaca sessionStorage saat render; di Node belum ada.
+if (!globalThis.sessionStorage) globalThis.sessionStorage = { getItem: () => null };
 
 // [nama, elemen, teks yang harus ada, override fixture, teks yang tidak boleh ada]
 const cases = [
@@ -36,6 +40,9 @@ const cases = [
   ['ElectricalStatusPanel', <ElectricalStatusPanel key="case-9" panel={{ id: 'x', title: 'Status Listrik' }} latestData={latest} isEditing={false} />, ['Vab', 'Current1', 'PF', 'Freq', 'Qa', 'Leading', 'Lagging', 'Unity']],
   ['DeviceStateNotice offline', <DeviceStateNotice key="case-10" state="offline" onRefresh={() => {}} />, ['Device is Offline', 'Refresh']],
   ['DeviceStateNotice nodata', <DeviceStateNotice key="case-11" state="nodata" onRefresh={() => {}} />, ['No Data Found For Today']],
+  ['FailureReport (ada alarm aktif)', <FailureReport key="case-12" />, ['Failure Report - TRF-001', 'Export', 'Start Date', 'Sedang aktif sekarang', 'Top Oil Temperature', 'High Alarm', 'bg-amber-400', 'Jam mulai dan durasi', 'Tidak ada failure pada periode ini'], undefined, ['Voltage Phase-Phase A-B', 'Tidak ada alarm/trip aktif']],
+  ['FailureReport (semua aman)', <FailureReport key="case-12b" />, ['Tidak ada alarm/trip aktif'], ALL_SAFE, ['Jam mulai dan durasi']],
+  ['FailureReport (tanpa data status)', <FailureReport key="case-12c" />, ['Belum ada data status dari Raspi'], NO_STATUS],
 ];
 
 const panelsOf = (k) => PRESETS[k].panels;
