@@ -29,13 +29,10 @@ test("patchMasterDb tidak mengubah apa pun kalau sudah ada", async () => {
 });
 
 test("patchCompanyDb menambah trafoId ke tabel temp dan index unik", async () => {
-  // semua tabel base_tmu ada, hanya tabel trafo (milik web) yang belum ada
-  const db = makeFakeDb((sql, params) =>
-    /SHOW TABLES/i.test(sql) && params[0] !== "trafo" ? [{ t: 1 }] : [],
-  );
+  // semua tabel base_tmu ada, kolom dan index belum ada
+  const db = makeFakeDb((sql) => (/SHOW TABLES/i.test(sql) ? [{ t: 1 }] : []));
   await patchCompanyDb(db);
   const sqls = alterCalls(db);
-  assert.ok(sqls.some((s) => /CREATE TABLE trafo/.test(s)), "tabel trafo dibuat");
   assert.ok(
     sqls.some((s) =>
       /ALTER TABLE `temp_reading_data_realtime` ADD COLUMN `trafoId`/.test(s),
@@ -66,11 +63,7 @@ test("patchCompanyDb menambah trafoId ke tabel temp dan index unik", async () =>
 test("patchCompanyDb melewati tabel yang tidak ada", async () => {
   const db = makeFakeDb(() => []);
   await patchCompanyDb(db);
-  // tabel trafo memang dibuat kalau belum ada; selain itu tidak boleh ada ALTER/CREATE
-  assert.deepEqual(
-    alterCalls(db).filter((s) => !/CREATE TABLE trafo/.test(s)),
-    [],
-  );
+  assert.deepEqual(alterCalls(db), []);
 });
 
 test("patchAllCompanies melanjutkan ke perusahaan lain kalau satu DB tidak ada", async () => {

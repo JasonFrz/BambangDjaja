@@ -6,17 +6,26 @@ const { raspiClients } = require("./raspiWebSocket");
 const ONLINE_WINDOW_SEC = 120;
 
 async function getTransformerData(db, trafoId) {
-  const [rows] = await db.execute("SELECT * FROM transformer_data WHERE trafoId = ? LIMIT 1", [trafoId]);
+  const [rows] = await db.execute(
+    "SELECT * FROM transformer_data WHERE trafoId = ? LIMIT 1",
+    [trafoId],
+  );
   return rows[0] || null;
 }
 
 async function getStatusRow(db, trafoId) {
-  const [rows] = await db.execute("SELECT * FROM transformer_status WHERE trafoId = ? LIMIT 1", [trafoId]);
+  const [rows] = await db.execute(
+    "SELECT * FROM transformer_status WHERE trafoId = ? LIMIT 1",
+    [trafoId],
+  );
   return rows[0] || null;
 }
 
 async function getTripStatusRow(db, trafoId) {
-  const [rows] = await db.execute("SELECT * FROM trip_status WHERE trafoId = ? LIMIT 1", [trafoId]);
+  const [rows] = await db.execute(
+    "SELECT * FROM trip_status WHERE trafoId = ? LIMIT 1",
+    [trafoId],
+  );
   return rows[0] || null;
 }
 
@@ -43,7 +52,8 @@ async function getOnlineMap(masterDb, serials) {
       [pending],
     );
     for (const r of rows) {
-      if (r.age !== null && r.age >= 0 && r.age <= ONLINE_WINDOW_SEC) result[r.raspi_serial_no] = true;
+      if (r.age !== null && r.age >= 0 && r.age <= ONLINE_WINDOW_SEC)
+        result[r.raspi_serial_no] = true;
     }
   }
   return result;
@@ -53,10 +63,13 @@ async function getOnlineMap(masterDb, serials) {
 async function listTrafos(db) {
   const [rows] = await db.query(
     `SELECT td.trafoId AS id, td.raspiSerialNo, td.trafoSerialNo, td.ratedPower, td.ratedLowVoltage, td.version,
-            td.imageFileName, td.lastSyncTimestamp
-     FROM transformer_data td ORDER BY td.trafoId ASC`,
+          td.vectorGroup, td.imageFileName, td.lastSyncTimestamp
+   FROM transformer_data td ORDER BY td.trafoId ASC`,
   );
-  const online = await getOnlineMap(await getMasterDb(), rows.map((r) => r.raspiSerialNo));
+  const online = await getOnlineMap(
+    await getMasterDb(),
+    rows.map((r) => r.raspiSerialNo),
+  );
   return rows.map((r) => ({
     id: r.id,
     nama: r.trafoSerialNo || `Trafo ${r.id}`,
@@ -66,6 +79,7 @@ async function listTrafos(db) {
     device_serial: r.raspiSerialNo || null,
     serial_no: r.trafoSerialNo || null,
     rated_power: r.ratedPower,
+    vector_group: r.vectorGroup,
     rated_low_voltage: r.ratedLowVoltage,
     tmu_version: r.version,
     created_at: r.lastSyncTimestamp || null,

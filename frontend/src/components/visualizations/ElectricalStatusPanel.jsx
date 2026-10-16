@@ -28,7 +28,7 @@ export const ElectricalStatusPanel = memo(({ panel, latestData, isEditing }) => 
 
   return (
     <div className="h-full w-full flex flex-col">
-      <div className={`flex items-center gap-3 mb-2 select-none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
+      <div className={`flex items-center gap-3 mb-2 -none shrink-0 ${isEditing ? 'cursor-move drag-handle' : ''}`}>
         <h3 className="font-medium text-[#172b4d] dark:text-white text-sm font-heading tracking-tight truncate flex-1">{panel.title}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
