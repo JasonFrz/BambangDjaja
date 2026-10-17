@@ -19,7 +19,7 @@ export const OilQualityPanel = memo(({ panel, latestData, isEditing }) => {
         <h3 className="font-medium text-[#172b4d] dark:text-white text-sm font-heading tracking-tight truncate flex-1">{panel.title}</h3>
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
-      {isLoading ? <div className="flex-1 flex items-center justify-center text-xs text-gray-400">Memuat...</div> : (
+      {isLoading ? <div className="flex-1 flex items-center justify-center text-xs text-gray-400">Loading...</div> : (
         <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-2">
           <Item label="Hydrogen (H2)" value={latestData && latestData.h2ppm} unit="ppm" />
           <Item label="Moisture" value={latestData && latestData.moisturePpm} unit="ppm" />
@@ -32,7 +32,7 @@ export const OilQualityPanel = memo(({ panel, latestData, isEditing }) => {
             </div>
           </>) : (
             <div className="col-span-2 rounded-xl border border-dashed border-gray-300 dark:border-white/10 p-3 text-[11px] text-gray-500 flex items-center gap-2">
-              <Droplets size={14} /> Water activity, BDV, dan kondisi oli belum tersedia di database ini (kolom tidak ada di skema `transformer_data`).
+              <Droplets size={14} /> Water activity, BDV, and oil condition metrics are not yet available in this database schema (`transformer_data`).
             </div>
           )}
         </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../contexts/ApiContext';
 import { Activity, ShieldAlert, X, CheckCircle2, Edit, Trash2, Plus, Zap } from 'lucide-react';
+import EnergyLoader from '../components/EnergyLoader';
 
 const ManageTransformers = () => {
   const [transformers, setTransformers] = useState([]);
@@ -301,8 +302,8 @@ const ManageTransformers = () => {
             <tbody className="divide-y divide-[#dfe1e6] dark:divide-white/10">
               {isLoadingTransformers ? (
                 <tr>
-                  <td colSpan="7" className="p-8 text-center text-[#5e6c84] dark:text-[#94a3b8]">
-                    Loading transformers...
+                  <td colSpan="7" className="p-12 text-center">
+                    <EnergyLoader text="Loading transformers..." />
                   </td>
                 </tr>
               ) : transformers.length === 0 ? (

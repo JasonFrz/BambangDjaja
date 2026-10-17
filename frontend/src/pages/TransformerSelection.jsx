@@ -57,7 +57,7 @@ const TransformerSelection = () => {
           const data = await response.json();
           if (isMounted) setTransformers(data);
         } else if (isFirst) {
-          if (isMounted) setError("Gagal mengambil data trafo dari server.");
+          if (isMounted) setError("Failed to fetch transformer data from server.");
         }
 
         try {
@@ -78,7 +78,7 @@ const TransformerSelection = () => {
           }
         } catch (_) {}
       } catch (err) {
-        if (isFirst && isMounted) setError("Koneksi ke server gagal.");
+        if (isFirst && isMounted) setError("Connection to server failed.");
       } finally {
         if (isFirst && isMounted) setLoading(false);
       }
@@ -133,7 +133,7 @@ const TransformerSelection = () => {
           ),
         );
       } else {
-        alert("Gagal mengubah nama trafo");
+        alert("Failed to rename transformer");
       }
     } catch (err) {
       console.error("Failed to rename trafo", err);
@@ -173,7 +173,7 @@ const TransformerSelection = () => {
           ...prev,
           [trafo.id]: {
             type: "success",
-            msg: data.message + (data.simulated ? " (Simulasi)" : ""),
+            msg: data.message + (data.simulated ? " (Simulated)" : ""),
           },
         }));
       } else {
@@ -181,7 +181,7 @@ const TransformerSelection = () => {
           ...prev,
           [trafo.id]: {
             type: "error",
-            msg: data.error || "Gagal mengirim pesan",
+            msg: data.error || "Failed to send message",
           },
         }));
 
@@ -192,7 +192,7 @@ const TransformerSelection = () => {
     } catch (err) {
       setWaStatus((prev) => ({
         ...prev,
-        [trafo.id]: { type: "error", msg: "Tidak dapat terhubung ke server" },
+        [trafo.id]: { type: "error", msg: "Unable to connect to server" },
       }));
     } finally {
       setWaSending(null);

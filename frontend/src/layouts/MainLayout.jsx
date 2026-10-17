@@ -3,7 +3,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Moon, Sun, LogOut, LayoutDashboard, TrendingUp, Users, ChevronLeft, ChevronRight, 
   Settings, Key, ShieldCheck, Activity, ClipboardList, User, Server, Database,
-  ChevronDown, ChevronUp, BarChart2, AlertTriangle, LineChart, Zap, X
+  ChevronDown, ChevronUp, BarChart2, AlertTriangle, LineChart, Zap, X, Sparkles, Bot
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -21,19 +21,31 @@ const MainLayout = () => {
   const [isMobileReportDrawerOpen, setIsMobileReportDrawerOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const reportPaths = ['/performance-report', '/failure-report', '/analysis', '/instantaneous-report'];
+  const reportPaths = ['/transformer-data', '/status-report', '/analysis', '/performance-report', '/failure-report', '/instantaneous-report'];
   const isReportActive = reportPaths.includes(location.pathname);
-  const isTransformerDashboard = ['/dashboard', '/transformer-data', '/manage-users', '/settings', ...reportPaths].includes(location.pathname);
+  const isTransformerDashboard = ['/dashboard', '/ai-assistant', '/manage-users', '/settings', ...reportPaths].includes(location.pathname);
   const isAdminDashboard = role === 'admin' && (location.pathname === '/users' || location.pathname === '/provisioning' || location.pathname === '/manage-transformers');
   const isSuperuserDashboard = role === 'superuser' && (location.pathname === '/manage-users');
   const showSidebar = isTransformerDashboard || isAdminDashboard || isSuperuserDashboard;
 
   const reportMenuItems = [
     {
-      name: 'Performance',
-      path: '/performance-report',
-      desc: 'Transformer performance & loading health summary',
-      icon: TrendingUp,
+      name: 'Transformer Data',
+      path: '/transformer-data',
+      desc: 'Nameplate specifications, ratings & oil capacity',
+      icon: Database,
+    },
+    {
+      name: 'Instantaneous',
+      path: '/instantaneous-report',
+      desc: 'Real-time telemetry snapshots (PQ, Electrical, Physical)',
+      icon: Zap,
+    },
+    {
+      name: 'Analysis',
+      path: '/status-report',
+      desc: 'Transformer Health Index (THI) & parameter diagnostic matrix',
+      icon: Activity,
     },
     {
       name: 'Failure',
@@ -42,16 +54,10 @@ const MainLayout = () => {
       icon: AlertTriangle,
     },
     {
-      name: 'Analysis',
-      path: '/analysis',
-      desc: 'Comparative trends, predictive analytics & DGA',
-      icon: LineChart,
-    },
-    {
-      name: 'Instantaneous',
-      path: '/instantaneous-report',
-      desc: 'Real-time telemetry snapshots (PQ, Electrical, Physical)',
-      icon: Zap,
+      name: 'Performance',
+      path: '/performance-report',
+      desc: 'Transformer performance & loading health summary',
+      icon: TrendingUp,
     },
   ];
 
@@ -240,19 +246,6 @@ const MainLayout = () => {
                     <LayoutDashboard size={20} className="shrink-0" />
                     {!isSidebarCollapsed && <span className="truncate">Dashboard</span>}
                   </Link>
-                  <Link 
-                    to="/transformer-data"
-                    title={isSidebarCollapsed ? "Transformer Data" : undefined}
-                    className={`flex items-center py-3 rounded-xl font-medium transition-all ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} ${
-                      location.pathname === '/transformer-data' 
-                        ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
-                        : 'text-[#5e6c84] dark:text-[#94a3b8] hover:bg-[#f4f5f7] dark:hover:bg-white/5 hover:text-[#172b4d] dark:hover:text-white'
-                    }`}
-                  >
-                    <Database size={20} className="shrink-0" />
-                    {!isSidebarCollapsed && <span className="truncate">Transformer Data</span>}
-                  </Link>
-                  {/* Expandable Report Accordion */}
                   {!isSidebarCollapsed ? (
                     <div className="flex flex-col">
                       <button 
@@ -266,7 +259,7 @@ const MainLayout = () => {
                       >
                         <div className="flex items-center gap-3">
                           <BarChart2 size={20} className="shrink-0" />
-                          <span className="truncate">Report</span>
+                          <span className="truncate">Reports & Data</span>
                         </div>
                         {isReportMenuOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       </button>
@@ -289,11 +282,6 @@ const MainLayout = () => {
                                   <span className="absolute left-0 top-1.5 bottom-1.5 w-1.5 bg-[#0052cc] dark:bg-[#4c9aff] rounded-r-md" />
                                 )}
                                 <span className="truncate pl-1">{item.name}</span>
-                                {item.badge && (
-                                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-600 text-white shadow-xs">
-                                    {item.badge}
-                                  </span>
-                                )}
                               </Link>
                             );
                           })}
@@ -307,7 +295,7 @@ const MainLayout = () => {
                         setIsSidebarCollapsed(false);
                         setIsReportMenuOpen(true);
                       }}
-                      title="Report Menu"
+                      title="Reports & Data"
                       className={`flex items-center justify-center py-3 rounded-xl font-medium transition-all ${
                         isReportActive 
                           ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
@@ -317,6 +305,25 @@ const MainLayout = () => {
                       <BarChart2 size={20} className="shrink-0" />
                     </button>
                   )}
+                  <Link 
+                    to="/ai-assistant"
+                    title={isSidebarCollapsed ? "AI Assistant" : undefined}
+                    className={`flex items-center py-3 rounded-xl font-medium transition-all ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} ${
+                      location.pathname === '/ai-assistant' 
+                        ? 'bg-[#0052cc]/10 text-[#0052cc] dark:bg-[#4c9aff]/10 dark:text-[#4c9aff]' 
+                        : 'text-[#5e6c84] dark:text-[#94a3b8] hover:bg-[#f4f5f7] dark:hover:bg-white/5 hover:text-[#172b4d] dark:hover:text-white'
+                    }`}
+                  >
+                    <Sparkles size={20} className="shrink-0 text-indigo-500" />
+                    {!isSidebarCollapsed && (
+                      <div className="flex items-center justify-between flex-1 min-w-0">
+                        <span className="truncate">AI Assistant</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xs">
+                          AI
+                        </span>
+                      </div>
+                    )}
+                  </Link>
                   {role === 'superuser' && (
                     <>
                       <Link 
@@ -389,15 +396,15 @@ const MainLayout = () => {
             <span className="text-[10px] font-medium">Dashboard</span>
           </Link>
           <Link 
-            to="/transformer-data"
+            to="/ai-assistant"
             className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-              location.pathname === '/transformer-data' 
+              location.pathname === '/ai-assistant' 
                 ? 'text-[#0052cc] dark:text-[#4c9aff]' 
                 : 'text-[#5e6c84] dark:text-[#94a3b8] hover:text-[#172b4d] dark:hover:text-white'
             }`}
           >
-            <Database size={20} />
-            <span className="text-[10px] font-medium">Data</span>
+            <Sparkles size={20} className="text-indigo-500" />
+            <span className="text-[10px] font-medium">AI</span>
           </Link>
 
           <button 
@@ -502,7 +509,7 @@ const MainLayout = () => {
                   Transformer Reports
                 </h3>
                 <p className="text-xs text-[#5e6c84] dark:text-[#94a3b8]">
-                  Pilih modul report telemetri & analisis trafo
+                  Select telemetry & transformer analysis report module
                 </p>
               </div>
               <button 

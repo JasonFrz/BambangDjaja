@@ -40,14 +40,14 @@ export default function NameplateCards({ trafoId }) {
 
   const load = useCallback(async () => {
     if (!trafoId) return;
-    try { const res = await axios.get(`${apiUrl}/api/trafo/${trafoId}/data`); setData(res.data.data || null); setError(res.data.data ? '' : 'Nameplate belum ada (menunggu Raspi mendaftar).'); }
+    try { const res = await axios.get(`${apiUrl}/api/trafo/${trafoId}/data`); setData(res.data.data || null); setError(res.data.data ? '' : 'No nameplate data available yet (awaiting Raspi registration).'); }
     catch (err) { setError(err.response?.data?.error || err.message); }
   }, [apiUrl, trafoId]);
   useEffect(() => { load(); }, [load]);
 
   const fmt = (col, type) => {
     const v = data ? data[col] : null;
-    if (type === 'time') return v ? new Date(v).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) : null;
+    if (type === 'time') return v ? new Date(v).toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }) : null;
     return v;
   };
 
@@ -66,18 +66,18 @@ export default function NameplateCards({ trafoId }) {
       if (raw === '') { body[col] = null; continue; }
       if (type === 'text') { body[col] = raw; continue; }
       const n = Number(raw);
-      if (!Number.isFinite(n)) { setNotice(`Nilai ${col} bukan angka`); return; }
+      if (!Number.isFinite(n)) { setNotice(`Value for ${col} must be a number`); return; }
       body[col] = n;
     }
     if (Object.keys(body).length === 0) { setEditing(false); return; }
     try {
       const res = await axios.put(`${apiUrl}/api/trafo/${trafoId}/data`, body);
       setData(res.data.data || res.data.transformerData || data);
-      setNotice(res.data.pushed ? 'Nameplate tersimpan dan dikirim ke Raspi' : 'Nameplate tersimpan (Raspi offline, akan sinkron saat terhubung)');
+      setNotice(res.data.pushed ? 'Nameplate saved and synced to Raspi' : 'Nameplate saved (Raspi offline, will sync when connected)');
       setEditing(false);
       await load();
-      window.dispatchEvent(new Event('thresholdsUpdated')); // limits bergantung rated values
-    } catch (err) { setNotice(err.response?.data?.error || 'Gagal menyimpan nameplate'); }
+      window.dispatchEvent(new Event('thresholdsUpdated'));
+    } catch (err) { setNotice(err.response?.data?.error || 'Failed to save nameplate'); }
   };
 
   return (

@@ -11,13 +11,11 @@ import {
   Download,
   ChevronDown,
   AlertCircle,
-  AlertTriangle,
-  ShieldCheck,
   Search
 } from 'lucide-react';
 import axios from 'axios';
 import EnergyLoader from '../components/EnergyLoader';
-import { useTrafoApi } from '../hooks/useTrafoApi';
+import DateRangePicker from '../components/DateRangePicker';
 import { toUtcRange, formatDuration } from '../utils/failureReportUtils';
 
 // Nama parameter dari Raspi (failure_log.parameter / kolom transformer_status) -> label dan satuan.
@@ -80,7 +78,7 @@ const paramLabel = (code) => PARAM_INFO[code]?.label || code || '-';
 
 const formatTime = (ts) =>
   ts
-    ? new Date(ts).toLocaleString('id-ID', {
+    ? new Date(ts).toLocaleString('en-US', {
         timeZone: 'Asia/Jakarta',
         day: '2-digit',
         month: 'short',
@@ -117,10 +115,6 @@ const FailureReport = () => {
   const companyName = sessionStorage.getItem('company_name') || dbName;
   const sessionTrafoName = sessionStorage.getItem('selectedTrafoName');
 
-  // Kotak "Sedang aktif sekarang": status per parameter dari Raspi (dikirim tiap menit).
-  const { data: statusData, isLoading: statusLoading } = useTrafoApi('status', REFRESH_MS);
-  const noStatus = !!statusData && statusData.hasStatus === false;
-  const activeItems = ((noStatus ? [] : statusData?.items) || []).filter((i) => i.level !== 'normal');
 
   // Close export dropdown when clicking outside (desktop + mobile touch)
   useEffect(() => {
@@ -142,10 +136,10 @@ const FailureReport = () => {
     setError(null);
     try {
       if (!startDate || !endDate) {
-        throw new Error('Pilih Start Date dan End Date.');
+        throw new Error('Please select both Start Date and End Date.');
       }
       if (startDate > endDate) {
-        throw new Error('Start Date tidak boleh lebih besar dari End Date.');
+        throw new Error('Start Date cannot be later than End Date.');
       }
 
       const { start, end } = toUtcRange(startDate, endDate);
@@ -160,7 +154,7 @@ const FailureReport = () => {
       setReportData(res.data);
     } catch (err) {
       console.error('Fetch failure report error:', err);
-      setError(err.response?.data?.error || err.message || 'Gagal memuat data report');
+      setError(err.response?.data?.error || err.message || 'Failed to load report data');
       setReportData(null);
     } finally {
       setLoading(false);
@@ -463,71 +457,15 @@ const FailureReport = () => {
 
         {/* Date Filter: Start Date & End Date */}
         <div className="flex flex-col gap-0.5 w-full sm:w-auto shrink-0">
-          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-gray-400 px-1">
-            <span className="flex items-center gap-1">
-              <Calendar size={11} /> Start Date
-            </span>
-            <span>End Date</span>
-          </div>
-          <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-1 w-full">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="min-w-0 w-full sm:w-auto text-xs py-1.5 px-2 sm:px-2.5 rounded-xl border border-[#dfe1e6] dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none cursor-pointer focus:border-indigo-500 font-medium h-[38px] text-center sm:text-left"
-              title="Start Date"
-            />
-            <span className="hidden sm:inline text-gray-400 text-xs">-</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="min-w-0 w-full sm:w-auto text-xs py-1.5 px-2 sm:px-2.5 rounded-xl border border-[#dfe1e6] dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none cursor-pointer focus:border-indigo-500 font-medium h-[38px] text-center sm:text-left"
-              title="End Date"
-            />
-          </div>
+          <DateRangePicker
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+          />
         </div>
-
       </div>
 
-      {/* ========================================================= */}
-      {/* 3. SEDANG AKTIF SEKARANG (status per parameter, tanpa jam mulai) */}
-      {/* ========================================================= */}
-      <div className="bg-white dark:bg-[#151521] p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border border-[#dfe1e6]/80 dark:border-white/10 shadow-sm shrink-0">
-        <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-[#172b4d] dark:text-white mb-2">
-          <AlertTriangle size={16} className="text-amber-500" />
-          <span>Sedang aktif sekarang</span>
-        </div>
-        {statusLoading && !statusData ? (
-          <div className="text-xs text-gray-400">Memuat status...</div>
-        ) : noStatus ? (
-          <div className="text-xs text-gray-400">Belum ada data status dari Raspi</div>
-        ) : activeItems.length === 0 ? (
-          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-            <ShieldCheck size={14} /> Tidak ada alarm/trip aktif
-          </div>
-        ) : (
-          <>
-            <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
-              {activeItems.map((it) => (
-                <div
-                  key={it.parameter}
-                  className="flex items-center gap-2 px-2.5 py-1 rounded-lg border border-gray-100 dark:border-white/10 bg-gray-50/70 dark:bg-white/5 text-xs text-[#172b4d] dark:text-gray-200"
-                >
-                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${BADGE[it.level]}`}>
-                    {LEVEL_LABEL[it.level]}
-                  </span>
-                  <span className="font-semibold">{paramLabel(it.parameter)}</span>
-                  <span className="text-gray-500 dark:text-gray-400">{it.label}</span>
-                </div>
-              ))}
-            </div>
-            <p className="mt-2 text-[11px] text-[#5e6c84] dark:text-[#94a3b8]">
-              Jam mulai dan durasi muncul di tabel setelah failure selesai (paling lambat sekitar 10 menit).
-            </p>
-          </>
-        )}
-      </div>
 
       {error && (
         <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/40 rounded-xl text-rose-600 dark:text-rose-400 text-xs sm:text-sm flex items-center gap-2 shrink-0">
@@ -541,7 +479,7 @@ const FailureReport = () => {
       {/* ========================================================= */}
       {loading && !reportData ? (
         <div className="flex-1 flex items-center justify-center py-16">
-          <EnergyLoader text="Mengambil data Failure Report..." />
+          <EnergyLoader text="Loading Failure Report data..." />
         </div>
       ) : (
         <div className="bg-white dark:bg-[#151521] rounded-xl sm:rounded-2xl border border-[#dfe1e6]/80 dark:border-white/10 shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
@@ -554,9 +492,9 @@ const FailureReport = () => {
             </div>
             <span className="text-xs text-[#5e6c84] dark:text-[#94a3b8]">
               {searchQuery.trim() ? (
-                <>Menampilkan <strong>{filteredRows.length}</strong> dari <strong>{allRows.length}</strong> Failure</>
+                <>Showing <strong>{filteredRows.length}</strong> of <strong>{allRows.length}</strong> Failures</>
               ) : (
-                <>Total <strong>{allRows.length}</strong> Failure</>
+                <>Total <strong>{allRows.length}</strong> Failures</>
               )}
             </span>
           </div>
@@ -565,18 +503,18 @@ const FailureReport = () => {
             <table className="w-full text-left text-xs sm:text-sm text-[#172b4d] dark:text-gray-200 border-collapse">
               <thead className="sticky top-0 z-10 bg-gray-50/95 dark:bg-[#1e1e2d]/95 backdrop-blur-xs border-b border-[#dfe1e6] dark:border-white/10 text-[11px] font-bold text-[#5e6c84] dark:text-[#94a3b8] uppercase tracking-wider whitespace-nowrap shadow-xs">
                 <tr>
-                  <th className="py-2.5 sm:py-3 px-4 sm:px-6">Waktu (WIB)</th>
-                  <th className="py-2.5 sm:py-3 px-4 sm:px-6">Jenis</th>
+                  <th className="py-2.5 sm:py-3 px-4 sm:px-6">Timestamp</th>
+                  <th className="py-2.5 sm:py-3 px-4 sm:px-6">Severity</th>
                   <th className="py-2.5 sm:py-3 px-4 sm:px-6">Parameter</th>
-                  <th className="py-2.5 sm:py-3 px-4 sm:px-6 text-right">Nilai</th>
-                  <th className="py-2.5 sm:py-3 px-4 sm:px-6 text-right">Durasi</th>
+                  <th className="py-2.5 sm:py-3 px-4 sm:px-6 text-right">Value</th>
+                  <th className="py-2.5 sm:py-3 px-4 sm:px-6 text-right">Duration</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-white/5 whitespace-nowrap font-medium">
                 {filteredRows.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-10 text-center text-xs sm:text-sm text-gray-400 dark:text-gray-500">
-                      {searchQuery ? `Tidak ada failure yang cocok dengan "${searchQuery}"` : 'Tidak ada failure pada periode ini'}
+                      {searchQuery ? `No failures matching "${searchQuery}"` : 'No failures recorded during this period'}
                     </td>
                   </tr>
                 ) : (

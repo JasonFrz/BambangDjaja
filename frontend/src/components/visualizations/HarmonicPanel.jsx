@@ -7,7 +7,6 @@ import { harmonicRows, harmonicPhaseLabel } from '../../config/panelHelpers';
 const PHASE_COLORS = { 1: '#ef4444', 2: '#eab308', 3: '#3b82f6' };
 
 export const HarmonicPanel = memo(({ panel, isEditing, updatePanel }) => {
-  // Sumber disimpan di panel (updatePanel); di preview tanpa updatePanel dipakai state lokal.
   const [localSource, setLocalSource] = useState(null);
   const source = (localSource ?? panel.source) === 'current' ? 'current' : 'voltage';
   const { data, isLoading, error } = useTrafoApi('harmonics', 60000, { type: source });
@@ -28,9 +27,9 @@ export const HarmonicPanel = memo(({ panel, isEditing, updatePanel }) => {
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
       <div className="flex-1 min-h-0">
-        {isLoading ? <div className="h-full flex items-center justify-center text-xs text-gray-400">Memuat...</div>
+        {isLoading ? <div className="h-full flex items-center justify-center text-xs text-gray-400">Loading...</div>
         : error ? <div className="h-full flex items-center justify-center text-xs text-red-400">{error}</div>
-        : rows.length === 0 ? <div className="h-full flex items-center justify-center text-xs text-gray-400">Belum ada data harmonik dari Raspi</div>
+        : rows.length === 0 ? <div className="h-full flex items-center justify-center text-xs text-gray-400">No harmonic data from Raspi yet</div>
         : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={rows} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>

@@ -13,7 +13,9 @@ import InstantaneousReport from './pages/InstantaneousReport';
 import FailureReport from './pages/FailureReport';
 import AnalysisReport from './pages/AnalysisReport';
 import Settings from './pages/Settings';
+import StatusReport from './pages/StatusReport';
 import TransformerSelection from './pages/TransformerSelection';
+import AiAssistant from './pages/AiAssistant';
 
 import { ThemeProvider } from './contexts/ThemeContext';
 import { TrendDataProvider } from './contexts/TrendDataContext';
@@ -77,6 +79,8 @@ function App() {
                 <Route path="instantaneous-report" element={<InstantaneousReport />} />
                 <Route path="failure-report" element={<FailureReport />} />
                 <Route path="analysis" element={<AnalysisReport />} />
+                <Route path="status-report" element={<StatusReport />} />
+                <Route path="ai-assistant" element={<AiAssistant />} />
                 <Route path="settings" element={<Settings />} />
 
               </Route>

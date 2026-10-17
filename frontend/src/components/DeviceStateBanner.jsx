@@ -17,8 +17,8 @@ export const DeviceStateNotice = ({ state, onRefresh }) => {
       <div className="flex-1 min-w-0">
         <div className="font-bold text-sm">{offline ? 'Device is Offline' : 'No Data Found For Today'}</div>
         <div className="text-xs opacity-80">{offline
-          ? 'Raspberry Pi trafo ini tidak terhubung. Panel menampilkan data terakhir yang tersimpan.'
-          : 'Device online, tetapi belum ada data pembacaan hari ini.'}</div>
+          ? 'Raspberry Pi is disconnected. Panels show the latest recorded telemetry.'
+          : 'Device is online, but no readings have been recorded today.'}</div>
       </div>
       {offline && (
         <button onClick={onRefresh} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700">

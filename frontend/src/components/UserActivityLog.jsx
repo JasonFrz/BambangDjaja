@@ -152,7 +152,7 @@ const UserActivityLog = () => {
       }
     } catch (err) {
       console.error('Failed to load activity logs:', err);
-      setError(err.message || 'Gagal memuat activity log.');
+      setError(err.message || 'Failed to load activity log.');
     } finally {
       setLoading(false);
     }
@@ -623,31 +623,31 @@ const UserActivityLog = () => {
       {/* 2. Main Log Table: Timestamp | User | Activity | Module | Transformer | Action */}
       {loading ? (
         <div className="py-16">
-          <EnergyLoader text="Memuat User Activity Log..." />
+          <EnergyLoader text="Loading User Activity Log..." />
         </div>
       ) : error ? (
         <div className="p-6 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/40 text-center">
           <AlertCircle size={32} className="mx-auto text-rose-500 mb-2" />
-          <h3 className="text-base font-bold text-rose-700 dark:text-rose-400">Gagal Mengambil Log</h3>
+          <h3 className="text-base font-bold text-rose-700 dark:text-rose-400">Failed to Fetch Log</h3>
           <p className="text-xs sm:text-sm text-rose-600/80 dark:text-rose-400/80 mt-1">{error}</p>
           <button
             onClick={fetchLogs}
             className="mt-3 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
           >
-            Coba Lagi
+            Try Again
           </button>
         </div>
       ) : filteredLogs.length === 0 ? (
         <div className="py-12 px-4 rounded-2xl bg-white dark:bg-[#151521] border border-[#dfe1e6]/80 dark:border-white/10 text-center text-[#5e6c84] dark:text-[#94a3b8]">
           <History size={32} className="mx-auto text-gray-400 mb-2 opacity-50" />
-          <p className="font-semibold text-sm">Tidak ada activity log yang ditemukan.</p>
+          <p className="font-semibold text-sm">No activity logs found.</p>
         </div>
       ) : (
         <div className="bg-white dark:bg-[#151521] rounded-2xl border border-[#dfe1e6]/80 dark:border-white/10 shadow-sm overflow-hidden flex flex-col">
           
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[600px] custom-scrollbar">
             <table className="w-full text-left border-collapse">
-              <thead className="bg-gray-50/90 dark:bg-white/5 border-b border-[#dfe1e6] dark:border-white/10 text-[11px] font-bold text-[#5e6c84] dark:text-[#94a3b8] uppercase tracking-wider">
+              <thead className="sticky top-0 z-10 bg-gray-50/95 dark:bg-[#1e1e2d]/95 backdrop-blur-xs border-b border-[#dfe1e6] dark:border-white/10 text-[11px] font-bold text-[#5e6c84] dark:text-[#94a3b8] uppercase tracking-wider shadow-xs">
                 <tr>
                   <th className="py-3 px-4 sm:px-5">Timestamp</th>
                   <th className="py-3 px-4">User</th>
@@ -805,26 +805,26 @@ const UserActivityLog = () => {
                 {/* Old Value */}
                 <div className="flex flex-col rounded-xl border border-rose-200 dark:border-rose-900/30 overflow-hidden bg-rose-50/20 dark:bg-rose-950/10">
                   <div className="py-2 px-3 bg-rose-100/60 dark:bg-rose-950/40 border-b border-rose-200 dark:border-rose-900/30 text-rose-700 dark:text-rose-400 font-bold text-xs flex items-center justify-between">
-                    <span>OLD VALUE (Sebelumnya)</span>
+                    <span>OLD VALUE (Previous)</span>
                     <span className="text-[10px] uppercase opacity-75 font-mono">old_value</span>
                   </div>
                   <pre className="p-3 text-[11px] font-mono text-[#172b4d] dark:text-gray-300 overflow-x-auto whitespace-pre-wrap max-h-60">
                     {selectedLog.old_value 
                       ? JSON.stringify(parseJsonSafe(selectedLog.old_value), null, 2)
-                      : '(NULL / Tidak Ada Nilai Lama)'}
+                      : '(NULL / No Previous Value)'}
                   </pre>
                 </div>
 
                 {/* New Value */}
                 <div className="flex flex-col rounded-xl border border-emerald-200 dark:border-emerald-900/30 overflow-hidden bg-emerald-50/20 dark:bg-emerald-950/10">
                   <div className="py-2 px-3 bg-emerald-100/60 dark:bg-emerald-950/40 border-b border-emerald-200 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-bold text-xs flex items-center justify-between">
-                    <span>NEW VALUE (Perubahan Baru)</span>
+                    <span>NEW VALUE (Modified)</span>
                     <span className="text-[10px] uppercase opacity-75 font-mono">new_value</span>
                   </div>
                   <pre className="p-3 text-[11px] font-mono text-[#172b4d] dark:text-gray-300 overflow-x-auto whitespace-pre-wrap max-h-60">
                     {selectedLog.new_value 
                       ? JSON.stringify(parseJsonSafe(selectedLog.new_value), null, 2)
-                      : '(NULL / Tidak Ada Nilai Baru)'}
+                      : '(NULL / No New Value)'}
                   </pre>
                 </div>
 
@@ -845,7 +845,7 @@ const UserActivityLog = () => {
                 onClick={() => setSelectedLog(null)}
                 className="px-4 py-2 bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-[#172b4d] dark:text-white rounded-xl text-xs font-semibold transition-colors"
               >
-                Tutup
+                Close
               </button>
             </div>
 

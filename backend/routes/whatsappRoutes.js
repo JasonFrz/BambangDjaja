@@ -32,9 +32,6 @@ router.post('/test', requireRole('admin', 'superuser'), async (req, res) => {
     const emailSubject = `[TEST NOTIFIKASI TMU]`;
     const emailMsg = `Notifikasi uji coba berhasil.\nFrekuensi saat ini: ${frequency.toFixed(2)} Hz\n\nPesan otomatis dari PT. Bambang Djaja - TMU System`;
     
-    console.log(`\n========================================`);
-    console.log(`✅ MENGIRIM PESAN WHATSAPP & EMAIL KE ${users.length} USER`);
-    
     let successCount = 0;
     
     for (const user of users) {
@@ -45,28 +42,22 @@ router.post('/test', requireRole('admin', 'superuser'), async (req, res) => {
       if (phone.length >= 10 && phone !== '+62') {
         try {
           await whatsappClient.sendWhatsAppMessage(phone, message);
-          console.log(`- Berhasil WA: ${user.username}  - ${phone}`);
           sentToUser = true;
           await new Promise(resolve => setTimeout(resolve, 3000));
         } catch (err) {
-          console.log(`- Gagal WA: ${user.username}  - ${phone} (${err.message})`);
         }
       }
 
       if (email && email.includes('@')) {
         try {
           await emailClient.sendEmailMessage(email, emailSubject, emailMsg);
-          console.log(`- Berhasil Email: ${user.username}  - ${email}`);
           sentToUser = true;
         } catch (err) {
-          console.log(`- Gagal Email: ${user.username}  - ${email} (${err.message})`);
         }
       }
 
       if (sentToUser) successCount++;
     }
-    
-    console.log(`========================================\n`);
     
     if (successCount === 0) {
        return res.status(500).json({ error: 'Gagal mengirim pesan ke semua kontak yang terdaftar. Pastikan nomor/email valid.' });

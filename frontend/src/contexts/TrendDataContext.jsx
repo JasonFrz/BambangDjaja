@@ -54,8 +54,7 @@ export const TrendDataProvider = ({ children }) => {
       setIsLoading(true);
       const res = await axios.get(`${apiUrl}/api/trends/meter`, {
         headers: {
-          'X-DB-Name': dbName,
-          'ngrok-skip-browser-warning': '69420'
+          'X-DB-Name': dbName
         }
       });
       const historical = (res.data || []).map(toPoint);
@@ -144,8 +143,7 @@ export const TrendDataProvider = ({ children }) => {
 
       const res = await axios.get(`${apiUrl}/api/trends`, {
         headers: {
-          'X-DB-Name': dbName,
-          'ngrok-skip-browser-warning': '69420'
+          'X-DB-Name': dbName
         },
         params
       });

@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 const nodemailer = require('nodemailer');
 
 const createTransporter = () => {
@@ -29,7 +29,6 @@ const sendEmailMessage = async (toEmail, subject, text) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Berhasil mengirim notifikasi Email ke ${toEmail} [${info.messageId}]`);
     return true;
   } catch (error) {
     console.error(`❌ Gagal mengirim notifikasi Email ke ${toEmail}:`, error.message);

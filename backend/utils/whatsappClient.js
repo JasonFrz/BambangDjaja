@@ -61,12 +61,9 @@ const initWhatsApp = () => {
     if (waClient.info && waClient.info.wid) {
       connectedPhone = '+' + waClient.info.wid.user;
     }
-    
-    console.log('\n✅ WhatsApp Client READY! Notifikasi siap dikirim.\n');
   });
 
   waClient.on('authenticated', () => {
-    console.log('✅ WhatsApp Authenticated!');
     connectionState = 'CONNECTING';
     qrString = '';
   });
@@ -84,7 +81,6 @@ const initWhatsApp = () => {
     connectionState = 'DISCONNECTED';
     connectedSince = null;
     connectedPhone = '';
-    console.log('⚠️ WhatsApp Disconnected:', reason);
 
     if (waClient) {
       waClient.destroy().catch(() => { });
@@ -119,7 +115,6 @@ const sendWhatsAppMessage = async (phone, text) => {
       throw new Error(`Nomor telepon ${phoneNumber} tidak terdaftar di WhatsApp`);
     }
     await waClient.sendMessage(chatId, text);
-    console.log(`✅ Berhasil mengirim notifikasi WA ke ${phoneNumber}`);
     
     const today = new Date().toDateString();
     if (lastMessageDate !== today) {

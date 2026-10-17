@@ -5,7 +5,6 @@ import App from './App.jsx'
 import axios from 'axios';
 
 axios.interceptors.request.use((config) => {
-  config.headers['ngrok-skip-browser-warning'] = '69420';
   const dbName = sessionStorage.getItem('db_name');
   const username = sessionStorage.getItem('username');
   const token = sessionStorage.getItem('token');
@@ -48,12 +47,10 @@ window.fetch = async (...args) => {
   if (!isMapApi) {
     if (config.headers instanceof Headers) {
       if (token) config.headers.set('Authorization', `Bearer ${token}`);
-      config.headers.append('ngrok-skip-browser-warning', '69420');
       if (dbName) config.headers.append('X-DB-Name', dbName);
       if (username) config.headers.append('X-Username', username);
       if (trafoId) config.headers.set('X-Trafo-Id', trafoId);
     } else {
-      config.headers['ngrok-skip-browser-warning'] = '69420';
       if (token) config.headers['Authorization'] = `Bearer ${token}`;
       if (dbName) config.headers['X-DB-Name'] = dbName;
       if (username) config.headers['X-Username'] = username;

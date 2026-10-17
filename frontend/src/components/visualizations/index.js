@@ -23,3 +23,4 @@ export * from './TransformerStatusPanel';
 export * from './PhysicalStatusPanel';
 export * from './OilQualityPanel';
 export * from './ElectricalStatusPanel';
+export * from './Transformer3DPanel';

@@ -17,6 +17,7 @@ import {
   RefreshCw, Database
 } from 'lucide-react';
 import EnergyLoader from '../components/EnergyLoader';
+import DateRangePicker from '../components/DateRangePicker';
 import {
   exportReadingDataExcel,
   exportReadingDataPDF,
@@ -296,19 +297,42 @@ const AnalysisReport = () => {
   const [gridLayouts, setGridLayouts] = useState(DEFAULT_LAYOUTS);
 
   const containerRef = useRef(null);
-  const [containerWidth, setContainerWidth] = useState(1200);
+  const [containerWidth, setContainerWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return Math.min(1600, Math.max(320, window.innerWidth - 280));
+    }
+    return 1200;
+  });
+  const [isResizingContainer, setIsResizingContainer] = useState(true);
+  const resizeTimeoutRef = useRef(null);
 
-  // ResizeObserver for container width
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsResizingContainer(false);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver(entries => {
       for (const entry of entries) {
         const width = entry.contentRect.width;
-        if (width > 0) setContainerWidth(width);
+        if (width > 0) {
+          setContainerWidth(width);
+          setIsResizingContainer(true);
+          clearTimeout(resizeTimeoutRef.current);
+          resizeTimeoutRef.current = setTimeout(() => {
+            setIsResizingContainer(false);
+          }, 150);
+        }
       }
     });
     observer.observe(containerRef.current);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      clearTimeout(resizeTimeoutRef.current);
+    };
   }, []);
 
   const trafoId = sessionStorage.getItem('selectedTrafoId') || '1';
@@ -349,13 +373,13 @@ const AnalysisReport = () => {
     const d1 = new Date(newStart);
     const d2 = new Date(newEnd);
     if (d1 > d2) {
-      setError('Start Date tidak boleh lebih besar dari End Date.');
+      setError('Start Date cannot be greater than End Date.');
       return;
     }
 
     const diffDays = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
     if (diffDays > 730) {
-      setWarningMsg('Rentang analisis dibatasi maksimal 2 tahun (730 hari).');
+      setWarningMsg('Analysis range is limited to a maximum of 2 years (730 days).');
       // Automatically clamp to 730 days (2 years)
       const clampedEnd = new Date(d1);
       clampedEnd.setDate(clampedEnd.getDate() + 729);
@@ -415,7 +439,7 @@ const AnalysisReport = () => {
       setSeriesData(formatted);
     } catch (err) {
       console.error('Fetch analysis trends error:', err);
-      const msg = err.response?.data?.error || err.message || 'Gagal memuat data analisis';
+      const msg = err.response?.data?.error || err.message || 'Failed to load analysis data';
       setError(msg);
       setSeriesData([]);
     } finally {
@@ -532,7 +556,6 @@ const AnalysisReport = () => {
         }
 
         if (saved) {
-          console.log('Layout successfully saved to DB master');
         }
       } catch (err) {
         console.error('Failed to save layout to DB master:', err);
@@ -719,7 +742,7 @@ const AnalysisReport = () => {
               <button
                 onClick={() => setAllViews('chart')}
                 className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold text-[#172b4d] dark:text-white hover:bg-white/80 dark:hover:bg-white/10 transition-colors"
-                title="Tampilkan semua dalam bentuk Area Chart"
+                title="Show all as Area Chart"
               >
                 <TrendingUp size={13} className="text-indigo-500" />
                 <span className="hidden sm:inline">All Charts</span>
@@ -727,7 +750,7 @@ const AnalysisReport = () => {
               <button
                 onClick={() => setAllViews('table')}
                 className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold text-[#172b4d] dark:text-white hover:bg-white/80 dark:hover:bg-white/10 transition-colors"
-                title="Tampilkan semua dalam bentuk Tabel"
+                title="Show all as Table"
               >
                 <TableIcon size={13} className="text-indigo-500" />
                 <span className="hidden sm:inline">All Tables</span>
@@ -910,31 +933,13 @@ const AnalysisReport = () => {
           </div>
         </div>
 
-        {/* Date Range: Start Date & End Date */}
         <div className="flex flex-col gap-0.5 w-full sm:w-auto shrink-0">
-          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-gray-400 px-1">
-            <span className="flex items-center gap-1">
-              <Calendar size={11} /> Start Date
-            </span>
-            <span>End Date</span>
-          </div>
-          <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-1 w-full">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => handleDateChange(e.target.value, endDate)}
-              className="min-w-0 w-full sm:w-auto text-xs py-1.5 px-2 sm:px-2.5 rounded-xl border border-[#dfe1e6] dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none cursor-pointer focus:border-indigo-500 font-medium h-[38px] text-center sm:text-left"
-              title="Start Date"
-            />
-            <span className="hidden sm:inline text-gray-400 text-xs">-</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => handleDateChange(startDate, e.target.value)}
-              className="min-w-0 w-full sm:w-auto text-xs py-1.5 px-2 sm:px-2.5 rounded-xl border border-[#dfe1e6] dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#172b4d] dark:text-white outline-none cursor-pointer focus:border-indigo-500 font-medium h-[38px] text-center sm:text-left"
-              title="End Date"
-            />
-          </div>
+          <DateRangePicker
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={(val) => handleDateChange(val, endDate)}
+            onEndDateChange={(val) => handleDateChange(startDate, val)}
+          />
         </div>
 
       </div>
@@ -958,17 +963,17 @@ const AnalysisReport = () => {
       {/* ========================================================= */}
       {loading && seriesData.length === 0 ? (
         <div className="flex items-center justify-center py-24">
-          <EnergyLoader text="Mengambil data agregasi per jam..." />
+          <EnergyLoader text="Loading hourly aggregated data..." />
         </div>
       ) : filteredCharts.length === 0 ? (
         <div className="p-12 text-center bg-white dark:bg-[#151521] rounded-2xl border border-[#dfe1e6] dark:border-white/10 text-gray-400">
-          Tidak ada chart yang sesuai dengan pencarian "{searchQuery}"
+          No charts matching "{searchQuery}"
         </div>
       ) : (
         <div className={`transition-all ${isEditing ? 'ring-2 ring-indigo-500/30 rounded-2xl p-1 bg-indigo-500/5' : ''}`}>
           <ResponsiveGridLayout
             width={containerWidth}
-            className="layout"
+            className={`layout ${isResizingContainer ? 'is-container-resizing' : ''}`}
             layouts={lockedLayouts}
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
             cols={{ lg: 12, md: 10, sm: 6, xs: 2, xxs: 1 }}
@@ -1003,7 +1008,7 @@ const AnalysisReport = () => {
                               ? 'cursor-grab active:cursor-grabbing text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50' 
                               : 'text-gray-300 dark:text-gray-600 cursor-default'
                           }`} 
-                          title={isEditing ? 'Drag to reorder' : 'Kunci mode edit untuk memindahkan'}
+                          title={isEditing ? 'Drag to reorder' : 'Lock mode to move'}
                         >
                           <GripVertical size={16} />
                         </div>
@@ -1034,7 +1039,7 @@ const AnalysisReport = () => {
                                 ? 'bg-indigo-600 text-white shadow-2xs'
                                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
                             }`}
-                            title="Tampilkan Area Chart"
+                            title="Show Area Chart"
                           >
                             <TrendingUp size={13} />
                           </button>
@@ -1045,17 +1050,16 @@ const AnalysisReport = () => {
                                 ? 'bg-indigo-600 text-white shadow-2xs'
                                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
                             }`}
-                            title="Tampilkan Tabel"
+                            title="Show Table"
                           >
                             <TableIcon size={13} />
                           </button>
                         </div>
 
-                        {/* Export CSV button */}
                         <button
                           onClick={() => handleExportCardCSV(chart)}
                           className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
-                          title="Export CSV data chart ini"
+                          title="Export chart data as CSV"
                         >
                           <Download size={13} />
                         </button>
@@ -1069,7 +1073,7 @@ const AnalysisReport = () => {
                       {seriesData.length === 0 ? (
                         <div className="flex-1 flex flex-col items-center justify-center p-4 text-center text-gray-400">
                           <Icon size={24} className="mb-1.5 opacity-40" />
-                          <span className="text-xs font-medium">Belum ada data pada rentang waktu ini</span>
+                          <span className="text-xs font-medium">No data available for this time range</span>
                         </div>
                       ) : currentView === 'chart' ? (
                         
@@ -1135,7 +1139,7 @@ const AnalysisReport = () => {
                           <table className="w-full text-left text-xs text-[#172b4d] dark:text-gray-200 border-collapse">
                             <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-[#1e1e2d] border-b border-[#dfe1e6] dark:border-white/10 text-[10px] font-bold text-[#5e6c84] dark:text-[#94a3b8] uppercase tracking-wider whitespace-nowrap shadow-xs">
                               <tr>
-                                <th className="py-2 px-3">Waktu (Timestamp)</th>
+                                <th className="py-2 px-3">Timestamp</th>
                                 {chart.metrics.map(m => (
                                   <th key={m.key} className="py-2 px-3 text-right">
                                     {m.label} {chart.unit && chart.unit !== '-' ? `(${chart.unit})` : ''}

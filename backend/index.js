@@ -4,7 +4,8 @@ const http = require("http");
 const { Server } = require("socket.io");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-require("dotenv").config();
+process.env.DOTENV_CONFIG_QUIET = "true";
+require("dotenv").config({ quiet: true });
 
 process.on("unhandledRejection", (reason) => {
   const msg = reason && (reason.message || String(reason));
@@ -39,7 +40,7 @@ process.on("uncaughtException", (error) => {
 });
 
 const app = express();
-app.set("trust proxy", 1); // Allow rate limiting behind proxies like ngrok
+app.set("trust proxy", 1);
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -49,7 +50,6 @@ const io = new Server(server, {
     },
     methods: ["GET", "POST"],
     credentials: true,
-    allowedHeaders: ["ngrok-skip-browser-warning"],
   },
 });
 
@@ -85,8 +85,6 @@ const activeSubscriptions = new Map();
 const roomIntervals = new Map();
 
 io.on("connection", (socket) => {
-  console.log("Client connected:", socket.id);
-
   socket.on("subscribe_transformer", (data) => {
     const trafoId = data.trafoId || data;
     const dbName = data.dbName;
@@ -99,9 +97,6 @@ io.on("connection", (socket) => {
           if (!roomData || roomData.size === 0) {
             activeSubscriptions.delete(room);
             roomIntervals.delete(room);
-            console.log(
-              `Removed ${room} from active subscriptions as client switched trafo`,
-            );
           }
         }
       }
@@ -114,9 +109,6 @@ io.on("connection", (socket) => {
           ? socket.requestedPollInterval
           : (roomIntervals.get(roomName) ?? 0);
       roomIntervals.set(roomName, pollInterval);
-      console.log(
-        `Client ${socket.id} subscribed to ${roomName} for DB: ${dbName} (interval: ${pollInterval}ms)`,
-      );
     }
   });
 
@@ -127,20 +119,17 @@ io.on("connection", (socket) => {
     for (const roomName of socket.rooms) {
       if (roomName.startsWith("trafo_")) {
         roomIntervals.set(roomName, validMs);
-        console.log(`Room ${roomName} poll interval set to ${validMs}ms`);
       }
     }
   });
 
   socket.on("disconnect", () => {
-    console.log("Client disconnected:", socket.id);
     for (const roomName of socket.rooms) {
       if (roomName.startsWith("trafo_")) {
         const room = io.sockets.adapter.rooms.get(roomName);
         if (!room || room.size === 0) {
           activeSubscriptions.delete(roomName);
           roomIntervals.delete(roomName);
-          console.log(`Removed ${roomName} from active subscriptions`);
         }
       }
     }
@@ -153,9 +142,6 @@ io.on("connection", (socket) => {
         if (room && room.size === 1) {
           activeSubscriptions.delete(roomName);
           roomIntervals.delete(roomName);
-          console.log(
-            `Removed ${roomName} from active subscriptions as last client is leaving`,
-          );
         }
       }
     }
@@ -179,6 +165,7 @@ const { verifyToken } = require("./utils/authMiddleware");
 
 const trafoRoutes = require("./routes/trafo");
 const companiesRoutes = require("./routes/companies");
+const statusReportRoutes = require("./routes/statusReport");
 
 app.use("/api", authRoutes);
 app.use("/api/users", verifyToken, userRoutes);
@@ -191,6 +178,7 @@ app.use("/api/layouts", verifyToken, layoutsRoutes);
 app.use("/api/settings", verifyToken, settingsRoutes);
 
 app.use("/api/trafo", verifyToken, trafoRoutes);
+app.use("/api/status-report", verifyToken, statusReportRoutes);
 app.use("/api/admin/companies", verifyToken, companiesRoutes);
 
 const startRealtimePoller = require("./utils/realtimePoller");

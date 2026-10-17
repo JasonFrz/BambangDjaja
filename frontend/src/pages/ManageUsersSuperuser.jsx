@@ -73,13 +73,13 @@ const ManageUsersSuperuser = () => {
     setIsLoading(true);
 
     if (email && !email.toLowerCase().endsWith('@gmail.com')) {
-      setError('Email harus menggunakan domain @gmail.com.');
+      setError('Email must use @gmail.com domain.');
       setIsLoading(false);
       return;
     }
 
     if (phone && !phone.startsWith('08')) {
-      setError('Nomor telepon harus diawali dengan 08.');
+      setError('Phone number must start with 08.');
       setIsLoading(false);
       return;
     }

@@ -25,14 +25,12 @@ async function ensureColumn(db, table, column, definition) {
   await db.query(
     `ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`,
   );
-  console.log(`[SchemaPatch] ${table}.${column} ditambahkan`);
   return true;
 }
 
 async function ensureIndex(db, table, indexName, definition) {
   if (await hasIndex(db, table, indexName)) return false;
   await db.query(`ALTER TABLE \`${table}\` ADD ${definition}`);
-  console.log(`[SchemaPatch] index ${indexName} di ${table} ditambahkan`);
   return true;
 }
 
@@ -50,7 +48,6 @@ async function patchMasterDb(db) {
         trafo_id VARCHAR(50) DEFAULT NULL,
         KEY idx_user_layouts_user (user_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
-    console.log("[SchemaPatch] tabel user_layouts dibuat");
   }
 }
 
@@ -101,7 +98,6 @@ async function patchAllCompanies(dbNames, openDb = getDbConnection) {
       await patchCompanyDb(db);
       hasil.ok.push(name);
     } catch (err) {
-      console.warn(`[SchemaPatch] lewati ${name}: ${err.message}`);
       hasil.gagal.push(name);
     }
   }
@@ -115,12 +111,8 @@ async function runSchemaPatch() {
     const [rows] = await master.execute(
       "SELECT database_name FROM company WHERE status = 1",
     );
-    const hasil = await patchAllCompanies(rows.map((r) => r.database_name));
-    console.log(
-      `[SchemaPatch] selesai. ok=${hasil.ok.length} gagal=${hasil.gagal.length}`,
-    );
+    await patchAllCompanies(rows.map((r) => r.database_name));
   } catch (err) {
-    console.error("[SchemaPatch] gagal:", err.message);
   }
 }
 

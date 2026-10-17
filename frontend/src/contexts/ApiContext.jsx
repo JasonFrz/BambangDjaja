@@ -7,9 +7,12 @@ export const useApi = () => {
 };
 
 export const ApiProvider = ({ children }) => {
-  const publicUrl = import.meta.env.VITE_PUBLIC_API_URL || 'https://wonderful-sci-san-arthur.trycloudflare.com';
+  const defaultUrl =
+    import.meta.env.VITE_PUBLIC_API_URL ||
+    import.meta.env.VITE_LOCAL_API_URL ||
+    'http://localhost:5000';
 
-  const [apiUrl, setApiUrl] = useState(publicUrl);
+  const [apiUrl, setApiUrl] = useState(defaultUrl);
 
   return (
     <ApiContext.Provider value={{ apiUrl }}>

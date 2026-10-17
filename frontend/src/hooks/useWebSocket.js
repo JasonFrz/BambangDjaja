@@ -9,9 +9,6 @@ export const useWebSocket = (url, updateInterval = 0) => {
   useEffect(() => {
     
     const socket = io(url, {
-      extraHeaders: {
-        "ngrok-skip-browser-warning": "69420"
-      },
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
     });
@@ -20,7 +17,6 @@ export const useWebSocket = (url, updateInterval = 0) => {
 
     socket.on("connect", () => {
       setIsConnected(true);
-      console.log("Connected to Pilot SPM33 backend");
       
       const trafoId = sessionStorage.getItem('selectedTrafoId') || '1';
       const dbName = sessionStorage.getItem('db_name');
@@ -50,7 +46,6 @@ export const useWebSocket = (url, updateInterval = 0) => {
 
     socket.on("disconnect", () => {
       setIsConnected(false);
-      console.log("Disconnected from backend");
     });
 
     socket.on("connect_error", (error) => {

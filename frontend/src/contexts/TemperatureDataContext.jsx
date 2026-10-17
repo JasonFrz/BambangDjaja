@@ -53,8 +53,7 @@ export const TemperatureDataProvider = ({ children }) => {
 
     axios.get(`${apiUrl}/api/trends/oil`, {
       headers: { 
-        'X-DB-Name': dbName,
-        'ngrok-skip-browser-warning': '69420'
+        'X-DB-Name': dbName
       }
     })
     .then(res => {

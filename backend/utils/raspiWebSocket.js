@@ -74,13 +74,32 @@ async function alertOnStatus(conn, meta, beforeRow, afterRow) {
     dbName: meta.dbName, trafoId: meta.trafoId, before: beforeRow, after: afterRow, point,
     limits: buildLimits(settings, td), cooldown, send: _deps.sendAlertMessage,
   });
-  if (sent.length > 0) console.log(`[Raspi WS] alert ${meta.dbName}/trafo ${meta.trafoId}: ${sent.map((a) => `${a.name} ${a.sub}`).join(', ')}`);
 }
 
-function closeConn(conn, reason) {
-  console.warn(`[Raspi WS] ${reason}`);
+function logRaspiReceivedData(payload) {
+  if (!payload) return;
+  const list = Array.isArray(payload) ? payload : [payload];
+  if (list.length === 0) return;
+  const items = list.length > 3 ? list.slice(-1) : list;
+  for (const item of items) {
+    if (!item || typeof item !== 'object') continue;
+    const rawTime = item.timestamp || item.TIMESTAMP || item.timestamp_string || item.time_start || new Date();
+    const timeStr = rawTime instanceof Date
+      ? rawTime.toISOString().slice(0, 19).replace('T', ' ')
+      : String(rawTime);
+    console.log(`time : ${timeStr}`);
+    for (const [k, v] of Object.entries(item)) {
+      if (['timestamp', 'TIMESTAMP', 'timestamp_string', 'data_id', 'time_start'].includes(k)) continue;
+      if (v !== null && v !== undefined && typeof v !== 'object') {
+        console.log(`${k} : ${v}`);
+      }
+    }
+  }
+}
+
+function closeConn(conn) {
   send(conn.ws, { type: 'terminateConnection' });
-  try { conn.ws.close(); } catch (e) { /* abaikan */ }
+  try { conn.ws.close(); } catch (e) {}
 }
 
 async function handleCreateConnection(conn, msg) {
@@ -109,11 +128,10 @@ async function handleCreateConnection(conn, msg) {
   raspiClients.set(conn.serial, ws);
   raspiMeta.set(conn.serial, reg);
   await rs.touchLastConnection(master, conn.serial);
-  console.log(`[Raspi WS] terdaftar: serial ${conn.serial} -> ${reg.dbName} trafo ${reg.trafoId} (v${reg.tmuVersion})`);
   const after = rs.first(msg.transformerStatus);
   if (after) {
     try { await alertOnStatus(await _deps.getDbConnection(reg.dbName), reg, before, after); }
-    catch (e) { console.error('[Raspi WS] alert saat registrasi gagal:', e.message); }
+    catch (e) {}
   }
   await tick(conn);
 }
@@ -125,8 +143,7 @@ async function handleMessage(conn, msg) {
     try {
       await handleCreateConnection(conn, msg);
     } catch (e) {
-      // Registrasi gagal (DB perusahaan tidak ada, DB mati): tutup supaya klien reconnect dan mencoba lagi.
-      closeConn(conn, `registrasi ${msg.raspiSerialNo || '-'} gagal: ${e.message}`);
+      closeConn(conn);
     }
     return;
   }
@@ -142,36 +159,41 @@ async function handleMessage(conn, msg) {
       send(ws, { type: 'pong_server' });
       break;
     case 'getReadingDataRealTimeReceived':
+      logRaspiReceivedData(msg.readingData);
       await rs.handleReadingRealtime(cdb, meta.trafoId, msg.readingData);
       break;
     case 'receivedRequestCurrentHarmonicRealTime':
+      logRaspiReceivedData(msg.data);
       await rs.handleHarmonic(cdb, meta.trafoId, 'current', msg.data);
       break;
     case 'receivedRequestVoltageHarmonicRealTime':
+      logRaspiReceivedData(msg.data);
       await rs.handleHarmonic(cdb, meta.trafoId, 'voltage', msg.data);
       break;
     case 'receivedSyncUpdateStatusTransformer': {
       const before = await _deps.getStatusRow(cdb, meta.trafoId);
       const after = rs.first(msg.transformerStatus);
+      logRaspiReceivedData(msg.transformerStatus);
+      logRaspiReceivedData(msg.tripStatus);
       await rs.handleStatusSync(cdb, meta.trafoId, after, rs.first(msg.tripStatus));
       if (after) await alertOnStatus(cdb, meta, before, after);
       break;
     }
     case 'getTapPositionRealTimeReceived':
+      logRaspiReceivedData(msg.transformerData);
       await rs.handleTapPosition(cdb, meta.trafoId, rs.first(msg.transformerData));
       break;
     case 'receivedSyncDataReading': {
+      logRaspiReceivedData(msg.data);
       const n = await rs.handleSyncReading(cdb, meta.trafoId, msg.data);
       send(ws, { type: 'successSyncDataReading' });
-      if (n > 0) console.log(`[Raspi WS] sync reading ${conn.serial}: ${n} baris baru`);
       break;
     }
     case 'receivedSyncDataFailureLog': {
-      const n = await rs.handleSyncFailureLog(cdb, meta.trafoId, msg.data);
-      if (n > 0) console.log(`[Raspi WS] sync failure log ${conn.serial}: ${n} baris`);
+      logRaspiReceivedData(msg.data);
+      await rs.handleSyncFailureLog(cdb, meta.trafoId, msg.data);
       break;
     }
-    // Perubahan dari UI lokal Raspi
     case 'updateSyncTransformerSettingsFromClient':
       await rs.handleSettingsFromClient(cdb, meta.trafoId, msg.data);
       break;
@@ -182,11 +204,10 @@ async function handleMessage(conn, msg) {
       await rs.handleTransformerDataFromClient(cdb, meta.trafoId, msg.data);
       break;
     default:
-      console.log(`[Raspi WS] pesan tidak ditangani (${msg.type}) dari ${conn.serial}`);
+      break;
   }
 }
 
-// Kirim permintaan yang jatuh tempo; dipanggil tiap detik per koneksi.
 async function tick(conn) {
   if (!conn.meta || !conn.state || !conn.ws || conn.ws.readyState !== 1) return;
   if (conn.inFlight) return;
@@ -215,31 +236,29 @@ async function tick(conn) {
   }
 }
 
-function handleRaspiConnection(ws, req) {
+function handleRaspiConnection(ws) {
   const conn = { ws, serial: null, meta: null, state: null, openedAt: Date.now(), isAlive: true, inFlight: false };
-  console.log(`[Raspi WS] koneksi masuk dari ${req.socket.remoteAddress}`);
-  const timer = setInterval(() => { tick(conn).catch((e) => console.error('[Raspi WS] tick error:', e.message)); }, 1000);
+  const timer = setInterval(() => { tick(conn).catch(() => {}); }, 1000);
   const heartbeat = setInterval(() => {
     const verdict = heartbeatVerdict(conn, Date.now());
-    if (verdict === 'dead') { console.warn(`[Raspi WS] ${conn.serial || '-'} tidak membalas ping, koneksi diputus`); return ws.terminate(); }
-    if (verdict === 'unregistered') { console.warn('[Raspi WS] koneksi tanpa createConnection, ditutup'); return ws.close(); }
+    if (verdict === 'dead') { return ws.terminate(); }
+    if (verdict === 'unregistered') { return ws.close(); }
     conn.isAlive = false;
-    try { ws.ping(); } catch (e) { /* socket sudah mati, heartbeat berikutnya terminate */ }
+    try { ws.ping(); } catch (e) {}
   }, HEARTBEAT_MS);
 
   ws.on('pong', () => { conn.isAlive = true; });
   ws.on('message', async (data) => {
     let msg;
-    try { msg = JSON.parse(data.toString()); } catch (e) { console.error('[Raspi WS] JSON tidak valid:', e.message); return; }
-    try { await handleMessage(conn, msg); } catch (e) { console.error(`[Raspi WS] gagal menangani ${msg && msg.type} dari ${conn.serial || '-'}:`, e.message); }
+    try { msg = JSON.parse(data.toString()); } catch (e) { return; }
+    try { await handleMessage(conn, msg); } catch (e) {}
   });
   ws.on('close', () => {
     clearInterval(timer);
     clearInterval(heartbeat);
     if (conn.serial && raspiClients.get(conn.serial) === ws) { raspiClients.delete(conn.serial); raspiMeta.delete(conn.serial); }
-    console.log(`[Raspi WS] koneksi putus: ${conn.serial || '-'}`);
   });
-  ws.on('error', (err) => console.error(`[Raspi WS] error socket (${conn.serial || '-'}):`, err.message));
+  ws.on('error', () => {});
 }
 
 function initRaspiWebSocket(server, { activeSubscriptions } = {}) {
@@ -252,18 +271,14 @@ function initRaspiWebSocket(server, { activeSubscriptions } = {}) {
   });
   wss.on('connection', handleRaspiConnection);
 
-  // Port khusus 2083 seperti deployment lama (opsional; gagal bind hanya peringatan).
   const dedicatedPort = process.env.RASPI_WS_PORT || process.env.WEBSOCKET_PORT || 2083;
   try {
     const standalone = http.createServer();
     const standaloneWss = new WebSocketServer({ server: standalone, path: '/bd-iot-socket' });
     standaloneWss.on('connection', handleRaspiConnection);
-    standalone.on('error', (err) => console.warn(`[Raspi WS] port ${dedicatedPort} tidak dipakai (${err.message}); hanya /bd-iot-socket di server utama`));
-    standalone.listen(dedicatedPort, () => console.log(`[Raspi WS] standalone aktif di port ${dedicatedPort} (/bd-iot-socket)`));
-  } catch (err) {
-    console.warn(`[Raspi WS] standalone dilewati: ${err.message}`);
-  }
-  console.log('[Raspi WS] handler aktif di /bd-iot-socket');
+    standalone.on('error', () => {});
+    standalone.listen(dedicatedPort, () => {});
+  } catch (err) {}
   return { wss, raspiClients };
 }
 

@@ -26,14 +26,14 @@ export const TransformerStatusPanel = memo(({ panel, isEditing }) => {
         )}
         {isEditing && <GripVertical size={16} className="text-gray-300 shrink-0" />}
       </div>
-      {isLoading ? <div className="flex-1 flex items-center justify-center text-xs text-gray-400">Memuat...</div>
+      {isLoading ? <div className="flex-1 flex items-center justify-center text-xs text-gray-400">Loading...</div>
       : error ? <div className="flex-1 flex items-center justify-center text-xs text-red-400">{error}</div>
-      : noStatus ? <div className="flex-1 flex items-center justify-center text-xs text-gray-400">Belum ada data status dari Raspi</div>
+      : noStatus ? <div className="flex-1 flex items-center justify-center text-xs text-gray-400">No status data from Raspi yet</div>
       : abnormal.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
           <ShieldCheck size={40} className="animate-pulse" />
           <div className="text-lg font-bold">All Systems Optimal</div>
-          <div className="text-[11px] opacity-80">Semua parameter transformator dalam kondisi normal.</div>
+          <div className="text-[11px] opacity-80">All transformer parameters are operating within normal limits.</div>
         </div>
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
@@ -42,8 +42,8 @@ export const TransformerStatusPanel = memo(({ panel, isEditing }) => {
               <tr>
                 <th className="py-1 pr-2 font-bold">Parameter</th>
                 <th className="py-1 pr-2 font-bold">Status</th>
-                <th className="py-1 pr-2 font-bold">Keterangan</th>
-                <th className="py-1 font-bold">Rekomendasi</th>
+                <th className="py-1 pr-2 font-bold">Description</th>
+                <th className="py-1 font-bold">Recommendations</th>
               </tr>
             </thead>
             <tbody>
@@ -56,7 +56,7 @@ export const TransformerStatusPanel = memo(({ panel, isEditing }) => {
                     <td className="py-1.5">
                       {it.recommendations.length === 0 ? <span className="text-gray-400">-</span> : (
                         <button onClick={() => setOpen(open === it.parameter ? null : it.parameter)} className="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-bold">
-                          {open === it.parameter ? <ChevronDown size={12} /> : <ChevronRight size={12} />} {it.recommendations.length} langkah
+                          {open === it.parameter ? <ChevronDown size={12} /> : <ChevronRight size={12} />} {it.recommendations.length} steps
                         </button>
                       )}
                     </td>

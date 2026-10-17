@@ -25,7 +25,7 @@ export const ThresholdProvider = ({ children }) => {
       const res = await axios.get(`${apiUrl}/api/settings/limits`, { params: { trafo_id: trafoId } });
       setLimits(res.data && res.data.limits ? res.data.limits : {});
     } catch (err) {
-      console.warn('Gagal memuat limits:', err.message);
+      console.warn('Failed to load limits:', err.message);
       setLimits({});
     } finally {
       setIsLoading(false);

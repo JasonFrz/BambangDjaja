@@ -202,13 +202,13 @@ const TransformerMapCard = ({ latitude, longitude, onLocationUpdate }) => {
         },
         (error) => {
           console.error("Error getting location:", error);
-          alert("Gagal mendapatkan lokasi. Pastikan izin lokasi di browser sudah diaktifkan.");
+          alert("Failed to get location. Please ensure location permissions are enabled in your browser.");
           setLocating(false);
         },
         { enableHighAccuracy: true }
       );
     } else {
-      alert("Geolocation tidak didukung di browser ini.");
+      alert("Geolocation is not supported by this browser.");
       setLocating(false);
     }
   };

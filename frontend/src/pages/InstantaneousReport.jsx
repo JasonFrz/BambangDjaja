@@ -146,7 +146,7 @@ const InstantaneousReport = () => {
       }
     } catch (err) {
       console.error('Fetch instantaneous report failed:', err);
-      setError(err.message || 'Gagal memuat data instantaneous report.');
+      setError(err.message || 'Failed to load instantaneous report data.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -528,25 +528,25 @@ const InstantaneousReport = () => {
       {/* ========================================================= */}
       {loading ? (
         <div className="py-16">
-          <EnergyLoader text="Memuat Parameter Realtime..." />
+          <EnergyLoader text="Loading Realtime Parameters..." />
         </div>
       ) : error ? (
         <div className="p-6 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/40 text-center">
           <ShieldAlert size={36} className="mx-auto text-rose-500 mb-2" />
-          <h3 className="text-base font-bold text-rose-700 dark:text-rose-400">Gagal Mengambil Data</h3>
+          <h3 className="text-base font-bold text-rose-700 dark:text-rose-400">Failed to Fetch Data</h3>
           <p className="text-xs sm:text-sm text-rose-600/80 dark:text-rose-400/80 mt-1">{error}</p>
           <button
             onClick={() => fetchData(true)}
             className="mt-4 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
           >
-            Coba Lagi
+            Try Again
           </button>
         </div>
       ) : currentList.length === 0 ? (
         <div className="py-12 px-4 rounded-2xl bg-white dark:bg-[#151521] border border-[#dfe1e6]/80 dark:border-white/10 text-center text-[#5e6c84] dark:text-[#94a3b8]">
           <Search size={32} className="mx-auto text-gray-400 mb-2 opacity-50" />
-          <p className="font-semibold text-sm">Tidak ada parameter yang cocok dengan "{searchQuery}"</p>
-          <p className="text-xs mt-1">Coba kata kunci lain atau pilih tab kategori yang berbeda.</p>
+          <p className="font-semibold text-sm">No parameters match "{searchQuery}"</p>
+          <p className="text-xs mt-1">Try different keywords or select another category tab.</p>
         </div>
       ) : viewMode === 'table' ? (
         /* TABLE VIEW (Inner Scroll, Sticky Header, Responsive Columns) */

@@ -85,44 +85,6 @@ const DEFAULT_DASHBOARD_TEMPLATES = [
         L('pp_sld', 0, 13, 6, 6), L('pp_news', 6, 13, 6, 6),
       ]
     })
-  },
-  {
-    layout_name: 'Status',
-    is_active: 0,
-    panels: [
-      P('ps_status', 'trafostatus', 'Transformer Status'),
-      P('ps_health', 'healthindex', 'Health Index', ['phaseA', 'phaseB', 'phaseC', 'frequency', 'pfTotal']),
-      P('ps_events', 'eventstream', 'Event Stream'),
-      P('ps_oilstatus', 'oilstatus', 'Oil Level Status'),
-      P('ps_phasor', 'phasor', 'Phasor', ['phaseA', 'phaseB', 'phaseC']),
-      P('ps_stat', 'stat', 'Key Values', ['lineAB', 'currentA', 'frequency', 'pfTotal', 'oil_temperature']),
-    ],
-    layouts: ensureResponsiveLayouts({
-      lg: [
-        L('ps_status', 0, 0, 12, 7),
-        L('ps_health', 0, 7, 4, 6), L('ps_events', 4, 7, 4, 6), L('ps_phasor', 8, 7, 4, 6),
-        L('ps_oilstatus', 0, 13, 6, 3), L('ps_stat', 6, 13, 6, 3),
-      ]
-    })
-  },
-  {
-    layout_name: 'Oil Quality',
-    is_active: 0,
-    panels: [
-      P('po_moist', 'linechart', 'Moisture Oil', ['moisturePpm']),
-      P('po_h2', 'linechart', 'Dissolved H2', ['h2ppm']),
-      P('po_quality', 'oilquality', 'Oil Quality'),
-      P('po_h2g', 'gauge', 'H2 Gauge', ['h2ppm']),
-      P('po_moistg', 'gauge', 'Moisture Gauge', ['moisturePpm']),
-      P('po_oiltemp', 'linechart', 'Oil Temperature', ['oil_temperature']),
-      P('po_press', 'linechart', 'Tank Pressure', ['oil_pressure']),
-    ],
-    layouts: ensureResponsiveLayouts({
-      lg: [
-        L('po_moist', 0, 0, 5, 5), L('po_h2', 5, 0, 4, 5), L('po_quality', 9, 0, 3, 5),
-        L('po_h2g', 0, 5, 2, 4), L('po_moistg', 2, 5, 2, 4), L('po_oiltemp', 4, 5, 4, 4), L('po_press', 8, 5, 4, 4),
-      ]
-    })
   }
 ];
 

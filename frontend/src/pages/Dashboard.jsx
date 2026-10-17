@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from "react";
 import { useSearchParams, useLocation } from 'react-router-dom';
-import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Plus, X, Settings2, Trash2, RefreshCw, GripVertical, Edit3, Send, LogOut, Download, Loader2, ChevronDown, Check, Search, Layers, RotateCcw, Thermometer, TrendingUp, BarChart3, Eye, AlertTriangle, Maximize2, Minimize2, MousePointer2, BellRing, Power, FileDown, Monitor, Crosshair, LayoutGrid, PlusSquare, Database, PieChart as PieChartIcon, FileText, Table, AlignLeft, CalendarClock, List, Rss, MessageSquareWarning, CandlestickChart, ActivitySquare, LayoutPanelLeft, BoxSelect, Calendar, Compass, GitCommit, HeartPulse, Terminal, Undo2, Redo2, Sparkles, Wand2, Bot } from 'lucide-react';
+import { Zap, Activity, Waves, Gauge, Wifi, WifiOff, Plus, X, Settings2, Trash2, RefreshCw, GripVertical, Edit3, Send, LogOut, Download, Loader2, ChevronDown, Check, Search, Layers, RotateCcw, Thermometer, TrendingUp, BarChart3, Eye, AlertTriangle, Maximize2, Minimize2, MousePointer2, BellRing, Power, FileDown, Monitor, Crosshair, LayoutGrid, PlusSquare, Database, PieChart as PieChartIcon, FileText, Table, AlignLeft, CalendarClock, List, Rss, MessageSquareWarning, CandlestickChart, ActivitySquare, LayoutPanelLeft, BoxSelect, Calendar, Compass, GitCommit, HeartPulse, Terminal, Undo2, Redo2, Sparkles, Wand2, Bot, Box } from 'lucide-react';
 import { useTrendData } from "../contexts/TrendDataContext";
 import { useTemperatureData } from "../contexts/TemperatureDataContext";
 import { useDialog } from "../contexts/DialogContext";
@@ -21,12 +21,13 @@ import {
   HistogramPanel, NewsPanel, CandlestickPanel, OilStatusPanel,
   PhasorDiagramPanel, TransformerSLDPanel, HealthIndexPanel, EventStreamPanel,
   HarmonicPanel, DeratingPanel, TransformerStatusPanel, PhysicalStatusPanel, OilQualityPanel,
-  ElectricalStatusPanel
+  ElectricalStatusPanel, Transformer3DPanel
 } from "../components/visualizations";
 import { DeviceStateBanner } from "../components/DeviceStateBanner";
 import { UniversalTimePicker } from "../components/UniversalTimePicker";
 import TransformerMapCard from '../components/TransformerMapCard';
 import AiLayoutModal from '../components/AiLayoutModal';
+import { useTrafoApi } from '../hooks/useTrafoApi';
 
 
 const ensureResponsiveLayouts = (layouts) => {
@@ -69,17 +70,18 @@ const ensureResponsiveLayouts = (layouts) => {
   return result;
 };
 
-// Profil bawaan: preset Electrical adalah "default"; tiga preset lain ditambahkan lewat withPresets.
 const DEFAULT_PANELS = PRESETS.electrical.panels;
 const DEFAULT_GRID_LAYOUTS = ensureResponsiveLayouts(PRESETS.electrical.layouts);
 const DEFAULT_PROFILE_NAME = PRESETS.electrical.name;
 const withPresets = (profiles) => {
   const out = { ...profiles };
-  for (const key of ['physical', 'status', 'oilquality']) {
+  for (const key of ['physical']) {
     const pr = PRESETS[key];
-    const exists = Object.values(out).some(p => p.name === pr.name || p.id === pr.id);
-    if (!exists) {
-      out[pr.id] = { id: pr.id, dbId: pr.id, name: pr.name, panels: [...pr.panels], layouts: ensureResponsiveLayouts(pr.layouts), isEditable: true };
+    if (pr) {
+      const exists = Object.values(out).some(p => p.name === pr.name || p.id === pr.id);
+      if (!exists) {
+        out[pr.id] = { id: pr.id, dbId: pr.id, name: pr.name, panels: [...pr.panels], layouts: ensureResponsiveLayouts(pr.layouts), isEditable: true };
+      }
     }
   }
   if (out['default']) out['default'] = { ...out['default'], name: DEFAULT_PROFILE_NAME, isEditable: true };
@@ -124,6 +126,7 @@ const PanelRenderer = memo(({ panel, latestData, chartData, tempData, isLive, is
     case 'physicalstatus': return <PhysicalStatusPanel panel={panel} isEditing={isEditing} />;
     case 'oilquality': return <OilQualityPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
     case 'electricalstatus': return <ElectricalStatusPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
+    case 'transformer3d': return <Transformer3DPanel panel={panel} latestData={combinedLatestData} isEditing={isEditing} />;
     default:
       return (
         <div className="h-full w-full flex items-center justify-center bg-gray-50 dark:bg-white/5 rounded-xl border border-dashed border-gray-300 dark:border-white/20">
@@ -258,7 +261,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     sld: 8,          
   };
   const SINGLE_METRIC_PANELS = ['gauge', 'bargauge', 'candlestick', 'histogram'];
-  const NO_METRIC_PANELS = ['oilstatus', 'eventstream', 'news', 'harmonic', 'derating', 'trafostatus', 'physicalstatus', 'oilquality', 'electricalstatus'];
+  const NO_METRIC_PANELS = ['oilstatus', 'eventstream', 'news', 'harmonic', 'derating', 'trafostatus', 'physicalstatus', 'oilquality', 'electricalstatus', 'transformer3d'];
   const OPTIONAL_METRIC_PANELS = ['phasor', 'sld', 'healthindex'];
 
   const toggleMetric = (key) => {
@@ -280,6 +283,7 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
 
   const derivedTitle = useMemo(() => {
     if (panelType === 'oilstatus') return 'Oil Status';
+    if (panelType === 'transformer3d') return '3D Transformer Digital Twin';
     if (panelType === 'phasor') return '3-Phase Phasor Diagram';
     if (panelType === 'sld') return 'Transformer SLD';
     if (panelType === 'healthindex') return 'Transformer Health Index';
@@ -498,14 +502,14 @@ const PanelEditorModal = ({ isOpen, onClose, onSave, editingPanel, latestData, g
     { v: 'oilstatus', l: 'Oil Status', d: 'Oil Trip & Alarm Status', i: AlertTriangle },
     { v: 'phasor', l: 'Phasor Diagram', d: '3-Phase vector polar plot', i: Compass },
     { v: 'sld', l: 'Transformer SLD', d: 'Single Line Diagram & power flow', i: GitCommit },
-    { v: 'healthindex', l: 'Health Index', d: 'Composite THI & IEEE Aging', i: HeartPulse },
     { v: 'eventstream', l: 'Event Stream', d: 'Real-time terminal log & alert', i: Terminal },
     { v: 'harmonic', l: 'Harmonics', d: 'THD per orde, tegangan/arus', i: BarChart3 },
     { v: 'derating', l: 'De-rating', d: 'Kapasitas terpakai vs hilang per fase', i: PieChartIcon },
     { v: 'trafostatus', l: 'Transformer Status', d: '29 status alarm/trip + rekomendasi', i: AlertTriangle },
     { v: 'physicalstatus', l: 'Physical Status', d: 'Tap, oil level, pressure, gas fault', i: Thermometer },
     { v: 'oilquality', l: 'Oil Quality', d: 'H2, moisture, BDV, water activity', i: Database },
-    { v: 'electricalstatus', l: 'Electrical Status', d: 'Badge status V/I/PF/Freq + leading/lagging', i: Zap }
+    { v: 'electricalstatus', l: 'Electrical Status', d: 'Badge status V/I/PF/Freq + leading/lagging', i: Zap },
+    { v: 'transformer3d', l: '3D Digital Twin', d: 'Interactive 3D transformer model & thermal heatmap', i: Box }
   ].filter(t => t.l.toLowerCase().includes(visSearchQuery.toLowerCase()) || t.d.toLowerCase().includes(visSearchQuery.toLowerCase())).map(t => (
                     <div key={t.v} className={`rounded-xl border transition-all flex flex-col overflow-hidden ${panelType === t.v ? 'bg-blue-50 border-blue-500 dark:bg-blue-500/10 dark:border-blue-500 shadow-sm' : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#151521] hover:border-blue-300 dark:hover:border-blue-500/50'}`}>
                       <button
@@ -537,6 +541,7 @@ const Dashboard = () => {
   const { liveData, wsData, isConnected, isLive, isLiveMode, isLoading: isLoadingTrend, updateInterval, setUpdateInterval, fetchHistoricalData, resetToLive } = useTrendData();
   const { apiUrl } = useApi();
   const { data: tempData, liveData: oilLiveData } = useTemperatureData();
+  const { data: trafoStatus } = useTrafoApi('status', 15000);
   const { confirm, prompt, alert } = useDialog();
   const location = useLocation();
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -556,11 +561,24 @@ const Dashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
+  const [isIntervalDropdownOpen, setIsIntervalDropdownOpen] = useState(false);
+  const intervalDropdownRef = useRef(null);
+
+  const INTERVAL_OPTIONS = useMemo(() => [
+    { value: 0, label: 'Real time' },
+    { value: 2000, label: '2 Sec' },
+    { value: 5000, label: '5 Sec' },
+    { value: 30000, label: '30 Sec' },
+    { value: 60000, label: '1 Min' }
+  ], []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
         setIsProfileDropdownOpen(false);
+      }
+      if (intervalDropdownRef.current && !intervalDropdownRef.current.contains(event.target)) {
+        setIsIntervalDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -1065,7 +1083,7 @@ const Dashboard = () => {
 
     const result = await saveLayoutToApi(null, name.trim(), { panels: panels ? [...panels] : null, layouts: gridLayouts }, true);
     if (!result || !result.success || !result.id) {
-      alert("Gagal menyimpan profil baru ke server.", { title: 'Error' });
+      alert("Failed to save new profile to server.", { title: 'Error' });
       return;
     }
 
@@ -1126,28 +1144,29 @@ const Dashboard = () => {
   };
 
   const handleDeleteProfile = async () => {
-    const isDefault = profilesState.activeProfileId === 'default';
-    const actionText = isDefault ? 'reset' : 'delete';
-    const titleText = isDefault ? 'Reset Dashboard' : 'Delete Profile';
+    const currentProf = profilesState.profiles[profilesState.activeProfileId];
+    const profileName = currentProf?.name || 'Current Profile';
     
-    const isConfirmed = await confirm(`Are you sure you want to ${actionText} "${profilesState.profiles[profilesState.activeProfileId]?.name}"?`, { title: titleText });
+    const isConfirmed = await confirm(`Are you sure you want to delete profile "${profileName}"?`, { title: 'Delete Profile' });
     if (isConfirmed) {
       const deletedId = profilesState.activeProfileId;
-      
-      deleteLayoutFromApi(deletedId).then(() => {
-        if (!isDefault) setActiveLayoutInApi('default');
-      });
+      deleteLayoutFromApi(deletedId);
 
       setProfilesState(prev => {
         const newProfiles = { ...prev.profiles };
-        if (isDefault) {
-          newProfiles['default'] = { id: 'default', name: DEFAULT_PROFILE_NAME, panels: [...DEFAULT_PANELS], layouts: JSON.parse(JSON.stringify(DEFAULT_GRID_LAYOUTS)), isEditable: false };
-        } else {
-          delete newProfiles[deletedId];
+        delete newProfiles[deletedId];
+        const remainingKeys = Object.keys(newProfiles);
+        if (remainingKeys.length === 0) {
+          return {
+            activeProfileId: 'default',
+            profiles: {
+              default: { id: 'default', name: 'Electrical', panels: [], layouts: { lg: [], md: [], sm: [], xs: [], xxs: [] }, isEditable: true }
+            }
+          };
         }
+        const nextActive = remainingKeys.includes('default') ? 'default' : remainingKeys[0];
         return {
-          ...prev,
-          activeProfileId: 'default',
+          activeProfileId: nextActive,
           profiles: newProfiles
         };
       });
@@ -1197,7 +1216,7 @@ const Dashboard = () => {
   };
 
   const handleImportProfile = async () => {
-    const id = await prompt('Masukkan Layout ID yang ingin diimpor:', { title: 'Import Layout' });
+    const id = await prompt('Enter Layout ID to import:', { title: 'Import Layout' });
     if (!id || id.trim() === '') return;
 
     try {
@@ -1232,10 +1251,10 @@ const Dashboard = () => {
           };
         });
       } else {
-        alert("Layout ID tidak ditemukan atau gagal mengambil data.", { title: 'Import Gagal' });
+        alert("Layout ID not found or failed to fetch data.", { title: 'Import Failed' });
       }
     } catch (err) {
-      alert("Koneksi gagal saat import layout.", { title: 'Import Gagal' });
+      alert("Connection failed during layout import.", { title: 'Import Failed' });
     }
   };
 
@@ -1591,7 +1610,7 @@ const Dashboard = () => {
       active: true,
       current: processedAiPanels.length,
       total: processedAiPanels.length,
-      currentTitle: 'Selesai! Panel berhasil dirakit ke dashboard.',
+      currentTitle: 'Done! Panels successfully assembled to dashboard.',
       progress: 100,
       completed: true
     });
@@ -1721,7 +1740,7 @@ const Dashboard = () => {
     } catch (err) {
       setIsExporting(false); setExportStep(0);
       if (err.response?.status === 404) {
-        try { const t = await err.response.data.text(); setExportError(JSON.parse(t).error || "Tidak ada data."); } catch { setExportError("No data found in this time range."); }
+        try { const t = await err.response.data.text(); setExportError(JSON.parse(t).error || "No data found."); } catch { setExportError("No data found in this time range."); }
       } else { setExportError("Failed to download Excel file."); }
     }
   };
@@ -1742,20 +1761,48 @@ const Dashboard = () => {
     setWaLogoutMessage({ text: '', type: '' });
     try { 
       await axios.post(`${apiUrl}/api/whatsapp/logout`);
-      setWaLogoutMessage({ text: 'WhatsApp berhasil dilogout!', type: 'success' });
+      setWaLogoutMessage({ text: 'WhatsApp logged out successfully!', type: 'success' });
       setTimeout(() => {
         setShowLogoutModal(false);
         setWaLogoutMessage({ text: '', type: '' });
       }, 2000);
     } catch (e) { 
       console.error("WA logout failed:", e); 
-      setWaLogoutMessage({ text: 'Gagal logout WhatsApp. Coba lagi.', type: 'error' });
+      setWaLogoutMessage({ text: 'Failed to logout WhatsApp. Please try again.', type: 'error' });
     } finally { 
       setIsLoggingOut(false); 
     }
   };
 
-  const isFreqSafe = (latestData.frequency || 0) <= 52.5;
+  const statusBadge = useMemo(() => {
+    if (!trafoStatus || !trafoStatus.items || trafoStatus.items.length === 0) {
+      const isFreqSafe = (latestData.frequency || 0) <= 52.5;
+      return isFreqSafe
+        ? { text: 'Safe', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', dot: 'bg-emerald-500' }
+        : { text: 'High Alarm', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', dot: 'bg-amber-500 animate-pulse' };
+    }
+
+    const items = trafoStatus.items;
+    const hasHighTrip = items.some(i => i.code === 5) || (trafoStatus.tripActive && trafoStatus.tripActive.length > 0);
+    const hasLowTrip = items.some(i => i.code === 1);
+    const hasHighAlarm = items.some(i => i.code === 4);
+    const hasLowAlarm = items.some(i => i.code === 2);
+
+    if (hasHighTrip) {
+      return { text: 'High Trip', color: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400', dot: 'bg-rose-500 animate-ping' };
+    }
+    if (hasLowTrip) {
+      return { text: 'Trip', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', dot: 'bg-red-500 animate-pulse' };
+    }
+    if (hasHighAlarm) {
+      return { text: 'High Alarm', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', dot: 'bg-amber-500 animate-pulse' };
+    }
+    if (hasLowAlarm) {
+      return { text: 'Alarm', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400', dot: 'bg-yellow-500 animate-pulse' };
+    }
+
+    return { text: 'Safe', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', dot: 'bg-emerald-500' };
+  }, [trafoStatus, latestData.frequency]);
 
   const lockedLayouts = useMemo(() => {
     const locked = {};
@@ -1799,7 +1846,7 @@ const Dashboard = () => {
         </div>
         <h2 className="text-2xl font-bold text-[#172b4d] dark:text-white mb-2 font-heading text-center">Welcome to the Dashboard</h2>
         <p className="text-sm text-[#5e6c84] dark:text-[#94a3b8] max-w-md text-center mb-8 leading-relaxed">
-          This dashboard is highly flexible — you can customize which panels to display, chart types, and layout positions.
+          This dashboard is currently empty. Choose an option below to set up your layout:
         </p>
         <div className="flex flex-col sm:flex-row gap-3">
           <button
@@ -1807,25 +1854,26 @@ const Dashboard = () => {
             className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white font-bold shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all text-sm cursor-pointer"
           >
             <Sparkles size={18} className="animate-pulse" />
-            Atur dengan Prompt
+            Setup with AI
           </button>
           <button
             onClick={loadDefaults}
-            className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[#172b4d] dark:text-gray-300 font-bold hover:bg-gray-50 dark:hover:bg-white/10 transition-colors shadow-sm text-sm"
+            className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[#172b4d] dark:text-gray-300 font-bold hover:bg-gray-50 dark:hover:bg-white/10 transition-colors shadow-sm text-sm cursor-pointer"
           >
             <Layers size={18} />
-            ⚡ Load Default Dashboard
+            Default Preset
           </button>
           <button
             onClick={() => { 
               setPanels([]); 
               setGridLayouts({ lg: [], md: [], sm: [], xs: [], xxs: [] }); 
+              setEditingPanel(null);
               setEditorOpen(true); 
             }}
-            className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[#172b4d] dark:text-gray-300 font-bold hover:bg-gray-50 dark:hover:bg-white/10 transition-colors shadow-sm text-sm"
+            className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[#172b4d] dark:text-gray-300 font-bold hover:bg-gray-50 dark:hover:bg-white/10 transition-colors shadow-sm text-sm cursor-pointer"
           >
             <Plus size={18} />
-            🎨 Create Custom Panel
+            Manual Layout
           </button>
         </div>
       </div>
@@ -1896,9 +1944,9 @@ const Dashboard = () => {
               {isLive ? <Wifi strokeWidth={2.5} size={12} /> : <WifiOff strokeWidth={2.5} size={12} />}
               {isLive ? 'Live' : 'Offline'}
             </div>
-            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${isFreqSafe ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-              <div className={`w-2 h-2 rounded-full ${isFreqSafe ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`} />
-              {isFreqSafe ? 'Safe' : 'Danger'}
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${statusBadge.color}`}>
+              <div className={`w-2 h-2 rounded-full ${statusBadge.dot}`} />
+              {statusBadge.text}
             </div>
           </div>
           <p className="text-[#5e6c84] dark:text-[#94a3b8] text-xs">
@@ -1943,19 +1991,19 @@ const Dashboard = () => {
                 title="Double click to rename"
                 className="flex items-center justify-between min-w-[150px] px-3 py-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-indigo-600 dark:text-indigo-400 text-xs font-bold cursor-pointer hover:bg-gray-50 dark:hover:bg-[#374151] transition-colors shadow-sm"
               >
-                <span className="truncate pr-4">{profilesState.profiles[profilesState.activeProfileId]?.name || 'Main Dashboard'}</span>
+                <span className="truncate pr-4">{profilesState.profiles[profilesState.activeProfileId]?.name || 'Electrical'}</span>
                 <ChevronDown size={14} className={`text-indigo-500 shrink-0 transition-transform ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
             )}
 
             {isProfileDropdownOpen && (
-              <div className="absolute top-full mt-1.5 left-0 w-56 bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl z-[100] overflow-hidden flex flex-col animate-[slideDownFade_0.15s_ease-out] origin-top">
-                <div className="px-3 py-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider bg-gray-50/50 dark:bg-black/10 border-b border-gray-100 dark:border-white/5">
-                  Presets & Saved Dashboards
+              <div className="absolute top-full mt-1.5 left-0 right-0 w-full min-w-full bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl z-[100] overflow-hidden flex flex-col animate-[slideDownFade_0.15s_ease-out] origin-top">
+                <div className="px-3 py-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider bg-gray-50/50 dark:bg-black/10 border-b border-gray-100 dark:border-white/5 truncate">
+                  Presets & Dashboards
                 </div>
 
-                <div className="max-h-[105px] overflow-y-auto custom-scrollbar">
-                  {[...Object.values(profilesState.profiles)].sort((a, b) => ((isPresetId(a.id) || a.id === 'default') ? 0 : 1) - ((isPresetId(b.id) || b.id === 'default') ? 0 : 1)).map(p => {
+                <div className="max-h-[140px] overflow-y-auto custom-scrollbar">
+                  {[...Object.values(profilesState.profiles)].map(p => {
                     const isActive = p.id === profilesState.activeProfileId;
                     return (
                       <button
@@ -1978,48 +2026,69 @@ const Dashboard = () => {
                   <div className="border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/10">
                     <button
                       onClick={() => { setIsProfileDropdownOpen(false); handleCopyProfileId(); }}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2 transition-colors"
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2 transition-colors truncate"
                     >
-                      <FileDown size={14} /> Copy Current Layout ID
+                      <FileDown size={14} className="shrink-0" /> <span className="truncate">Copy Current Layout ID</span>
                     </button>
                     <button
                       onClick={() => { setIsProfileDropdownOpen(false); handleImportProfile(); }}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 flex items-center gap-2 transition-colors"
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 flex items-center gap-2 transition-colors truncate"
                     >
-                      <Download size={14} /> Import Layout from ID...
+                      <Download size={14} className="shrink-0" /> <span className="truncate">Import Layout from ID...</span>
                     </button>
                     <button
                       onClick={() => { setIsProfileDropdownOpen(false); handleCreateProfile(); }}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 flex items-center gap-2 transition-colors"
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 flex items-center gap-2 transition-colors truncate"
                     >
-                      <PlusSquare size={14} /> Save As New Profile...
+                      <PlusSquare size={14} className="shrink-0" /> <span className="truncate">Save As New Profile...</span>
                     </button>
-                    {(activeProfile?.isEditable || profilesState.activeProfileId === 'default') && (
                     <button
                       onClick={() => { setIsProfileDropdownOpen(false); handleDeleteProfile(); }}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors"
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors truncate"
                     >
-                      <Trash2 size={14} /> {profilesState.activeProfileId === 'default' ? 'Reset to Default Layout' : 'Delete Current Profile'}
+                      <Trash2 size={14} className="shrink-0" /> <span className="truncate">Delete Current Profile</span>
                     </button>
-                    )}
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          <select
-            value={updateInterval}
-            onChange={(e) => setUpdateInterval(Number(e.target.value))}
-            className="px-3 py-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-[#172b4d] dark:text-white text-xs font-semibold cursor-pointer outline-none hover:bg-gray-50 dark:hover:bg-[#374151] transition-colors shadow-sm"
-            style={{ colorScheme: 'dark light' }}
-          >
-            <option value={0} className="bg-white dark:bg-[#1f2937] text-[#172b4d] dark:text-white">Real time</option>
-            <option value={2000} className="bg-white dark:bg-[#1f2937] text-[#172b4d] dark:text-white">2 Sec</option>
-            <option value={5000} className="bg-white dark:bg-[#1f2937] text-[#172b4d] dark:text-white">5 Sec</option>
-            <option value={30000} className="bg-white dark:bg-[#1f2937] text-[#172b4d] dark:text-white">30 Sec</option>
-            <option value={60000} className="bg-white dark:bg-[#1f2937] text-[#172b4d] dark:text-white">1 Min</option>
-          </select>
+          <div className="relative" ref={intervalDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsIntervalDropdownOpen(!isIntervalDropdownOpen)}
+              className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 text-[#172b4d] dark:text-white text-xs font-semibold cursor-pointer hover:bg-gray-50 dark:hover:bg-[#374151] transition-colors shadow-sm select-none"
+            >
+              <span>{INTERVAL_OPTIONS.find(opt => opt.value === updateInterval)?.label || 'Real time'}</span>
+              <ChevronDown size={14} className={`text-gray-500 shrink-0 transition-transform ${isIntervalDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isIntervalDropdownOpen && (
+              <div className="absolute top-full mt-1.5 right-0 w-32 bg-white dark:bg-[#1f2937] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl z-[100] overflow-hidden flex flex-col py-1 animate-[slideDownFade_0.15s_ease-out]">
+                {INTERVAL_OPTIONS.map(opt => {
+                  const isSelected = updateInterval === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setUpdateInterval(opt.value);
+                        setIsIntervalDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between transition-colors ${
+                        isSelected
+                          ? 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-bold'
+                          : 'text-[#172b4d] dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      {isSelected && <Check size={13} className="text-indigo-600 dark:text-indigo-400" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {!isFullscreen && (
             <>
@@ -2029,10 +2098,9 @@ const Dashboard = () => {
               <button
                 onClick={() => setIsAiModalOpen(true)}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white text-xs font-bold shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-                title="Buka Asisten Dashboard"
+                title="AI Layout"
               >
-                <Bot strokeWidth={2.2} size={15} />
-                <span className="hidden sm:inline">Asisten Layout</span>
+                <span className="text-xs font-bold">AI Layout</span>
               </button>
               <button onClick={() => { setEditingPanel(null); setEditorOpen(true); }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all cursor-pointer">
                 <PlusSquare strokeWidth={2.5} size={14} /><span className="hidden sm:inline">Add Panel</span>
@@ -2096,12 +2164,44 @@ const Dashboard = () => {
       <div className={`transition-all ${isEditing ? 'ring-2 ring-blue-500/30 rounded-xl p-1 bg-blue-500/5 dark:bg-blue-500/10' : ''}`}>
 
         {(!panels || panels.length === 0) && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <BarChart3 size={48} className="text-gray-300 dark:text-gray-700 mb-4" />
-            <p className="text-gray-500 dark:text-gray-400 font-medium mb-4">Dashboard is empty. Add your first panel!</p>
-            <button onClick={() => { setEditingPanel(null); setEditorOpen(true); }} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold shadow-lg shadow-blue-500/20">
-              <Plus size={16} className="inline mr-1" /> Add Panel
-            </button>
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-white/40 dark:bg-black/20 rounded-2xl border border-dashed border-gray-300 dark:border-white/10 my-4 animate-[slideUpFade_0.3s_ease-out]">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-500/5 dark:to-indigo-500/5 flex items-center justify-center mb-4">
+              <BarChart3 size={32} className="text-blue-500/60" />
+            </div>
+            <h3 className="text-lg sm:text-xl font-bold text-[#172b4d] dark:text-white mb-1.5 font-heading">
+              Welcome to the Dashboard
+            </h3>
+            <p className="text-xs sm:text-sm text-[#5e6c84] dark:text-[#94a3b8] max-w-md text-center mb-6 leading-relaxed">
+              This dashboard is currently empty. Choose an option below to set up your layout:
+            </p>
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-lg justify-center">
+              <button
+                onClick={() => setIsAiModalOpen(true)}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white font-bold shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all text-xs cursor-pointer"
+              >
+                <Sparkles size={16} />
+                <span>Setup with AI</span>
+              </button>
+              <button
+                onClick={loadDefaults}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[#172b4d] dark:text-gray-200 font-bold hover:bg-gray-50 dark:hover:bg-white/10 transition-colors shadow-sm text-xs cursor-pointer"
+              >
+                <Layers size={16} />
+                <span>Default Preset</span>
+              </button>
+              <button
+                onClick={() => { 
+                  setPanels([]); 
+                  setGridLayouts({ lg: [], md: [], sm: [], xs: [], xxs: [] }); 
+                  setEditingPanel(null);
+                  setEditorOpen(true); 
+                }}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[#172b4d] dark:text-gray-200 font-bold hover:bg-gray-50 dark:hover:bg-white/10 transition-colors shadow-sm text-xs cursor-pointer"
+              >
+                <Plus size={16} />
+                <span>Manual Layout</span>
+              </button>
+            </div>
           </div>
         )}
         <ResponsiveGridLayout
@@ -2135,7 +2235,7 @@ const Dashboard = () => {
                 >
                   {isNewlyAdded && (
                     <div className="absolute top-2 left-2 z-40 px-2 py-0.5 rounded-md bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white text-[9.5px] font-bold shadow-md flex items-center gap-1 animate-pulse pointer-events-none">
-                      <Sparkles size={10} /> Baru Ditambahkan
+                      <Sparkles size={10} /> Newly Added
                     </div>
                   )}
 

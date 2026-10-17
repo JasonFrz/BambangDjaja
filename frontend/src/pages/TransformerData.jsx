@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Wifi, WifiOff, Camera, Upload, X, Check, Image as ImageIcon } from "lucide-react";
+import { Wifi, WifiOff, Camera, Upload, X, Check, Image as ImageIcon, Edit3 } from "lucide-react";
 import Cropper from 'react-easy-crop';
 import Webcam from 'react-webcam';
 import imageCompression from 'browser-image-compression';
@@ -146,12 +146,12 @@ const TransformerData = () => {
 
   const handleUpload = async () => {
     if (!selectedImage) {
-      setUploadError('Pilih gambar terlebih dahulu.');
+      setUploadError('Please select an image first.');
       return;
     }
     
     if (!trafoId) {
-      setUploadError('Tidak ada Trafo yang dipilih.');
+      setUploadError('No transformer selected.');
       return;
     }
 
@@ -184,7 +184,7 @@ const TransformerData = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setUploadSuccess('Gambar berhasil disimpan ke Google Drive!');
+        setUploadSuccess('Image successfully saved!');
         setTrafoImage(data.imageUrl);
         setTimeout(() => {
           setShowUploadModal(false);
@@ -193,17 +193,17 @@ const TransformerData = () => {
           setUploadSuccess('');
         }, 2000);
       } else {
-        setUploadError(data.error || 'Gagal mengupload gambar');
+        setUploadError(data.error || 'Failed to upload image');
       }
     } catch (err) {
-      setUploadError('Koneksi ke server gagal.');
+      setUploadError('Connection to server failed.');
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleResetImage = async () => {
-    const isConfirmed = await confirm('Apakah Anda yakin ingin mereset gambar trafo ke default?', { title: 'Reset Foto' });
+    const isConfirmed = await confirm('Are you sure you want to reset the transformer photo to default?', { title: 'Reset Photo' });
     if (!isConfirmed) return;
     
     setIsUploading(true);
@@ -222,10 +222,10 @@ const TransformerData = () => {
         setPreviewUrl(null);
         setShowUploadModal(false);
       } else {
-        setUploadError('Gagal mereset gambar');
+        setUploadError('Failed to reset image');
       }
     } catch (err) {
-      setUploadError('Koneksi gagal');
+      setUploadError('Connection failed');
     } finally {
       setIsUploading(false);
     }
@@ -238,21 +238,34 @@ const TransformerData = () => {
         <div>
           <div className="flex items-center gap-3">
             {isEditingName ? (
-              <input 
-                type="text" 
-                value={editNameValue} 
-                onChange={(e) => setEditNameValue(e.target.value)}
-                onBlur={handleRename}
-                onKeyDown={(e) => { if(e.key === 'Enter') handleRename(); if(e.key === 'Escape') setIsEditingName(false); }}
-                autoFocus
-                className="text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1 bg-transparent border-b-2 border-blue-500 outline-none min-w-[300px]"
-              />
+              <div className="flex items-center gap-2">
+                <input 
+                  type="text" 
+                  value={editNameValue} 
+                  onChange={(e) => setEditNameValue(e.target.value)}
+                  onKeyDown={(e) => { if(e.key === 'Enter') handleRename(); if(e.key === 'Escape') setIsEditingName(false); }}
+                  autoFocus
+                  className="text-2xl sm:text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1 bg-transparent border-b-2 border-blue-500 outline-none min-w-[200px] sm:min-w-[300px]"
+                />
+                <button
+                  type="button"
+                  onClick={handleRename}
+                  className="p-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white shadow-xs cursor-pointer"
+                  title="Save Name"
+                >
+                  <Check size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingName(false)}
+                  className="p-1.5 rounded-lg bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-gray-200 shadow-xs cursor-pointer"
+                  title="Cancel"
+                >
+                  <X size={16} />
+                </button>
+              </div>
             ) : (
-              <h2 
-                className="text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1 transition-colors flex items-center gap-4 cursor-text"
-                onDoubleClick={() => { setIsEditingName(true); setEditNameValue(trafoName); }}
-                title="Double click to rename"
-              >
+              <h2 className="text-2xl sm:text-3xl font-bold text-[#172b4d] dark:text-white font-heading mb-1 transition-colors">
                 {trafoName}
               </h2>
             )}
@@ -261,17 +274,28 @@ const TransformerData = () => {
             Transformer Location & Specifications
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${isLive ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 animate-glow-pulse" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
-            {isLive ? <Wifi size={16} /> : <WifiOff size={16} />}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium ${isLive ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 animate-glow-pulse" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
+            {isLive ? <Wifi size={15} /> : <WifiOff size={15} />}
             {isLive ? "Live" : "Offline"}
           </div>
           <button
-            onClick={() => setShowUploadModal(true)}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-600 text-white font-bold hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/20"
+            onClick={() => {
+              setIsEditingName(true);
+              setEditNameValue(trafoName);
+            }}
+            className="flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-white dark:bg-[#151521] border border-gray-200 dark:border-white/10 text-[#172b4d] dark:text-white font-bold hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all shadow-xs text-xs sm:text-sm active:scale-95 cursor-pointer"
+            title="Edit Transformer Name"
           >
-            <Camera size={16} />
-            <span className="hidden sm:inline">Photo</span>
+            <Edit3 size={15} className="text-blue-500" />
+            <span className="inline">Edit</span>
+          </button>
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-blue-600 text-white font-bold hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/20 text-xs sm:text-sm active:scale-95 cursor-pointer"
+          >
+            <Camera size={15} />
+            <span className="inline">Photo</span>
           </button>
         </div>
       </div>

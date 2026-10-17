@@ -100,44 +100,44 @@ export const UniversalTimePicker = () => {
       </div>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl bg-white dark:bg-[#181826] border border-gray-200 dark:border-white/10 shadow-2xl z-50 p-2 overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="px-3 py-2 border-b border-gray-100 dark:border-white/5 mb-1 flex items-center justify-between">
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Universal Time Range</span>
+        <div className="absolute left-0 right-0 top-full mt-1.5 w-full min-w-full rounded-xl bg-white dark:bg-[#181826] border border-gray-200 dark:border-white/10 shadow-2xl z-50 p-1.5 overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="px-2 py-1.5 border-b border-gray-100 dark:border-white/5 mb-1 flex items-center justify-between">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Time Range</span>
           </div>
 
-          <div className="space-y-0.5">
+          <div className="space-y-0.5 max-h-56 overflow-y-auto custom-scrollbar">
             {presets.map((p) => {
               const isSelected = timeRange.preset === p.key;
               return (
                 <button
                   key={p.key}
                   onClick={() => handleSelectPreset(p.key)}
-                  className={`w-full flex items-start justify-between p-2 rounded-xl text-left transition-colors ${
+                  className={`w-full flex items-center justify-between p-2 rounded-lg text-left transition-colors ${
                     isSelected
                       ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
                       : 'hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300'
                   }`}
                 >
-                  <div className="flex flex-col">
-                    <span className="text-xs font-semibold">{p.label}</span>
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500">{p.desc}</span>
+                  <div className="flex flex-col min-w-0 pr-2">
+                    <span className="text-xs font-semibold truncate">{p.label}</span>
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{p.desc}</span>
                   </div>
-                  {isSelected && <Check size={14} className="text-blue-500 mt-1 shrink-0" />}
+                  {isSelected && <Check size={14} className="text-blue-500 shrink-0" />}
                 </button>
               );
             })}
           </div>
 
-          <div className="mt-2 pt-2 border-t border-gray-100 dark:border-white/5">
+          <div className="mt-1 pt-1 border-t border-gray-100 dark:border-white/5">
             <button
               onClick={() => {
                 setIsOpen(false);
                 setShowCustomModal(true);
               }}
-              className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+              className="w-full flex items-center gap-2 p-2 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
             >
-              <Calendar size={14} className="text-blue-500" />
-              <span>Custom Date Range...</span>
+              <Calendar size={13} className="text-blue-500 shrink-0" />
+              <span className="truncate">Custom Range...</span>
             </button>
           </div>
         </div>
@@ -148,13 +148,13 @@ export const UniversalTimePicker = () => {
           <div className="bg-white dark:bg-[#181826] rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl p-6 w-full max-w-md">
             <div className="flex items-center gap-2 mb-4">
               <Calendar size={18} className="text-blue-500" />
-              <h4 className="text-sm font-bold text-gray-900 dark:text-white">Pilih Rentang Waktu Kustom</h4>
+              <h4 className="text-sm font-bold text-gray-900 dark:text-white">Select Custom Time Range</h4>
             </div>
 
             <form onSubmit={handleApplyCustom} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
-                  Waktu Mulai (Start Time)
+                  Start Time
                 </label>
                 <input
                   type="datetime-local"
@@ -167,7 +167,7 @@ export const UniversalTimePicker = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
-                  Waktu Akhir (End Time)
+                  End Time
                 </label>
                 <input
                   type="datetime-local"
@@ -184,13 +184,13 @@ export const UniversalTimePicker = () => {
                   onClick={() => setShowCustomModal(false)}
                   className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
                 >
-                  Batal
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 transition-all"
                 >
-                  Terapkan Rentang
+                  Apply Range
                 </button>
               </div>
             </form>

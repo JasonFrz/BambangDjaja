@@ -1,11 +1,9 @@
-// Empat profil bawaan (tidak bisa diedit). Layout hanya lg; breakpoint lain diturunkan ensureResponsiveLayouts.
 const P = (id, type, title, metrics = [], extra = {}) => ({ id, type, title, metrics, chartType: 'line', ...extra });
 const L = (i, x, y, w, h, minW = 2, minH = 3) => ({ i, x, y, w, h, minW, minH, isDraggable: true, isResizable: true });
 
-// Panel urut seperti dashboard-documentation bagian 3 sampai 6; panel tambahan proyek ini di bawahnya.
 export const PRESETS = {
   electrical: {
-    id: 'preset_electrical', name: 'Electrical (Default)',
+    id: 'preset_electrical', name: 'Electrical',
     panels: [
       P('pe_vphase', 'linechart', 'Voltage Phase-Neutral', ['phaseA', 'phaseB', 'phaseC']),
       P('pe_vline', 'linechart', 'Voltage Phase-Phase', ['lineAB', 'lineBC', 'lineCA']),
@@ -56,44 +54,10 @@ export const PRESETS = {
       L('pp_sld', 0, 13, 6, 6), L('pp_news', 6, 13, 6, 6),
     ] },
   },
-  status: {
-    id: 'preset_status', name: 'Status',
-    panels: [
-      P('ps_status', 'trafostatus', 'Transformer Status'),
-      P('ps_health', 'healthindex', 'Health Index', ['phaseA', 'phaseB', 'phaseC', 'frequency', 'pfTotal']),
-      P('ps_events', 'eventstream', 'Event Stream'),
-      P('ps_oilstatus', 'oilstatus', 'Oil Level Status'),
-      P('ps_phasor', 'phasor', 'Phasor', ['phaseA', 'phaseB', 'phaseC']),
-      P('ps_stat', 'stat', 'Key Values', ['lineAB', 'currentA', 'frequency', 'pfTotal', 'oil_temperature']),
-    ],
-    layouts: { lg: [
-      L('ps_status', 0, 0, 12, 7),
-      L('ps_health', 0, 7, 4, 6), L('ps_events', 4, 7, 4, 6), L('ps_phasor', 8, 7, 4, 6),
-      L('ps_oilstatus', 0, 13, 6, 3), L('ps_stat', 6, 13, 6, 3),
-    ] },
-  },
-  oilquality: {
-    id: 'preset_oilquality', name: 'Oil Quality',
-    panels: [
-      P('po_moist', 'linechart', 'Moisture Oil', ['moisturePpm']),
-      P('po_h2', 'linechart', 'Dissolved H2', ['h2ppm']),
-      P('po_quality', 'oilquality', 'Oil Quality'),
-      P('po_h2g', 'gauge', 'H2 Gauge', ['h2ppm']),
-      P('po_moistg', 'gauge', 'Moisture Gauge', ['moisturePpm']),
-      P('po_oiltemp', 'linechart', 'Oil Temperature', ['oil_temperature']),
-      P('po_press', 'linechart', 'Tank Pressure', ['oil_pressure']),
-    ],
-    layouts: { lg: [
-      L('po_moist', 0, 0, 5, 5), L('po_h2', 5, 0, 4, 5), L('po_quality', 9, 0, 3, 5),
-      L('po_h2g', 0, 5, 2, 4), L('po_moistg', 2, 5, 2, 4), L('po_oiltemp', 4, 5, 4, 4), L('po_press', 8, 5, 4, 4),
-    ] },
-  },
 };
 
 export const PRESET_IDS = Object.values(PRESETS).map((p) => p.id);
 export const isPresetId = (id) => typeof id === 'string' && id.startsWith('preset_');
 
-// Semua profil terkonfigurasi dengan user_layouts di DB dan dapat disimpan
 export const canPersist = (profile) => !!profile && profile.isEditable !== false;
-// Nama baris default di tabel user_layouts (backend mencocokkan nama ini).
 export const DB_DEFAULT_LAYOUT_NAME = 'Main Dashboard';

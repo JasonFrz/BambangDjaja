@@ -312,8 +312,7 @@ const AdminDashboard = () => {
     baseURL: apiUrl,
     headers: {
       'X-Super-Admin': 'true',
-      'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
-      'ngrok-skip-browser-warning': '69420'
+      'Authorization': `Bearer ${sessionStorage.getItem('token')}`
     }
   });
 

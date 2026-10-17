@@ -65,10 +65,10 @@ const PerformanceReport = () => {
     setError(null);
     try {
       if (!startDate || !endDate) {
-        throw new Error('Pilih Start Date dan End Date.');
+        throw new Error('Please select both Start Date and End Date.');
       }
       if (startDate > endDate) {
-        throw new Error('Start Date tidak boleh lebih besar dari End Date.');
+        throw new Error('Start Date cannot be later than End Date.');
       }
 
       const start = `${startDate} 00:00:00`;
@@ -85,7 +85,7 @@ const PerformanceReport = () => {
       setReportData(res.data);
     } catch (err) {
       console.error('Fetch performance report error:', err);
-      setError(err.response?.data?.error || err.message || 'Gagal memuat data report');
+      setError(err.response?.data?.error || err.message || 'Failed to load report data');
       setReportData(null);
     } finally {
       setLoading(false);
@@ -460,7 +460,7 @@ const PerformanceReport = () => {
       {/* ========================================================= */}
       {loading && !reportData ? (
         <div className="flex-1 flex items-center justify-center py-16">
-          <EnergyLoader text="Mengambil data Performance Report..." />
+          <EnergyLoader text="Loading Performance Report data..." />
         </div>
       ) : (
         <div className="bg-white dark:bg-[#151521] rounded-xl sm:rounded-2xl border border-[#dfe1e6]/80 dark:border-white/10 shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
@@ -473,9 +473,9 @@ const PerformanceReport = () => {
             </div>
             <span className="text-xs text-[#5e6c84] dark:text-[#94a3b8]">
               {searchQuery.trim() ? (
-                <>Menampilkan <strong>{filteredRows.length}</strong> dari <strong>{allRows.length}</strong> Parameter</>
+                <>Showing <strong>{filteredRows.length}</strong> of <strong>{allRows.length}</strong> Parameters</>
               ) : (
-                <>Total <strong>{allRows.length}</strong> Parameter</>
+                <>Total <strong>{allRows.length}</strong> Parameters</>
               )}
             </span>
           </div>
@@ -495,7 +495,7 @@ const PerformanceReport = () => {
                 {filteredRows.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-10 text-center text-xs sm:text-sm text-gray-400 dark:text-gray-500">
-                      {searchQuery ? `Tidak ada parameter yang cocok dengan "${searchQuery}"` : 'Tidak ada data'}
+                      {searchQuery ? `No parameters matching "${searchQuery}"` : 'No data available'}
                     </td>
                   </tr>
                 ) : (

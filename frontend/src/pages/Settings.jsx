@@ -305,7 +305,7 @@ const Settings = () => {
       setError(
         res.data.settings
           ? ""
-          : "Trafo ini belum punya transformer_settings (menunggu Raspi mendaftar).",
+          : "This transformer does not have settings configured yet (awaiting Raspi registration).",
       );
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -318,17 +318,14 @@ const Settings = () => {
     load();
   }, [load]);
 
-  // Simpan satu kartu threshold (semua kolomnya sekaligus). Dipanggil otomatis,
-  // tidak ada tombol Save. values = isi draft saat perubahan terakhir.
   const save = async (g, values) => {
     const body = {};
     for (const [col] of g.fields) {
       const raw = String(values[col] ?? "").trim();
-      // Kotak angka sempat kosong saat diketik ulang: jangan simpan sebagai null.
       if (raw === "") continue;
       const n = Number(raw);
       if (!Number.isFinite(n)) {
-        setNotice(`Nilai ${col} bukan angka`);
+        setNotice(`Value for ${col} must be a number`);
         return;
       }
       body[col] = n;
@@ -339,19 +336,16 @@ const Settings = () => {
         `${apiUrl}/api/settings/thresholds/${trafoId}`,
         body,
       );
-      // Draft sengaja tidak ditimpa: user mungkin masih menggeser slider.
       setSettings(res.data.settings);
       setNotice("");
       await refreshThresholds();
       window.dispatchEvent(new Event("thresholdsUpdated"));
     } catch (err) {
       setDraft((d) => ({ ...d, ...draftOf(settings, [g]) }));
-      setNotice(err.response?.data?.error || "Gagal menyimpan");
+      setNotice(err.response?.data?.error || "Failed to save settings");
     }
   };
 
-  // Slider memicu onChange di setiap langkah geser, jadi kartu baru disimpan
-  // 800 ms setelah perubahan terakhir (debounce per kartu).
   const saveTimers = useRef({});
   const editField = (g, col, v) => {
     const next = { ...draft, [col]: v };
@@ -376,8 +370,6 @@ const Settings = () => {
     save(g, next);
   };
 
-  // Trip langsung tersimpan saat dropdown diganti (tanpa tombol Save).
-  // Hanya kolom yang diubah yang dikirim; kalau gagal, dropdown kembali ke nilai DB.
   const changeTrip = async (col, value) => {
     setTripDraft((d) => ({ ...d, [col]: value }));
     try {
@@ -390,7 +382,7 @@ const Settings = () => {
       setNotice("");
     } catch (err) {
       setTripDraft(trip);
-      setNotice(err.response?.data?.error || "Gagal menyimpan trip settings");
+      setNotice(err.response?.data?.error || "Failed to save trip settings");
     } finally {
       setSaving(false);
     }
